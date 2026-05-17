@@ -720,6 +720,7 @@
         </div>
       </div>
       <label class="check"><input id="removeKeys" type="checkbox" checked> 删除原 [Key*] 节</label>
+      <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
 
     <section>
@@ -780,6 +781,20 @@
       </div>
       <pre id="viewIni" class="ini-view"></pre>
     </div>
+  </div>
+</div>
+
+<!-- ============ DRAFT HISTORY ============ -->
+<div class="modal" id="draftHistory">
+  <div class="modal-card">
+    <div class="modal-head">
+      <strong>历史暂存 <small style="color:var(--muted);font-weight:400">最近 30 次</small></strong>
+      <button class="icon-btn" id="draftHistoryClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)">拖入对应 INI 文件时自动恢复</div>
+    <div style="overflow:auto;max-height:60vh" id="draftHistoryList"></div>
   </div>
 </div>
 
@@ -876,6 +891,158 @@ function saveSettings() {
   s.removeKeys = $("removeKeys").checked;
   if (state.swapOrder) s.swapOrder = state.swapOrder;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+/* ---------- 暂存草稿 ---------- */
+const DRAFT_KEY = "keyswap-gui-drafts-v2";
+const MAX_DRAFTS = 30;
+const DB_NAME = "KeySwapDrafts";
+const DB_STORE = "blobs";
+
+// ---------- IndexedDB helpers ----------
+
+function dbOpen() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore(DB_STORE, { keyPath: "h" }); };
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function dbGet(h) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readonly");
+      const r = tx.objectStore(DB_STORE).get(h);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => resolve(null);
+      tx.oncomplete = () => db.close();
+    });
+  } catch (e) { return null; }
+}
+
+async function dbPut(h, data) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).put({ h, ...data });
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = () => { db.close(); resolve(false); };
+    });
+  } catch (e) { return false; }
+}
+
+async function dbDel(h) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).delete(h);
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = () => { db.close(); resolve(false); };
+    });
+  } catch (e) { return false; }
+}
+
+async function dbClear() {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).clear();
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = () => { db.close(); resolve(false); };
+    });
+  } catch (e) { return false; }
+}
+
+// FNV-1a hash
+function hash64(s) {
+  let h = 0xcbf29ce484222325n;
+  for (let i = 0; i < s.length; i++) {
+    h ^= BigInt(s.charCodeAt(i));
+    h = (h * 0x100000001b3n) & 0xffffffffffffffffn;
+  }
+  return h.toString(36);
+}
+
+function saveDraft() {
+  if (!state.swaps.length) return;
+  const h = hash64(state.text);
+  const ui = {};
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+    ui[id] = $(id).value;
+  }
+  ui.removeKeys = $("removeKeys").checked;
+
+  // 元数据（不含大图）存 localStorage
+  const entry = {
+    h, n: state.fileName, t: Date.now(),
+    order: state.swapOrder,
+    meta: state.slotMeta.map(m => ({
+      name: m.name, skip: m.skip, iconKind: m.iconKind, iconName: m.iconName, iconColor: m.iconColor,
+    })),
+    ui,
+  };
+  let drafts = [];
+  try { drafts = JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); } catch (e) {}
+  drafts = drafts.filter(d => d.h !== h);
+  drafts.push(entry);
+  if (drafts.length > MAX_DRAFTS) {
+    // 移出旧条目时同步删 IndexedDB
+    const removed = drafts.splice(0, drafts.length - MAX_DRAFTS);
+    for (const r of removed) dbDel(r.h);
+  }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
+
+  // 大图数据存 IndexedDB（异步，不阻塞）
+  const iconPreviews = state.slotMeta.map(m => m.iconPreview || null);
+  const hasBlobs = state.panelImagePreview || iconPreviews.some(p => p) || state.text;
+  if (hasBlobs) {
+    dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
+  }
+}
+
+async function loadDraft() {
+  if (!state.swaps.length) return false;
+  try {
+    const h = hash64(state.text);
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return false;
+    const drafts = JSON.parse(raw);
+    const d = drafts.find(d => d.h === h);
+    if (!d) return false;
+    // 恢复 UI 配置
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+      if (d.ui[id] !== undefined) $(id).value = d.ui[id];
+    }
+    if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+    // 从 IndexedDB 恢复大图
+    const blob = await dbGet(h);
+    state.panelImagePreview = blob?.img || null;
+    state.panelImageRgba = null;
+    // 恢复 swapOrder + slotMeta（先排后覆）
+    if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
+      state.swapOrder = d.order;
+      saveSettings();
+      restoreSwapOrder();
+      for (let i = 0; i < d.meta.length; i++) {
+        Object.assign(state.slotMeta[i], d.meta[i]);
+      }
+      // 恢复图标预览
+      if (blob?.iconPreviews) {
+        for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
+          if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+        }
+      }
+    }
+    toast("已恢复上次暂存", "ok");
+    return true;
+  } catch (e) { /* ignore */ }
+  return false;
 }
 
 /* ============================================================
@@ -1099,39 +1266,21 @@ function colorizeSvg(svg, stroke, fill = "none") {
 }
 
 /* ============================================================
- * 5. 图标 → DDS（B8G8R8A8）
+ * 5. 图标 → PNG
  * ============================================================ */
 
-// XXMI/3DMigoto draw_2d.hlsl 用 IniParams[87] 提供 size/offset
-// 纹理用 B8G8R8A8 DDS，pitch = w*4
-function ddsFromRgba(width, height, rgba) {
-  const header = new Uint8Array(128);
-  const dv = new DataView(header.buffer);
-  header[0] = 0x44; header[1] = 0x44; header[2] = 0x53; header[3] = 0x20; // 'DDS '
-  dv.setUint32(4, 124, true);
-  dv.setUint32(8, 0x0002100F, true); // CAPS|HEIGHT|WIDTH|PIXELFORMAT|PITCH|MIPMAP off
-  dv.setUint32(12, height, true);
-  dv.setUint32(16, width, true);
-  dv.setUint32(20, width * 4, true); // pitch
-  dv.setUint32(76, 32, true); // PixelFormat size
-  dv.setUint32(80, 0x41, true); // RGBA
-  dv.setUint32(88, 32, true); // bit count
-  dv.setUint32(92, 0x00FF0000, true);
-  dv.setUint32(96, 0x0000FF00, true);
-  dv.setUint32(100, 0x000000FF, true);
-  dv.setUint32(104, 0xFF000000, true);
-  dv.setUint32(108, 0x1000, true); // CAPS texture
-
-  const out = new Uint8Array(128 + rgba.length);
-  out.set(header, 0);
-  // RGBA → BGRA
-  for (let i = 0; i < rgba.length; i += 4) {
-    out[128 + i + 0] = rgba[i + 2];
-    out[128 + i + 1] = rgba[i + 1];
-    out[128 + i + 2] = rgba[i + 0];
-    out[128 + i + 3] = rgba[i + 3];
-  }
-  return out;
+function rgbaToPng(width, height, rgba) {
+  const c = document.createElement("canvas");
+  c.width = width; c.height = height;
+  const ctx = c.getContext("2d");
+  const id = ctx.createImageData(width, height);
+  id.data.set(rgba);
+  ctx.putImageData(id, 0, 0);
+  const b64 = c.toDataURL("image/png").split(",")[1];
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
 }
 
 function solidRgba(width, height, [r, g, b, a]) {
@@ -1693,6 +1842,8 @@ function buildIni() {
     const m = state.slotMeta[sIdx];
     L.push(`${n === 0 ? "if" : "elif"} $gui_clicked == ${n + 1}`);
     L.push(`  ; ${m.name}`);
+    const cond = swap.condition ? swap.condition.replace(/!=\s*0\b/g, "> 0") : "";
+    if (cond) L.push(`  if ${cond}`);
     if (swap.type === "action") {
       // action 类型：直接执行命令列表
       for (const cmd of swap.commandLists) {
@@ -1725,6 +1876,7 @@ function buildIni() {
         L.push(`  endif`);
       }
     }
+    if (cond) L.push(`  endif`);
   });
   if (active.length) L.push("endif");
   L.push("");
@@ -1743,18 +1895,18 @@ function buildIni() {
 
   // 资源声明
   L.push("[ResourceGuiBg]");
-  L.push("filename = res_gui\\bg.dds");
+  L.push("filename = res_gui\\bg.png");
   L.push("");
   L.push("[ResourceGuiTitle]");
-  L.push("filename = res_gui\\title.dds");
+  L.push("filename = res_gui\\title.png");
   L.push("");
   active.forEach((sIdx, n) => {
     const idx = String(n + 1).padStart(2, "0");
     L.push(`[ResourceGuiSlot${n + 1}]`);
-    L.push(`filename = res_gui\\slot_${idx}.dds`);
+    L.push(`filename = res_gui\\slot_${idx}.png`);
     L.push("");
     L.push(`[ResourceGuiSlotHover${n + 1}]`);
-    L.push(`filename = res_gui\\slot_hover_${idx}.dds`);
+    L.push(`filename = res_gui\\slot_hover_${idx}.png`);
     L.push("");
   });
 
@@ -1811,15 +1963,15 @@ async function buildResources() {
     bgCtx.clip();
     bgCtx.drawImage(imgCanvas, 0, 0, cw, ch);
     bgCtx.restore();
-    files.push({ name: "res_gui/bg.dds", data: ddsFromRgba(panelW, panelH, bgCtx.getImageData(0, 0, panelW, panelH).data) });
+    files.push({ name: "res_gui/bg.png", data: rgbaToPng(panelW, panelH, bgCtx.getImageData(0, 0, panelW, panelH).data) });
   } else {
-    files.push({ name: "res_gui/bg.dds", data: ddsFromRgba(panelW, panelH, renderBgRgba(panelW, panelH, bgOpts)) });
+    files.push({ name: "res_gui/bg.png", data: rgbaToPng(panelW, panelH, renderBgRgba(panelW, panelH, bgOpts)) });
   }
 
   // 标题图片（文字渲染为图片，XXMI 不支持独立文字）
   const titleW = panelW - 6;
   const titleText = ($("title").value || "GUI Menu").trim();
-  files.push({ name: "res_gui/title.dds", data: ddsFromRgba(titleW, 48, renderTitleRgba(titleText, titleW, [ar, ag, ab])) });
+  files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, [ar, ag, ab])) });
   // 每个活跃按钮一张完整 slot 图（圆角矩形 + 白色边框 + 图标 + 文字）
   const active = swaps.map((_, i) => i).filter(i => !meta[i].skip);
   for (let n = 0; n < active.length; n++) {
@@ -1846,8 +1998,8 @@ async function buildResources() {
     const hoverRgba = await renderSlotRgba({ ...baseOpts, fill: hoverFill });
 
     const idx = String(n + 1).padStart(2, "0");
-    files.push({ name: `res_gui/slot_${idx}.dds`, data: ddsFromRgba(64, 64, slotRgba) });
-    files.push({ name: `res_gui/slot_hover_${idx}.dds`, data: ddsFromRgba(64, 64, hoverRgba) });
+    files.push({ name: `res_gui/slot_${idx}.png`, data: rgbaToPng(64, 64, slotRgba) });
+    files.push({ name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(64, 64, hoverRgba) });
   }
 
   return files;
@@ -2030,6 +2182,7 @@ function renderIniView() {
 
 function rerender() {
   saveSettings();
+  saveDraft();
   renderPreview();
   renderIniView();
 }
@@ -2137,7 +2290,10 @@ async function loadFile(file) {
   state.slotMeta = state.swaps.map(newSlotMeta);
 
   // 恢复保存的排序
-  restoreSwapOrder();
+
+  // 尝试恢复草稿（含排序和元信息）
+  const hasDraft = await loadDraft();
+  if (!hasDraft) restoreSwapOrder();
 
   // 自动检测 MOD 使用的 $active* 变量
   let hasPlainActive = false;
@@ -2145,23 +2301,27 @@ async function loadFile(file) {
   for (const sec of state.sections) {
     if (!sec.name) continue;
     for (const line of sec.lines) {
-      // 检测 $active\d+ 变量
       const m = line.match(/\$active\d+/g);
       if (m) m.forEach(v => activeVars.add(v));
-      // 检测纯 $active（不跟数字）
       if (/\$active\b/.test(line) && !/\$active\d/.test(line)) hasPlainActive = true;
     }
   }
-  if (hasPlainActive) {
-    $("activeVar").value = "$active";
-  } else if (activeVars.size > 0) {
-    $("activeVar").value = [...activeVars].sort()[0];
+  if (!hasDraft) {
+    if (hasPlainActive) {
+      $("activeVar").value = "$active";
+    } else if (activeVars.size > 0) {
+      $("activeVar").value = [...activeVars].sort()[0];
+    }
   }
 
-  // 自动推算列数
-  const active = state.swaps.filter((_, i) => !state.slotMeta[i].skip).length;
-  $("cols").value = autoCols(active || state.swaps.length);
-  colsManual = false;
+  // 自动推算列数（无草稿时）
+  if (!hasDraft) {
+    const active = state.swaps.filter((_, i) => !state.slotMeta[i].skip).length;
+    $("cols").value = autoCols(active || state.swaps.length);
+    colsManual = false;
+  } else {
+    colsManual = true;
+  }
 
   $("fileInfo").textContent = `${file.name} · 找到 ${state.swaps.length} 个 [Key*]`;
   $("btnZip").disabled = state.swaps.length === 0;
@@ -2170,7 +2330,7 @@ async function loadFile(file) {
   if (state.swaps.length) {
     $("status").className = "status ok";
     $("status").textContent = `读取成功，共 ${state.swaps.length} 组按键切换`;
-    if (!$("title").dataset.touched) {
+    if (!$("title").dataset.touched && !hasDraft) {
       $("title").value = file.name.replace(/\.[^.]+$/, "");
     }
   } else {
@@ -2265,6 +2425,142 @@ drop.addEventListener("drop", e => {
     if (id === "cols") colsManual = true;
     rerender();
   });
+});
+
+// 清除全部暂存
+$("btnClearDrafts").addEventListener("click", () => {
+  localStorage.removeItem(DRAFT_KEY);
+  dbClear();
+  toast("全部暂存已清除", "ok");
+});
+
+// 历史暂存
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+function renderDraftHistory() {
+  const el = $("draftHistoryList");
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY) || "[]";
+    const drafts = JSON.parse(raw);
+    if (!drafts.length) {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">暂无暂存记录</div>';
+      return;
+    }
+    // 倒序，最新的在前
+    const items = [...drafts].reverse();
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+    html += '<thead><tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--muted);font-size:11px"><th style="padding:8px 16px">文件</th><th style="padding:8px 16px;width:140px">时间</th><th style="padding:8px 16px;width:90px"></th></tr></thead><tbody>';
+    for (const d of items) {
+      html += `<tr style="border-bottom:1px solid var(--line-2)">
+        <td style="padding:10px 16px">${escapeHtml(d.n || "(未知)")}</td>
+        <td style="padding:10px 16px;color:var(--muted);white-space:nowrap">${fmtTime(d.t)}</td>
+        <td style="padding:10px 16px;white-space:nowrap"><button data-restore="${escapeHtml(d.h)}" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-right:8px">恢复</button><button data-del="${escapeHtml(d.h)}" style="font-size:11px;color:var(--hot);background:none;border:none;cursor:pointer">删除</button></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--hot)">读取失败</div>';
+  }
+}
+
+$("btnDraftHistory").addEventListener("click", () => {
+  renderDraftHistory();
+  $("draftHistory").classList.add("show");
+});
+
+$("draftHistoryClose").addEventListener("click", () => {
+  $("draftHistory").classList.remove("show");
+});
+
+$("draftHistory").addEventListener("click", (e) => {
+  if (e.target === $("draftHistory")) $("draftHistory").classList.remove("show");
+});
+
+$("draftHistoryList").addEventListener("click", async (e) => {
+  const delBtn = e.target.closest("[data-del]");
+  if (delBtn) {
+    const h = delBtn.dataset.del;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY) || "[]";
+      let drafts = JSON.parse(raw);
+      drafts = drafts.filter(d => d.h !== h);
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+      dbDel(h);
+      renderDraftHistory();
+      toast("已删除", "ok");
+    } catch (e) { /* ignore */ }
+    return;
+  }
+  const restoreBtn = e.target.closest("[data-restore]");
+  if (restoreBtn) {
+    const h = restoreBtn.dataset.restore;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY) || "[]";
+      const drafts = JSON.parse(raw);
+      const d = drafts.find(d => d.h === h);
+      if (!d) { toast("草稿不存在", "err"); return; }
+      // 如果当前有打开文件，先保存
+      if (state.swaps.length) saveDraft();
+      // 从 IndexedDB 读取 INI 原文和大图
+      const blob = await dbGet(h);
+      if (!blob?.text) { toast("草稿数据不完整", "err"); return; }
+      // 用存储的 INI 文本重建全部状态
+      state.text = blob.text;
+      state.fileName = d.n || "";
+      state.sections = parseSections(state.text);
+      state.swaps = parseSwaps(state.sections);
+      state.slotMeta = state.swaps.map(newSlotMeta);
+      // 恢复 UI
+      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+        if (d.ui[id] !== undefined) $(id).value = d.ui[id];
+      }
+      if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+      // 恢复大图
+      state.panelImagePreview = blob.img || null;
+      state.panelImageRgba = null;
+      if ($("panelImageThumb")) {
+        if (state.panelImagePreview) {
+          $("panelImageThumb").src = state.panelImagePreview;
+          $("panelImageThumb").classList.add("show");
+          $("btnClearPanelImage").style.display = "";
+        } else {
+          $("panelImageThumb").classList.remove("show");
+          $("btnClearPanelImage").style.display = "none";
+        }
+      }
+      // 恢复排序和元信息
+      if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
+        state.swapOrder = d.order;
+        saveSettings();
+        restoreSwapOrder();
+        for (let i = 0; i < d.meta.length; i++) {
+          Object.assign(state.slotMeta[i], d.meta[i]);
+        }
+        if (blob.iconPreviews) {
+          for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
+            if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+          }
+        }
+      }
+      $("draftHistory").classList.remove("show");
+      $("title").dataset.touched = "1";
+      colsManual = true;
+      $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 [Key*]`;
+      $("btnZip").disabled = state.swaps.length === 0;
+      $("btnIni").disabled = state.swaps.length === 0;
+      if (state.swaps.length) {
+        $("status").className = "status ok";
+        $("status").textContent = `已恢复，共 ${state.swaps.length} 组按键切换`;
+      }
+      renderSwapList();
+      rerender();
+      toast("已恢复暂存", "ok");
+    } catch (e) { toast("恢复失败", "err"); }
+  }
 });
 
 // 面板背景图上传

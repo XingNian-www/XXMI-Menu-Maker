@@ -9,7 +9,7 @@
 1. 在浏览器本地读取用户拖入或选择的 `.ini` / `.txt` 文件
 2. 解析其中的 `[Key*]` 节和变量循环内容
 3. 根据解析结果生成一个可点击的 GUI 菜单配置
-4. 生成 GUI 所需的 `dds` 纹理资源和 `draw_2d.hlsl`
+4. 生成 GUI 所需的 PNG 纹理资源和 `draw_2d.hlsl`
 5. 支持下载完整 ZIP 或仅下载生成后的 `.ini`
 
 整个工具不依赖后端，不上传用户文件，所有处理都在浏览器内完成。
@@ -174,10 +174,10 @@ downloadBlob(blob, name)
 ```text
 <原文件名>.gui.ini
 res_gui/draw_2d.hlsl
-res_gui/bg.dds
-res_gui/title.dds
-res_gui/slot_01.dds
-res_gui/slot_hover_01.dds
+res_gui/bg.png
+res_gui/title.png
+res_gui/slot_01.png
+res_gui/slot_hover_01.png
 ...
 ```
 
@@ -422,7 +422,7 @@ data-act="upload"
 上传图片会参与 ZIP 资源生成，输出为：
 
 ```text
-res_gui/icon_XX.dds
+res_gui/icon_XX.png
 ```
 
 ### 6.4 用户上传面板图片
@@ -437,39 +437,20 @@ res_gui/icon_XX.dds
 
 在 `renderPreview()` 中，如果有 `state.panelImagePreview`，面板预览会显示上传的图片作为背景。
 
-生成 ZIP 时，如果存在 `state.panelImageRgba`，则 `res_gui/bg.dds` 使用上传图片；否则使用纯色背景。
+生成 ZIP 时，如果存在 `state.panelImageRgba`，则 `res_gui/bg.png` 使用上传图片；否则使用纯色背景。
 
-## 7. DDS 资源生成
+## 7. PNG 资源生成
 
-### 7.1 DDS 格式
+`rgbaToPng(width, height, rgba)` 通过 canvas.toDataURL 生成 PNG 字节。
 
-`ddsFromRgba(width, height, rgba)` 生成未压缩 DDS。
-
-关键点：
-
-```text
-格式：B8G8R8A8
-header：128 bytes
-pitch：width * 4
-```
-
-输入 RGBA 会在写入 DDS 时转换为 BGRA：
-
-```js
-out[128 + i + 0] = rgba[i + 2];
-out[128 + i + 1] = rgba[i + 1];
-out[128 + i + 2] = rgba[i + 0];
-out[128 + i + 3] = rgba[i + 3];
-```
-
-### 7.2 资源尺寸
+### 7.1 资源尺寸
 
 | 资源 | 尺寸 | 说明 |
 |---|---|---|---:|---|
-| `bg.dds` | `panelW × panelH` | 面板背景（圆角矩形 + 白边框），动态匹配面板尺寸 |
-| `title.dds` | `(panelW-6)x48` | 标题文字图片（白色 + 强调色投影） |
-| `slot_##.dds` | `64x64` | 普通按钮（圆角矩形边框 + 图标 + 文字） |
-| `slot_hover_##.dds` | `64x64` | hover 按钮（同内容，背景变强调色） |
+| `bg.png` | `panelW × panelH` | 面板背景（圆角矩形 + 白边框），动态匹配面板尺寸 |
+| `title.png` | `(panelW-6)x48` | 标题文字图片（白色 + 强调色投影） |
+| `slot_##.png` | `64x64` | 普通按钮（圆角矩形边框 + 图标 + 文字） |
+| `slot_hover_##.png` | `64x64` | hover 按钮（同内容，背景变强调色） |
 
 `panelW` 和 `panelH` 计算公式：`padding = 16`，`slotSize = 64`，`gap` 和 `cols` 由用户配置。`renderBgRgba` 接受 `(width, height, opts)` 参数化渲染。当用户上传面板图片时，图片会缩放到面板圆角矩形区域绘制。
 
@@ -616,7 +597,7 @@ slot 固定 `64×64`。每个按钮是一张完整图片，包含：
 
 不再分层渲染（旧：共享 slot 背景 + 独立 icon 叠加），而是直接用 canvas 合成一张图。
 
-每按钮对应两份 DDS：`slot_##.dds`（普通态，深灰底）和 `slot_hover_##.dds`（悬停态，强调色底）。
+每按钮对应两份 PNG：`slot_##.png`（普通态，深灰底）和 `slot_hover_##.png`（悬停态，强调色底）。
 
 列数默认由 `autoCols(activeCount)` 自动推算，目标宽高比约 3:5。
 
@@ -969,8 +950,8 @@ hideHoverInfo()
 → 点击下载完整 ZIP
 → buildResources()
 → renderSlotRgba({ iconRgba, ... })
-→ ddsFromRgba(64, 64, mergedRgba)
-→ res_gui/slot_XX.dds
+→ rgbaToPng(64, 64, mergedRgba)
+→ res_gui/slot_XX.png
 ```
 
 ### 13.3 上传面板图片到 ZIP
@@ -984,8 +965,8 @@ hideHoverInfo()
 → rerender()
 → 点击下载完整 ZIP
 → buildResources()
-→ ddsFromRgba(256, 256, panelImageRgba)
-→ res_gui/bg.dds
+→ rgbaToPng(256, 256, panelImageRgba)
+→ res_gui/bg.png
 ```
 
 ### 13.4 下载完整 ZIP
@@ -1031,7 +1012,7 @@ DOM id：camelCase，例如 btnZip、viewIni
 以下部分对输出兼容性影响较大，修改前要谨慎：
 
 ```text
-ddsFromRgba
+rgbaToPng
 SHADER_TEXT
 CustomShaderGuiDraw
 IniParams[87]
@@ -1072,13 +1053,13 @@ buildIni()
 确保 ini 内路径使用双反斜杠：
 
 ```ini
-filename = res_gui\xxx.dds
+filename = res_gui\xxx.png
 ```
 
 ZIP 内路径使用正斜杠：
 
 ```text
-res_gui/xxx.dds
+res_gui/xxx.png
 ```
 
 ## 15. 常见开发任务
@@ -1109,7 +1090,7 @@ CSS .gui-slot img
 renderPreview() 里的 gridTemplateColumns
 buildIni() 里的 slotSize
 CommandListGuiSlot 里的图标缩进和图标尺寸
-buildResources() 里的 slot/icon DDS 尺寸
+buildResources() 里的 slot/icon PNG 尺寸
 ```
 
 这是容易出错的改动，不建议只改 CSS。
@@ -1190,10 +1171,6 @@ draw_2d.hlsl 是否兼容
 原 mod 的变量和条件
 ```
 
-### 16.6 DDS 头标志位轻微不一致
-
-`ddsFromRgba` 在 offset 8 写入 `0x0002100F`，其中 `0x20000` 位（DDSD_MIPMAPCOUNT）已被置位，但 MipMapCount 字段（offset 28）未初始化为 0。实际运行中无影响，3DMigoto/XXMI 不处理 mipmap。
-
 ## 17. 手动测试清单
 
 改动后建议至少测试这些路径：
@@ -1213,7 +1190,7 @@ draw_2d.hlsl 是否兼容
 13. 点击「只下载 ini」能下载 `.gui.ini`
 14. 点击「下载完整 ZIP」能下载 `.gui.zip`
 15. ZIP 中包含 `res_gui/draw_2d.hlsl`
-16. ZIP 中包含 `bg.dds`、`slot_##.dds`、`slot_hover_##.dds` 和 shader
+16. ZIP 中包含 `bg.png`、`slot_##.png`、`slot_hover_##.png` 和 shader
 17. 切换 cycle / toggle 后，生成 ini 中的点击逻辑符合预期
 18. 勾选 / 取消「删除原 [Key*] 节」后，生成 ini 符合预期
 19. 右键预览按钮改名，左侧列表同步更新
@@ -1224,7 +1201,7 @@ draw_2d.hlsl 是否兼容
 24. 批量合并 2+ 按钮后，合并按钮 groups > 1，"拆分"菜单项可见
 25. 右键拆分合并按钮后，恢复为独立按钮，groups 各为 1
 26. 面板拖拽排序后 skip 按钮保持原位，活跃按钮顺序可保存
-27. 面板背景 DDS 分辨率随 panelW × panelH 变化，不再固定 256x256
+27. 面板背景 PNG 分辨率随 panelW × panelH 变化，不再固定 256x256
 
 ## 18. 快速定位表
 
@@ -1244,7 +1221,7 @@ draw_2d.hlsl 是否兼容
 | INI 预览 | `renderIniView` |
 | INI 生成 | `buildIni` |
 | ZIP 资源 | `buildResources`、`renderSlotRgba` |
-| DDS 输出 | `ddsFromRgba` |
+| PNG 输出 | `rgbaToPng` |
 | slot 图片合成 | `renderSlotRgba`（canvas: 圆角矩形 + 边框 + 图标 + 文字） |
 | 面板背景 | `renderBgRgba(width, height, opts)`（参数化尺寸，不再硬编码 256x256） |
 | 标题图片 | `renderTitleRgba`（48px 高，白字 + 强调色投影） |
@@ -1264,7 +1241,7 @@ draw_2d.hlsl 是否兼容
 ```text
 parser.js        INI 解析
 generator.js     INI 生成
-resources.js     DDS、图片、ZIP
+resources.js     PNG、图片、ZIP
 icons.js         Lucide 和图标推荐
 state.js         应用状态
 ui.js            渲染和事件绑定
