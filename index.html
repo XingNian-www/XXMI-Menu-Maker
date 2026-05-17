@@ -889,7 +889,6 @@ function saveSettings() {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
-  if (state.swapOrder) s.swapOrder = state.swapOrder;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
@@ -901,14 +900,23 @@ const DB_STORE = "blobs";
 
 // ---------- IndexedDB helpers ----------
 
+let _db = null;
+let _dbOpenPromise = null;
+
 function dbOpen() {
-  return new Promise((resolve, reject) => {
+  if (_db) return Promise.resolve(_db);
+  if (_dbOpenPromise) return _dbOpenPromise;
+  _dbOpenPromise = new Promise((resolve, reject) => {
     const r = indexedDB.open(DB_NAME, 1);
     r.onupgradeneeded = () => { r.result.createObjectStore(DB_STORE, { keyPath: "h" }); };
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
+    r.onsuccess = () => { _db = r.result; _dbOpenPromise = null; resolve(_db); };
+    r.onerror = () => { _dbOpenPromise = null; reject(r.error); };
   });
+  return _dbOpenPromise;
 }
+
+// 仅在连接异常时重置（如 blocked/close 事件）
+function dbReset() { if (_db) { _db.close(); _db = null; _dbOpenPromise = null; } }
 
 async function dbGet(h) {
   try {
@@ -918,7 +926,6 @@ async function dbGet(h) {
       const r = tx.objectStore(DB_STORE).get(h);
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => resolve(null);
-      tx.oncomplete = () => db.close();
     });
   } catch (e) { return null; }
 }
@@ -929,8 +936,8 @@ async function dbPut(h, data) {
     return new Promise((resolve) => {
       const tx = db.transaction(DB_STORE, "readwrite");
       tx.objectStore(DB_STORE).put({ h, ...data });
-      tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = () => { db.close(); resolve(false); };
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
     });
   } catch (e) { return false; }
 }
@@ -941,8 +948,8 @@ async function dbDel(h) {
     return new Promise((resolve) => {
       const tx = db.transaction(DB_STORE, "readwrite");
       tx.objectStore(DB_STORE).delete(h);
-      tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = () => { db.close(); resolve(false); };
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
     });
   } catch (e) { return false; }
 }
@@ -953,8 +960,8 @@ async function dbClear() {
     return new Promise((resolve) => {
       const tx = db.transaction(DB_STORE, "readwrite");
       tx.objectStore(DB_STORE).clear();
-      tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = () => { db.close(); resolve(false); };
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
     });
   } catch (e) { return false; }
 }
@@ -969,7 +976,7 @@ function hash64(s) {
   return h.toString(36);
 }
 
-function saveDraft() {
+async function saveDraft() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
@@ -991,19 +998,26 @@ function saveDraft() {
   try { drafts = JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); } catch (e) {}
   drafts = drafts.filter(d => d.h !== h);
   drafts.push(entry);
+  // 超出上限时，先删 IndexedDB 再清理 localStorage，防止孤立数据
   if (drafts.length > MAX_DRAFTS) {
-    // 移出旧条目时同步删 IndexedDB
     const removed = drafts.splice(0, drafts.length - MAX_DRAFTS);
-    for (const r of removed) dbDel(r.h);
+    for (const r of removed) { await dbDel(r.h); }
   }
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
 
-  // 大图数据存 IndexedDB（异步，不阻塞）
+  // 大图数据存 IndexedDB
   const iconPreviews = state.slotMeta.map(m => m.iconPreview || null);
   const hasBlobs = state.panelImagePreview || iconPreviews.some(p => p) || state.text;
   if (hasBlobs) {
-    dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
+    await dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
   }
+
+  // 按文件 hash 持久化 swapOrder（独立于全局配置）
+  try {
+    const orderMap = JSON.parse(localStorage.getItem("keyswap-gui-order-v1") || "{}");
+    orderMap[h] = state.swapOrder;
+    localStorage.setItem("keyswap-gui-order-v1", JSON.stringify(orderMap));
+  } catch (e) {}
 }
 
 async function loadDraft() {
@@ -1024,8 +1038,13 @@ async function loadDraft() {
     const blob = await dbGet(h);
     state.panelImagePreview = blob?.img || null;
     state.panelImageRgba = null;
-    // 恢复 swapOrder + slotMeta（先排后覆）
+    // 恢复 swapOrder + slotMeta（先签名校验，确保对应同一组 swap）
     if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
+      // 校验 order 签名与当前 swaps 匹配
+      const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
+      const orderValid = d.order.length === state.swaps.length &&
+        d.order.every(sig => sigSet.has(JSON.stringify(sig)));
+      if (!orderValid) return false;
       state.swapOrder = d.order;
       saveSettings();
       restoreSwapOrder();
@@ -2180,11 +2199,14 @@ function renderIniView() {
   $("viewIni").innerHTML = html;
 }
 
+let _draftTimer = 0;
 function rerender() {
   saveSettings();
-  saveDraft();
   renderPreview();
   renderIniView();
+  // 防抖 saveDraft（频繁操作时延迟写 IndexedDB）
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => saveDraft(), 400);
 }
 
 /* ============================================================
@@ -2253,18 +2275,18 @@ function hideHoverInfo() {
 
 function restoreSwapOrder() {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (!s.swapOrder || !Array.isArray(s.swapOrder)) return;
-    if (s.swapOrder.length !== state.swaps.length) return;
+    const h = hash64(state.text);
+    const orderMap = JSON.parse(localStorage.getItem("keyswap-gui-order-v1") || "{}");
+    const swapOrder = orderMap[h];
+    if (!swapOrder || !Array.isArray(swapOrder)) return;
+    if (swapOrder.length !== state.swaps.length) return;
 
     // 签名为 key → 当前 swaps 索引
     const sigIdx = new Map();
     state.swaps.forEach((sw, i) => { sigIdx.set(JSON.stringify(swapSign(sw)), i); });
 
     const newOrder = [];
-    for (const sig of s.swapOrder) {
+    for (const sig of swapOrder) {
       const idx = sigIdx.get(JSON.stringify(sig));
       if (idx === undefined) return; // 签名不匹配，不还原
       newOrder.push(idx);
@@ -2273,7 +2295,7 @@ function restoreSwapOrder() {
 
     state.swaps = newOrder.map(i => state.swaps[i]);
     state.slotMeta = newOrder.map(i => state.slotMeta[i]);
-    state.swapOrder = s.swapOrder;
+    state.swapOrder = swapOrder;
   } catch (e) { /* ignore */ }
 }
 
@@ -2340,6 +2362,8 @@ async function loadFile(file) {
 
   renderSwapList();
   rerender();
+  // 初次加载立即保存草稿（不受防抖影响）
+  saveDraft();
 }
 
 /* ============================================================
@@ -2430,6 +2454,7 @@ drop.addEventListener("drop", e => {
 // 清除全部暂存
 $("btnClearDrafts").addEventListener("click", () => {
   localStorage.removeItem(DRAFT_KEY);
+  localStorage.removeItem("keyswap-gui-order-v1");
   dbClear();
   toast("全部暂存已清除", "ok");
 });
@@ -2504,7 +2529,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       const d = drafts.find(d => d.h === h);
       if (!d) { toast("草稿不存在", "err"); return; }
       // 如果当前有打开文件，先保存
-      if (state.swaps.length) saveDraft();
+      if (state.swaps.length) await saveDraft();
       // 从 IndexedDB 读取 INI 原文和大图
       const blob = await dbGet(h);
       if (!blob?.text) { toast("草稿数据不完整", "err"); return; }
@@ -2532,17 +2557,22 @@ $("draftHistoryList").addEventListener("click", async (e) => {
           $("btnClearPanelImage").style.display = "none";
         }
       }
-      // 恢复排序和元信息
+      // 恢复排序和元信息（先签名校验）
       if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
-        state.swapOrder = d.order;
-        saveSettings();
-        restoreSwapOrder();
-        for (let i = 0; i < d.meta.length; i++) {
-          Object.assign(state.slotMeta[i], d.meta[i]);
-        }
-        if (blob.iconPreviews) {
-          for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
-            if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+        const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
+        const orderValid = d.order.length === state.swaps.length &&
+          d.order.every(sig => sigSet.has(JSON.stringify(sig)));
+        if (orderValid) {
+          state.swapOrder = d.order;
+          saveSettings();
+          restoreSwapOrder();
+          for (let i = 0; i < d.meta.length; i++) {
+            Object.assign(state.slotMeta[i], d.meta[i]);
+          }
+          if (blob.iconPreviews) {
+            for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
+              if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+            }
           }
         }
       }
@@ -2558,6 +2588,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       }
       renderSwapList();
       rerender();
+      saveDraft();
       toast("已恢复暂存", "ok");
     } catch (e) { toast("恢复失败", "err"); }
   }
