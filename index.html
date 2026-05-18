@@ -733,6 +733,7 @@
       </div>
       <label class="check"><input id="removeKeys" type="checkbox" checked> 删除原 [Key*] 节</label>
       <label class="check" style="margin-left:18px"><input id="showKeyHint" type="checkbox" checked> 按钮显示按键提示</label>
+      <label class="check" style="margin-left:18px"><input id="hideUploadLabel" type="checkbox" checked> 上传图片不显示变量名</label>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
 
@@ -919,6 +920,7 @@ function loadSettings() {
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
+    if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
   } catch (e) {}
 }
 function saveSettings() {
@@ -928,6 +930,7 @@ function saveSettings() {
   }
   s.removeKeys = $("removeKeys").checked;
   s.showKeyHint = $("showKeyHint").checked;
+  s.hideUploadLabel = $("hideUploadLabel").checked;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
@@ -1025,6 +1028,7 @@ function flushDraftMeta() {
   }
   ui.removeKeys = $("removeKeys").checked;
   ui.showKeyHint = $("showKeyHint").checked;
+  ui.hideUploadLabel = $("hideUploadLabel").checked;
 
   const entry = {
     h, n: state.fileName, t: Date.now(),
@@ -1091,6 +1095,7 @@ async function loadDraft() {
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
+    if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
 
     // 从 IndexedDB 恢复大图
     const blob = await dbGet(h);
@@ -2272,7 +2277,7 @@ async function buildResources() {
     const m = meta[sIdx];
     const slotFill = [60, 60, 70, 200];
     const hoverFill = [ar, ag, ab, 230];
-    const label = m.name || "";
+    const label = (m.name && !($("hideUploadLabel").checked && m.iconPreview)) ? m.name : "";
 
     // 准备图标数据
     let iconRgba = null, iconSvg = null;
@@ -2451,6 +2456,9 @@ async function renderPreview() {
     const iconWrap = slotEl.querySelector(".slot-icon");
     const labelEl = slotEl.querySelector(".slot-label");
     labelEl.textContent = m.name || "";
+    // 上传图片模式下可选隐藏变量名
+    const hideLabel = $("hideUploadLabel").checked && m.iconPreview;
+    labelEl.style.display = hideLabel ? "none" : "";
     slotEl.querySelector(".slot-key").textContent = sw.key || "";
     if (m.iconPreview) {
       iconWrap.innerHTML = "";
@@ -2740,7 +2748,7 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior", "removeKeys", "showKeyHint"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior", "removeKeys", "showKeyHint", "hideUploadLabel"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
@@ -2841,6 +2849,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
+    if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
       state.panelImageRgba = null;
