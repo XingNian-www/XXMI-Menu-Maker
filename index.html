@@ -976,7 +976,8 @@ function hash64(s) {
   return h.toString(36);
 }
 
-async function saveDraft() {
+// 即时保存草稿元数据（localStorage，不含大图）
+function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
@@ -985,7 +986,6 @@ async function saveDraft() {
   }
   ui.removeKeys = $("removeKeys").checked;
 
-  // 元数据（不含大图）存 localStorage
   const entry = {
     h, n: state.fileName, t: Date.now(),
     order: state.swapOrder,
@@ -998,26 +998,35 @@ async function saveDraft() {
   try { drafts = JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); } catch (e) {}
   drafts = drafts.filter(d => d.h !== h);
   drafts.push(entry);
-  // 超出上限时，先删 IndexedDB 再清理 localStorage，防止孤立数据
   if (drafts.length > MAX_DRAFTS) {
+    // 超出上限：只清 localStorage 列表，IndexedDB 交由 flushDraftBlobs 异步清理
     const removed = drafts.splice(0, drafts.length - MAX_DRAFTS);
-    for (const r of removed) { await dbDel(r.h); }
+    for (const r of removed) { dbDel(r.h); }
   }
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
 
-  // 大图数据存 IndexedDB
-  const iconPreviews = state.slotMeta.map(m => m.iconPreview || null);
-  const hasBlobs = state.panelImagePreview || iconPreviews.some(p => p) || state.text;
-  if (hasBlobs) {
-    await dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
-  }
-
-  // 按文件 hash 持久化 swapOrder（独立于全局配置）
+  // 按文件 hash 持久化 swapOrder
   try {
     const orderMap = JSON.parse(localStorage.getItem("keyswap-gui-order-v1") || "{}");
     orderMap[h] = state.swapOrder;
     localStorage.setItem("keyswap-gui-order-v1", JSON.stringify(orderMap));
   } catch (e) {}
+}
+
+// 延迟保存大图数据（IndexedDB，较慢，加防抖）
+async function flushDraftBlobs() {
+  if (!state.swaps.length) return;
+  const h = hash64(state.text);
+  const iconPreviews = state.slotMeta.map(m => m.iconPreview || null);
+  const hasBlobs = state.panelImagePreview || iconPreviews.some(p => p) || state.text;
+  if (hasBlobs) {
+    await dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
+  }
+}
+
+async function saveDraft() {
+  flushDraftMeta();
+  await flushDraftBlobs();
 }
 
 async function loadDraft() {
@@ -2225,11 +2234,12 @@ let _draftTimer = 0;
 function rerender() {
   saveSettings();
   updateStatus();
+  flushDraftMeta();
   renderPreview();
   renderIniView();
-  // 防抖 saveDraft（频繁操作时延迟写 IndexedDB）
+  // 防抖：大图数据写入 IndexedDB（较慢）
   clearTimeout(_draftTimer);
-  _draftTimer = setTimeout(() => saveDraft(), 400);
+  _draftTimer = setTimeout(() => flushDraftBlobs(), 400);
 }
 
 /* ============================================================
