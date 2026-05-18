@@ -827,6 +827,31 @@
   </div>
 </div>
 
+<!-- ============ IMAGE CROPPER ============ -->
+<div class="modal" id="imgCropper">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <strong id="cropTitle">裁剪图片</strong>
+      <button class="icon-btn" id="cropClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <div style="position:relative;width:100%;aspect-ratio:1;max-height:380px;background:var(--bg-2);border-radius:8px;overflow:hidden;cursor:grab" id="cropArea">
+        <canvas id="cropCanvas" style="position:absolute;top:0;left:0"></canvas>
+        <div id="cropOverlay" style="position:absolute;inset:0;pointer-events:none">
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
+          <div id="cropBox" style="position:absolute;box-shadow:0 0 0 2px var(--hot),0 0 0 9999px rgba(0,0,0,.55);border-radius:2px"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn ghost" id="cropCancel">取消</button>
+        <button class="btn" id="cropConfirm">确认裁剪</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- 右键菜单 -->
@@ -1543,6 +1568,135 @@ async function fileToRgba(file, size = 64) {
     // FileReader 不需要 revoke
   }
 }
+
+/* ---------- 图片裁剪弹窗 ---------- */
+
+let _cropResolve = null;
+
+const cropState = {
+  img: null,        // Image 对象
+  areaW: 0, areaH: 0,  // 裁剪区域的像素尺寸
+  boxSize: 0,       // 裁剪框边长（始终 1:1）
+  offsetX: 0, offsetY: 0,  // 图片在 canvas 上的偏移
+  imgW: 0, imgH: 0, // 图片在 canvas 上的绘制尺寸
+  dragX: 0, dragY: 0, dragging: false,
+};
+
+function cropCanvas() {
+  const c = $("cropCanvas");
+  const ctx = c.getContext("2d");
+  const s = cropState;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(s.img, s.offsetX, s.offsetY, s.imgW, s.imgH);
+
+  // 裁剪框位置 = 居中
+  const bx = (c.width - s.boxSize) / 2;
+  const by = (c.height - s.boxSize) / 2;
+  const box = $("cropBox");
+  box.style.left = bx + "px";
+  box.style.top = by + "px";
+  box.style.width = s.boxSize + "px";
+  box.style.height = s.boxSize + "px";
+}
+
+function openCropper(file, opts = {}) {
+  const { size = 64, title = "裁剪图片 (1:1)" } = opts;
+  cropState.targetSize = size;
+  return new Promise((resolve) => {
+    _cropResolve = resolve;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const img = new Image();
+      img.onload = () => {
+        cropState.img = img;
+        const area = $("cropArea");
+        const areaW = area.clientWidth;
+        const areaH = area.clientHeight;
+        cropState.areaW = areaW; cropState.areaH = areaH;
+
+        // 图片等比缩放适配区域
+        const scale = Math.min(areaW / img.width, areaH / img.height);
+        cropState.imgW = img.width * scale;
+        cropState.imgH = img.height * scale;
+        cropState.offsetX = (areaW - cropState.imgW) / 2;
+        cropState.offsetY = (areaH - cropState.imgH) / 2;
+        // 裁剪框大小 = 图片短边（保证在图片范围内）
+        cropState.boxSize = Math.min(cropState.imgW, cropState.imgH);
+
+        const c = $("cropCanvas");
+        c.width = areaW; c.height = areaH;
+        cropCanvas();
+
+        $("cropTitle").textContent = title;
+        $("imgCropper").classList.add("show");
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+    $("cropCancel").onclick = () => { $("imgCropper").classList.remove("show"); _cropResolve(null); };
+  });
+}
+
+function doCrop() {
+  const s = cropState;
+  const c = $("cropCanvas");
+  const boxSize = s.boxSize;
+  const bx = (c.width - boxSize) / 2;
+  const by = (c.height - boxSize) / 2;
+  const outSize = s.targetSize || 64;
+
+  const out = document.createElement("canvas");
+  out.width = outSize; out.height = outSize;
+  const octx = out.getContext("2d");
+
+  // 计算裁剪区域在原图上的坐标
+  const srcX = (bx - s.offsetX) / s.imgW * s.img.width;
+  const srcY = (by - s.offsetY) / s.imgH * s.img.height;
+  const srcW = boxSize / s.imgW * s.img.width;
+  const srcH = boxSize / s.imgH * s.img.height;
+
+  octx.drawImage(s.img, srcX, srcY, srcW, srcH, 0, 0, outSize, outSize);
+  const rgba = octx.getImageData(0, 0, outSize, outSize).data;
+
+  $("imgCropper").classList.remove("show");
+  _cropResolve(rgba);
+}
+
+// 裁剪框拖动
+function initCropDrag() {
+  const area = $("cropArea");
+  area.addEventListener("pointerdown", (e) => {
+    cropState.dragging = true;
+    cropState.dragX = e.clientX;
+    cropState.dragY = e.clientY;
+    area.setPointerCapture(e.pointerId);
+  });
+  area.addEventListener("pointermove", (e) => {
+    if (!cropState.dragging) return;
+    const dx = e.clientX - cropState.dragX;
+    const dy = e.clientY - cropState.dragY;
+    cropState.dragX = e.clientX;
+    cropState.dragY = e.clientY;
+    // 移动图片位置（保持在区域内）
+    const s = cropState;
+    s.offsetX += dx;
+    s.offsetY += dy;
+    // 限制：裁剪框必须在图片范围内
+    const bx = (s.areaW - s.boxSize) / 2;
+    const by = (s.areaH - s.boxSize) / 2;
+    s.offsetX = Math.min(bx, Math.max(bx + s.boxSize - s.imgW, s.offsetX));
+    s.offsetY = Math.min(by, Math.max(by + s.boxSize - s.imgH, s.offsetY));
+    cropCanvas();
+  });
+  area.addEventListener("pointerup", () => { cropState.dragging = false; });
+  area.addEventListener("pointerleave", () => { cropState.dragging = false; });
+}
+
+$("cropClose").addEventListener("click", () => { $("imgCropper").classList.remove("show"); _cropResolve(null); });
+$("imgCropper").addEventListener("click", (e) => { if (e.target === $("imgCropper")) { $("imgCropper").classList.remove("show"); _cropResolve(null); } });
+$("cropConfirm").addEventListener("click", () => doCrop());
+initCropDrag();
 
 /* ============================================================
  * 6. ZIP 打包（store 模式，无压缩）
@@ -2702,7 +2856,8 @@ $("btnPanelImage").addEventListener("click", () => {
     const file = input.files[0];
     if (!file) return;
     try {
-      const rgba = await fileToRgba(file, 256);
+      const rgba = await openCropper(file, { size: 256, title: "裁剪面板背景 (1:1)" });
+      if (!rgba) return;
       state.panelImageRgba = rgba;
       const c = document.createElement("canvas");
       c.width = 256; c.height = 256;
@@ -2768,7 +2923,8 @@ $("swapList").addEventListener("click", async e => {
         const file = input.files[0];
         if (!file) return;
         try {
-          const rgba = await fileToRgba(file, 64);
+          const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
+          if (!rgba) return;
           m.iconRgba = rgba;
           m.iconKind = "upload";
           // 预览 dataURL
@@ -3101,7 +3257,8 @@ $("ctxMenu").addEventListener("click", async e => {
         const file = input.files[0];
         if (!file) return;
         try {
-          const rgba = await fileToRgba(file, 64);
+          const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
+          if (!rgba) return;
           m.iconRgba = rgba;
           m.iconKind = "upload";
           const c = document.createElement("canvas");
