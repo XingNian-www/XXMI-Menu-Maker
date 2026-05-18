@@ -327,7 +327,7 @@
     height: 64px;
     border: 3px solid #fff;
     border-radius: 9px;
-    background: rgba(40, 40, 44, .6);
+    background: rgba(60, 60, 70, .78);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -339,9 +339,10 @@
   .gui-slot.skip { opacity: .25; border-style: dashed; }
   .gui-slot .slot-icon { line-height: 0; }
   .gui-slot svg { width: 28px; height: 28px; color: white; }
-  .gui-slot img { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+  .gui-slot img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
   .gui-slot .slot-label {
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 700;
     color: #ccc;
     line-height: 1;
     text-align: center;
@@ -720,6 +721,7 @@
         </div>
       </div>
       <label class="check"><input id="removeKeys" type="checkbox" checked> 删除原 [Key*] 节</label>
+      <label class="check" style="margin-left:18px"><input id="showKeyHint" type="checkbox" checked> 按钮显示按键提示</label>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
 
@@ -881,6 +883,7 @@ function loadSettings() {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
+    if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
   } catch (e) {}
 }
 function saveSettings() {
@@ -889,6 +892,7 @@ function saveSettings() {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
+  s.showKeyHint = $("showKeyHint").checked;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
@@ -985,6 +989,7 @@ function flushDraftMeta() {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
+  ui.showKeyHint = $("showKeyHint").checked;
 
   const entry = {
     h, n: state.fileName, t: Date.now(),
@@ -1050,6 +1055,7 @@ async function loadDraft() {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+    if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
 
     // 从 IndexedDB 恢复大图
     const blob = await dbGet(h);
@@ -1331,7 +1337,7 @@ function solidRgba(width, height, [r, g, b, a]) {
 // XXMI 不支持独立文字渲染，所有内容必须画在图片中
 async function renderSlotRgba({ fill, border = [255,255,255,255],
                                  iconSvg = null, iconRgba = null, iconRgbaSize = 64,
-                                 label = "" }) {
+                                 label = "", keyHint = "" }) {
   const size = 64, bw = 3, r = 9;
   const canvas = document.createElement("canvas");
   canvas.width = size; canvas.height = size;
@@ -1400,6 +1406,15 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
       displayLabel += "…";
     }
     ctx.fillText(displayLabel, cx + cw / 2, cy + cw - 12);
+  }
+
+  // 按键提示：右下角小字（与原 Key 节并存时有用）
+  if (keyHint) {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = "bold 8px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(keyHint, cx + cw - 2, cy + cw - 2);
   }
 
   ctx.restore();
@@ -2029,6 +2044,9 @@ async function buildResources() {
     }
 
     const baseOpts = { border: [255, 255, 255, 255], iconRgba, iconSvg, label };
+    if ($("showKeyHint").checked && swaps[sIdx].key) {
+      baseOpts.keyHint = swaps[sIdx].key;
+    }
 
     const slotRgba = await renderSlotRgba({ ...baseOpts, fill: slotFill });
     const hoverRgba = await renderSlotRgba({ ...baseOpts, fill: hoverFill });
@@ -2177,9 +2195,10 @@ async function renderPreview() {
   grid.style.gap = `${gap}px`;
   grid.classList.toggle("merge-mode-on", state.mergeMode);
 
+  const showKey = $("showKeyHint").checked;
   const active = state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
   grid.innerHTML = active.map(i =>
-    `<div class="gui-slot" data-pre="${i}" draggable="true"><input type="checkbox" class="slot-check" data-mcheck="${i}"><span class="slot-icon"></span><span class="slot-label">${h(state.slotMeta[i].name)}</span><span class="slot-key"></span></div>`
+    `<div class="gui-slot" data-pre="${i}" draggable="true"><input type="checkbox" class="slot-check" data-mcheck="${i}"><span class="slot-icon"></span><span class="slot-label">${h(state.slotMeta[i].name)}</span><span class="slot-key"${showKey ? "" : " hidden"}></span></div>`
   ).join("");
 
   for (const i of active) {
@@ -2473,7 +2492,7 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior", "removeKeys"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior", "removeKeys", "showKeyHint"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
@@ -2572,7 +2591,8 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
-      if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+    if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+    if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
       state.panelImageRgba = null;
