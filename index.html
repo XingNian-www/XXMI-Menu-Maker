@@ -731,9 +731,11 @@
           <input id="activeVar" value="$active" placeholder="$active">
         </div>
       </div>
-      <label class="check"><input id="removeKeys" type="checkbox" checked> 删除原 [Key*] 节</label>
-      <label class="check" style="margin-left:18px"><input id="showKeyHint" type="checkbox" checked> 按钮显示按键提示</label>
-      <label class="check" style="margin-left:18px"><input id="hideUploadLabel" type="checkbox" checked> 上传图片不显示变量名</label>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:2px">
+        <label class="check" title="勾选后从生成 INI 中删除原文件的 [Key*] 节"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
+        <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
+        <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
+      </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
 
@@ -1038,12 +1040,14 @@ function flushDraftMeta() {
   try { drafts = JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); } catch (e) {}
   drafts = drafts.filter(d => d.h !== h);
   drafts.push(entry);
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
+  // 超出上限：先持久化列表，再异步清理 IndexedDB
   if (drafts.length > MAX_DRAFTS) {
-    // 超出上限：只清 localStorage 列表，IndexedDB 交由 flushDraftBlobs 异步清理
     const removed = drafts.splice(0, drafts.length - MAX_DRAFTS);
+    // 列表已持久化，重新写入以反映 splice 后的结果
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) {}
     for (const r of removed) { dbDel(r.h); }
   }
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
 }
 
 // 延迟保存大图数据（IndexedDB，较慢，加防抖）
@@ -2456,7 +2460,7 @@ async function renderPreview() {
   const showKey = $("showKeyHint").checked;
   const active = state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
   grid.innerHTML = active.map(i =>
-    `<div class="gui-slot" data-pre="${i}" draggable="true"><input type="checkbox" class="slot-check" data-mcheck="${i}"><span class="slot-icon"></span><span class="slot-label">${h(state.slotMeta[i].name)}</span><span class="slot-key"${showKey ? "" : " hidden"}></span></div>`
+    `<div class="gui-slot" data-pre="${i}" draggable="true"><input type="checkbox" class="slot-check" data-mcheck="${i}"><span class="slot-icon"></span><span class="slot-label">${escapeHtml(state.slotMeta[i].name)}</span><span class="slot-key"${showKey ? "" : " hidden"}></span></div>`
   ).join("");
 
   for (const i of active) {
@@ -2761,12 +2765,15 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior", "removeKeys", "showKeyHint", "hideUploadLabel"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
     rerender();
   });
+});
+["removeKeys", "showKeyHint", "hideUploadLabel"].forEach(id => {
+  $(id).addEventListener("change", () => { rerender(); });
 });
 
 // 清除全部暂存
@@ -2902,7 +2909,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       updateStatus();
       renderSwapList();
       rerender();
-      saveDraft();
+      await saveDraft();
       toast("已恢复暂存", "ok");
     } catch (e) { toast("恢复失败", "err"); }
   }
