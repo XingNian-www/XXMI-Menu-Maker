@@ -337,10 +337,20 @@
     padding: 2px;
   }
   .gui-slot.skip { opacity: .25; border-style: dashed; }
-  .gui-slot .slot-icon { line-height: 0; }
+  .gui-slot .slot-icon { position: relative; z-index: 1; line-height: 0; }
   .gui-slot svg { width: 28px; height: 28px; color: white; }
-  .gui-slot img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
+  .gui-slot .slot-img-bg {
+    position: absolute;
+    inset: 3px;
+    border-radius: 6px;
+    object-fit: cover;
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
+    z-index: 0;
+  }
   .gui-slot .slot-label {
+    position: relative;
+    z-index: 1;
     font-size: 11px;
     font-weight: 700;
     color: #ccc;
@@ -353,6 +363,7 @@
   }
   .gui-slot .slot-key {
     position: absolute;
+    z-index: 1;
     bottom: 1px;
     right: 3px;
     font-size: 8px;
@@ -1335,6 +1346,20 @@ function solidRgba(width, height, [r, g, b, a]) {
 
 // 将图标 + 文字合成到圆角矩形 + 白色边框的 slot 图片上
 // XXMI 不支持独立文字渲染，所有内容必须画在图片中
+
+// DOM 文字测量（与预览 CSS 完全对齐）
+let _measureEl = null;
+function measureTextWidth(text, font) {
+  if (!_measureEl) {
+    _measureEl = document.createElement("span");
+    _measureEl.style.cssText = "position:fixed;visibility:hidden;white-space:nowrap;pointer-events:none;left:-9999px;top:-9999px";
+    document.body.appendChild(_measureEl);
+  }
+  _measureEl.style.font = font;
+  _measureEl.textContent = text;
+  return _measureEl.getBoundingClientRect().width;
+}
+
 async function renderSlotRgba({ fill, border = [255,255,255,255],
                                  iconSvg = null, iconRgba = null, iconRgbaSize = 64,
                                  label = "", keyHint = "" }) {
@@ -1343,11 +1368,50 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext("2d");
 
-  // 圆角矩形填充背景
-  ctx.beginPath();
-  ctx.roundRect(bw, bw, size - bw * 2, size - bw * 2, r);
-  ctx.fillStyle = `rgba(${fill.join(",")})`;
-  ctx.fill();
+  const cx = bw, cy = bw, cw = size - bw * 2; // 58x58 内容区
+
+  if (iconRgba) {
+    // 上传图片模式：图片铺满内容区作为背景
+    const c2 = document.createElement("canvas");
+    c2.width = iconRgbaSize; c2.height = iconRgbaSize;
+    c2.getContext("2d").putImageData(new ImageData(iconRgba, iconRgbaSize, iconRgbaSize), 0, 0);
+
+    // 先画圆角矩形图片背景
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(bw, bw, cw, cw, r);
+    ctx.clip();
+    ctx.drawImage(c2, 0, 0, size, size);
+    ctx.restore();
+  } else {
+    // Lucide 图标模式：纯色背景 + 居中图标
+    ctx.beginPath();
+    ctx.roundRect(bw, bw, cw, cw, r);
+    ctx.fillStyle = `rgba(${fill.join(",")})`;
+    ctx.fill();
+
+    // 图标：28x28 靠上居中
+    const iconW = 28, iconH = 28;
+    const iconX = cx + (cw - iconW) / 2;
+    const iconY = cy + 5;
+
+    if (iconSvg) {
+      try {
+        let svg = iconSvg;
+        if (!svg.includes("xmlns")) {
+          svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        const url = "data:image/svg+xml," + encodeURIComponent(svg);
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        ctx.drawImage(img, iconX, iconY, iconW, iconH);
+      } catch (e) { /* SVG 加载失败不渲染图标 */ }
+    }
+  }
 
   // 白色边框
   ctx.beginPath();
@@ -1356,64 +1420,49 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
   ctx.lineWidth = bw;
   ctx.stroke();
 
-  // 裁剪到内容区（边框内部）
+  // 裁剪到内容区，绘制文字
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(bw, bw, size - bw * 2, size - bw * 2, r);
+  ctx.roundRect(bw, bw, cw, cw, r);
   ctx.clip();
 
-  const cx = bw, cy = bw, cw = size - bw * 2; // 58x58 内容区
-
-  // 图标：28x28 靠上居中
-  const iconW = 28, iconH = 28;
-  const iconX = cx + (cw - iconW) / 2;
-  const iconY = cy + 5;
-
-  if (iconRgba) {
-    const c2 = document.createElement("canvas");
-    c2.width = iconRgbaSize; c2.height = iconRgbaSize;
-    c2.getContext("2d").putImageData(new ImageData(iconRgba, iconRgbaSize, iconRgbaSize), 0, 0);
-    ctx.drawImage(c2, iconX, iconY, iconW, iconH);
-  } else if (iconSvg) {
-    try {
-      let svg = iconSvg;
-      if (!svg.includes("xmlns")) {
-        svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
-      }
-      const url = "data:image/svg+xml," + encodeURIComponent(svg);
-      const img = await new Promise((res, rej) => {
-        const im = new Image();
-        im.onload = () => res(im);
-        im.onerror = rej;
-        im.src = url;
-      });
-      ctx.drawImage(img, iconX, iconY, iconW, iconH);
-    } catch (e) { /* SVG 加载失败不渲染图标 */ }
-  }
-
   // 文字标签：底部居中，单行截断
+  const labelFont = "bold 11px system-ui, -apple-system, sans-serif";
   if (label) {
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+    ctx.font = labelFont;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     let displayLabel = label;
     const maxW = cw - 4;
-    if (ctx.measureText(displayLabel).width > maxW) {
-      while (ctx.measureText(displayLabel + "…").width > maxW && displayLabel.length > 1) {
+    if (measureTextWidth(displayLabel, labelFont) > maxW) {
+      while (measureTextWidth(displayLabel + "…", labelFont) > maxW && displayLabel.length > 1) {
         displayLabel = displayLabel.slice(0, -1);
       }
       displayLabel += "…";
     }
-    ctx.fillText(displayLabel, cx + cw / 2, cy + cw - 12);
+    // 上传图片模式下加半透明底条保证文字可读
+    if (iconRgba) {
+      const labelY = cy + cw - 14;
+      const tw = measureTextWidth(displayLabel, labelFont);
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(cx + (cw - tw) / 2 - 4, labelY - 8, tw + 8, 16);
+    }
+    ctx.fillStyle = iconRgba ? "#ffffff" : "#cccccc";
+    ctx.fillText(displayLabel, cx + cw / 2, cy + cw - 13);
   }
 
   // 按键提示：右下角小字（与原 Key 节并存时有用）
   if (keyHint) {
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "bold 8px system-ui, -apple-system, sans-serif";
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
+    // 上传图片模式下加半透明底保证可读
+    if (iconRgba) {
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      const kw = measureTextWidth(keyHint, "bold 8px system-ui, -apple-system, sans-serif");
+      ctx.fillRect(cx + cw - kw - 4, cy + cw - 14, kw + 4, 14);
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.fillText(keyHint, cx + cw - 2, cy + cw - 2);
   }
 
@@ -2211,8 +2260,14 @@ async function renderPreview() {
     labelEl.textContent = m.name || "";
     slotEl.querySelector(".slot-key").textContent = sw.key || "";
     if (m.iconPreview) {
-      iconWrap.innerHTML = `<img src="${m.iconPreview}">`;
+      iconWrap.innerHTML = "";
+      slotEl.style.backgroundImage = `url(${m.iconPreview})`;
+      slotEl.style.backgroundSize = "cover";
+      slotEl.style.backgroundPosition = "center";
     } else {
+      slotEl.style.backgroundImage = "";
+      slotEl.style.backgroundSize = "";
+      slotEl.style.backgroundPosition = "";
       const svg = await loadLucideSvg(m.iconName);
       iconWrap.innerHTML = svg ? colorizeSvg(svg, m.iconColor) : "";
     }
