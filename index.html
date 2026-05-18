@@ -1663,7 +1663,7 @@ function doCrop() {
   _cropResolve(rgba);
 }
 
-// 裁剪框拖动
+// 裁剪框拖动 + 滚轮缩放
 function initCropDrag() {
   const area = $("cropArea");
   area.addEventListener("pointerdown", (e) => {
@@ -1682,15 +1682,54 @@ function initCropDrag() {
     const s = cropState;
     s.offsetX += dx;
     s.offsetY += dy;
-    // 限制：裁剪框必须在图片范围内
-    const bx = (s.areaW - s.boxSize) / 2;
-    const by = (s.areaH - s.boxSize) / 2;
-    s.offsetX = Math.min(bx, Math.max(bx + s.boxSize - s.imgW, s.offsetX));
-    s.offsetY = Math.min(by, Math.max(by + s.boxSize - s.imgH, s.offsetY));
+    clampOffset();
     cropCanvas();
   });
   area.addEventListener("pointerup", () => { cropState.dragging = false; });
   area.addEventListener("pointerleave", () => { cropState.dragging = false; });
+
+  // 滚轮缩放
+  area.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const s = cropState;
+    if (!s.img) return;
+
+    // 光标在裁剪区域内的位置
+    const rect = area.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // 光标对应的图片坐标系位置（缩放前）
+    const imgX = (mx - s.offsetX) / s.imgW * s.img.width;
+    const imgY = (my - s.offsetY) / s.imgH * s.img.height;
+
+    // 缩放因子
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const newImgW = s.imgW * factor;
+    const newImgH = s.imgH * factor;
+
+    // 限制：图片短边不能小于裁剪框
+    const minDim = s.boxSize;
+    if (Math.min(newImgW, newImgH) < minDim) return;
+
+    s.imgW = newImgW;
+    s.imgH = newImgH;
+
+    // 保持光标指向的图片点不动
+    s.offsetX = mx - imgX / s.img.width * s.imgW;
+    s.offsetY = my - imgY / s.img.height * s.imgH;
+    clampOffset();
+
+    cropCanvas();
+  }, { passive: false });
+}
+
+function clampOffset() {
+  const s = cropState;
+  const bx = (s.areaW - s.boxSize) / 2;
+  const by = (s.areaH - s.boxSize) / 2;
+  s.offsetX = Math.min(bx, Math.max(bx + s.boxSize - s.imgW, s.offsetX));
+  s.offsetY = Math.min(by, Math.max(by + s.boxSize - s.imgH, s.offsetY));
 }
 
 $("cropClose").addEventListener("click", () => { $("imgCropper").classList.remove("show"); _cropResolve(null); });
