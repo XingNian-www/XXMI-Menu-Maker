@@ -1004,13 +1004,6 @@ function flushDraftMeta() {
     for (const r of removed) { dbDel(r.h); }
   }
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch (e) { return; }
-
-  // 按文件 hash 持久化 swapOrder
-  try {
-    const orderMap = JSON.parse(localStorage.getItem("keyswap-gui-order-v1") || "{}");
-    orderMap[h] = state.swapOrder;
-    localStorage.setItem("keyswap-gui-order-v1", JSON.stringify(orderMap));
-  } catch (e) {}
 }
 
 // 延迟保存大图数据（IndexedDB，较慢，加防抖）
@@ -1038,35 +1031,50 @@ async function loadDraft() {
     const drafts = JSON.parse(raw);
     const d = drafts.find(d => d.h === h);
     if (!d) return false;
+
+    // 校验 meta 和 order 签名：必须全部匹配才恢复
+    let metaOk = false, orderOk = false;
+    if (d.meta && d.meta.length === state.slotMeta.length) {
+      metaOk = true;
+    }
+    if (d.order && d.order.length === state.swaps.length) {
+      const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
+      orderOk = d.order.every(sig => sigSet.has(JSON.stringify(sig)));
+    }
+
+    if (!metaOk && !orderOk) return false; // 都不匹配，完全放弃
+
+    // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
     for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+
     // 从 IndexedDB 恢复大图
     const blob = await dbGet(h);
     state.panelImagePreview = blob?.img || null;
     state.panelImageRgba = null;
-    // 恢复 swapOrder + slotMeta（先签名校验，确保对应同一组 swap）
-    if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
-      // 校验 order 签名与当前 swaps 匹配
-      const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
-      const orderValid = d.order.length === state.swaps.length &&
-        d.order.every(sig => sigSet.has(JSON.stringify(sig)));
-      if (!orderValid) return false;
+
+    // 恢复排序（先排后覆：重排 swaps/slotMeta 后再恢复 meta）
+    if (orderOk) {
       state.swapOrder = d.order;
       saveSettings();
       restoreSwapOrder();
+    }
+
+    // 恢复 meta（名称/图标/跳过）——必须在排序之后
+    if (metaOk) {
       for (let i = 0; i < d.meta.length; i++) {
         Object.assign(state.slotMeta[i], d.meta[i]);
       }
-      // 恢复图标预览
       if (blob?.iconPreviews) {
         for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
           if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
         }
       }
     }
+
     toast("已恢复上次暂存", "ok");
     return true;
   } catch (e) { /* ignore */ }
@@ -2308,27 +2316,23 @@ function hideHoverInfo() {
 
 function restoreSwapOrder() {
   try {
-    const h = hash64(state.text);
-    const orderMap = JSON.parse(localStorage.getItem("keyswap-gui-order-v1") || "{}");
-    const swapOrder = orderMap[h];
+    const swapOrder = state.swapOrder;
     if (!swapOrder || !Array.isArray(swapOrder)) return;
     if (swapOrder.length !== state.swaps.length) return;
 
-    // 签名为 key → 当前 swaps 索引
     const sigIdx = new Map();
     state.swaps.forEach((sw, i) => { sigIdx.set(JSON.stringify(swapSign(sw)), i); });
 
     const newOrder = [];
     for (const sig of swapOrder) {
       const idx = sigIdx.get(JSON.stringify(sig));
-      if (idx === undefined) return; // 签名不匹配，不还原
+      if (idx === undefined) return;
       newOrder.push(idx);
     }
     if (newOrder.length !== state.swaps.length) return;
 
     state.swaps = newOrder.map(i => state.swaps[i]);
     state.slotMeta = newOrder.map(i => state.slotMeta[i]);
-    state.swapOrder = swapOrder;
   } catch (e) { /* ignore */ }
 }
 
@@ -2348,7 +2352,6 @@ async function loadFile(file) {
 
   // 尝试恢复草稿（含排序和元信息）
   const hasDraft = await loadDraft();
-  if (!hasDraft) restoreSwapOrder();
 
   // 自动检测 MOD 使用的 $active* 变量
   let hasPlainActive = false;
@@ -2481,7 +2484,6 @@ drop.addEventListener("drop", e => {
 // 清除全部暂存
 $("btnClearDrafts").addEventListener("click", () => {
   localStorage.removeItem(DRAFT_KEY);
-  localStorage.removeItem("keyswap-gui-order-v1");
   dbClear();
   toast("全部暂存已清除", "ok");
 });
@@ -2584,22 +2586,22 @@ $("draftHistoryList").addEventListener("click", async (e) => {
           $("btnClearPanelImage").style.display = "none";
         }
       }
-      // 恢复排序和元信息（先签名校验）
-      if (d.order && d.meta && d.meta.length === state.slotMeta.length) {
+      // 恢复排序（先排后覆）
+      if (d.order && d.order.length === state.swaps.length) {
         const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
-        const orderValid = d.order.length === state.swaps.length &&
-          d.order.every(sig => sigSet.has(JSON.stringify(sig)));
-        if (orderValid) {
+        if (d.order.every(sig => sigSet.has(JSON.stringify(sig)))) {
           state.swapOrder = d.order;
-          saveSettings();
           restoreSwapOrder();
-          for (let i = 0; i < d.meta.length; i++) {
-            Object.assign(state.slotMeta[i], d.meta[i]);
-          }
-          if (blob.iconPreviews) {
-            for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
-              if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
-            }
+        }
+      }
+      // 恢复 meta（名称/图标/跳过）
+      if (d.meta && d.meta.length === state.slotMeta.length) {
+        for (let i = 0; i < d.meta.length; i++) {
+          Object.assign(state.slotMeta[i], d.meta[i]);
+        }
+        if (blob.iconPreviews) {
+          for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
+            if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
           }
         }
       }
