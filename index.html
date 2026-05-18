@@ -840,8 +840,7 @@
       <div style="position:relative;width:100%;aspect-ratio:1;max-height:380px;background:var(--bg-2);border-radius:8px;overflow:hidden;cursor:grab" id="cropArea">
         <canvas id="cropCanvas" style="position:absolute;top:0;left:0"></canvas>
         <div id="cropOverlay" style="position:absolute;inset:0;pointer-events:none">
-          <div style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
-          <div id="cropBox" style="position:absolute;box-shadow:0 0 0 2px var(--hot),0 0 0 9999px rgba(0,0,0,.55);border-radius:2px"></div>
+          <div id="cropBox" style="position:absolute;outline:2px solid var(--hot);box-shadow:0 0 0 9999px rgba(0,0,0,.55)"></div>
         </div>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -1610,26 +1609,27 @@ function openCropper(file, opts = {}) {
       const img = new Image();
       img.onload = () => {
         cropState.img = img;
-        const area = $("cropArea");
-        const areaW = area.clientWidth;
-        const areaH = area.clientHeight;
-        cropState.areaW = areaW; cropState.areaH = areaH;
-
-        // 图片等比缩放适配区域
-        const scale = Math.min(areaW / img.width, areaH / img.height);
-        cropState.imgW = img.width * scale;
-        cropState.imgH = img.height * scale;
-        cropState.offsetX = (areaW - cropState.imgW) / 2;
-        cropState.offsetY = (areaH - cropState.imgH) / 2;
-        // 裁剪框大小 = 图片短边（保证在图片范围内）
-        cropState.boxSize = Math.min(cropState.imgW, cropState.imgH);
-
-        const c = $("cropCanvas");
-        c.width = areaW; c.height = areaH;
-        cropCanvas();
-
         $("cropTitle").textContent = title;
         $("imgCropper").classList.add("show");
+        // 弹窗显示后再读取尺寸和渲染
+        requestAnimationFrame(() => {
+          const area = $("cropArea");
+          const areaW = area.clientWidth;
+          const areaH = area.clientHeight;
+          if (!areaW || !areaH) return;
+          cropState.areaW = areaW; cropState.areaH = areaH;
+
+          const scale = Math.min(areaW / img.width, areaH / img.height);
+          cropState.imgW = img.width * scale;
+          cropState.imgH = img.height * scale;
+          cropState.offsetX = (areaW - cropState.imgW) / 2;
+          cropState.offsetY = (areaH - cropState.imgH) / 2;
+          cropState.boxSize = Math.min(cropState.imgW, cropState.imgH);
+
+          const c = $("cropCanvas");
+          c.width = areaW; c.height = areaH;
+          cropCanvas();
+        });
       };
       img.src = reader.result;
     };
