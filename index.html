@@ -2199,9 +2199,32 @@ function renderIniView() {
   $("viewIni").innerHTML = html;
 }
 
+function activeSwapCount() {
+  return state.swaps.filter((_, i) => !state.slotMeta[i]?.skip).length;
+}
+
+function updateStatus() {
+  const total = state.swaps.length;
+  const active = activeSwapCount();
+  const hasActive = active > 0;
+  $("btnZip").disabled = !hasActive;
+  $("btnIni").disabled = !hasActive;
+  if (!total) {
+    $("status").className = "status";
+    $("status").textContent = "等待 ini";
+  } else if (!hasActive) {
+    $("status").className = "status err";
+    $("status").textContent = `共 ${total} 组，但全部已跳过`;
+  } else {
+    $("status").className = "status ok";
+    $("status").textContent = `共 ${total} 组，${active} 个活跃`;
+  }
+}
+
 let _draftTimer = 0;
 function rerender() {
   saveSettings();
+  updateStatus();
   renderPreview();
   renderIniView();
   // 防抖 saveDraft（频繁操作时延迟写 IndexedDB）
@@ -2346,18 +2369,12 @@ async function loadFile(file) {
   }
 
   $("fileInfo").textContent = `${file.name} · 找到 ${state.swaps.length} 个 [Key*]`;
-  $("btnZip").disabled = state.swaps.length === 0;
-  $("btnIni").disabled = state.swaps.length === 0;
+  updateStatus();
 
   if (state.swaps.length) {
-    $("status").className = "status ok";
-    $("status").textContent = `读取成功，共 ${state.swaps.length} 组按键切换`;
     if (!$("title").dataset.touched && !hasDraft) {
       $("title").value = file.name.replace(/\.[^.]+$/, "");
     }
-  } else {
-    $("status").className = "status err";
-    $("status").textContent = "没找到 [Key*] 节，检查文件";
   }
 
   renderSwapList();
@@ -2580,12 +2597,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       $("title").dataset.touched = "1";
       colsManual = true;
       $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 [Key*]`;
-      $("btnZip").disabled = state.swaps.length === 0;
-      $("btnIni").disabled = state.swaps.length === 0;
-      if (state.swaps.length) {
-        $("status").className = "status ok";
-        $("status").textContent = `已恢复，共 ${state.swaps.length} 组按键切换`;
-      }
+      updateStatus();
       renderSwapList();
       rerender();
       saveDraft();
