@@ -37,7 +37,7 @@ JavaScript 业务逻辑
 .app
 ├─ .panel-left          左侧配置区
 │  ├─ ini 文件选择
-│  ├─ 面板配置（含面板背景图上传）
+│  ├─ 面板配置（含调色入口和面板背景图上传）
 │  ├─ 行为配置
 │  ├─ 按钮列表
 │  └─ 下载按钮
@@ -46,6 +46,8 @@ JavaScript 业务逻辑
 │  └─ .ini-view         生成的 INI 预览
 ├─ #iconPicker          Lucide 图标选择弹窗
 ├─ #ctxMenu             预览按钮右键菜单
+├─ #draftHistory        历史暂存弹窗
+├─ #imgCropper          图片裁剪弹窗
 ├─ #hoverInfo           面板按钮 hover 信息浮层
 └─ #toast               提示条
 ```
@@ -127,6 +129,9 @@ parseSwaps(sections)
 背景色
 强调色
 透明度
+调色面板：按钮底色、hover 色、面板边框、按钮边框、标题投影、预览背景
+预设配色 / 恢复默认配色
+禁用标题文字投影
 面板背景图
 点击行为
 是否删除原 [Key*] 节
@@ -136,13 +141,20 @@ parseSwaps(sections)
 右键菜单（预览面板按钮）
 ```
 
-配置会保存到 `localStorage`：
+基础配置会保存到 `localStorage`：
 
 ```js
 const SETTINGS_KEY = "keyswap-gui-settings-v1";
 ```
 
-注意：当前只持久化基础配置，不持久化用户上传的 ini、按钮图片、面板图片。
+当前文件相关草稿会保存到 `localStorage` + `IndexedDB`：
+
+```js
+const DRAFT_KEY = "keyswap-gui-drafts-v2";
+const DB_NAME = "KeySwapDrafts";
+```
+
+`localStorage` 存草稿元信息，`IndexedDB` 存原 ini 文本、面板图片和按钮上传图片。历史暂存弹窗只展示最近 30 次。
 
 ### 3.4 输出
 
@@ -413,7 +425,7 @@ data-act="upload"
 
 ```text
 选择图片
-→ fileToRgba(file, 64)
+→ openCropper(file, { size: 64 })
 → 保存到 slotMeta[index].iconRgba
 → 生成 data URL 存到 slotMeta[index].iconPreview
 → 刷新左侧缩略图和右侧面板预览
@@ -446,19 +458,39 @@ res_gui/icon_XX.png
 ### 7.1 资源尺寸
 
 | 资源 | 尺寸 | 说明 |
-|---|---|---|---:|---|
-| `bg.png` | `panelW × panelH` | 面板背景（圆角矩形 + 白边框），动态匹配面板尺寸 |
-| `title.png` | `(panelW-6)x48` | 标题文字图片（白色 + 强调色投影） |
-| `slot_##.png` | `64x64` | 普通按钮（圆角矩形边框 + 图标 + 文字） |
-| `slot_hover_##.png` | `64x64` | hover 按钮（同内容，背景变强调色） |
+|---|---|---|
+| `bg.png` | `panelW × panelH` | 面板背景（圆角矩形 + 可配置边框 + 顶部强调色边框），动态匹配面板尺寸 |
+| `title.png` | `(panelW-6)x48` | 标题文字图片（白色 + 可选投影，投影色可配置） |
+| `slot_##.png` | `64x64` | 普通按钮（可配置底色/边框 + 图标 + 文字） |
+| `slot_hover_##.png` | `64x64` | hover 按钮（同内容，背景使用 hover 色） |
 
 `panelW` 和 `panelH` 计算公式：`padding = 16`，`slotSize = 64`，`gap` 和 `cols` 由用户配置。`renderBgRgba` 接受 `(width, height, opts)` 参数化渲染。当用户上传面板图片时，图片会缩放到面板圆角矩形区域绘制。
 
+### 7.2 配色资源
+
+调色面板会影响网页预览和导出 PNG：
+
+```text
+bgColor / bgAlpha       → bg.png 面板填充
+accentColor             → bg.png 顶部边框
+panelBorderColor        → bg.png 外边框
+titleShadowColor        → title.png 标题投影
+disableTitleShadow      → title.png 是否绘制投影
+slotColor               → slot_##.png 背景
+hoverColor              → slot_hover_##.png 背景
+slotBorderColor         → slot_##.png / slot_hover_##.png 边框
+previewBg               → 仅影响网页预览背景，不导出
+```
+
+内置预设在 `PALETTE_PRESETS`，默认值在 `PALETTE_DEFAULT`。
+
 ### 7.3 图片缩放规则
 
-`fileToRgba(file, size)` 会等比缩放图片并居中绘制到正方形 canvas。
+`openCropper(file, opts)` 会打开 1:1 裁剪弹窗，确认后返回目标尺寸 RGBA。
 
-这意味着非正方形图片不会被拉伸，但边缘会留透明区域。
+`dataUrlToRgba(dataUrl, size)` 用于从草稿里的 data URL 恢复可导出的 RGBA。
+
+面板背景裁剪为 256×256，按钮图标裁剪为 64×64。导出时面板背景会缩放绘制到面板内容区。
 
 ## 8. ZIP 打包
 
@@ -772,6 +804,7 @@ renderPreview()
 
 ```text
 面板颜色
+面板边框 / 按钮底色 / hover 色 / 标题投影
 面板背景图
 标题
 列数
@@ -882,6 +915,30 @@ showHoverInfo(e, idx)
 hideHoverInfo()
 ```
 
+### 11.9 调色面板
+
+入口：
+
+```text
+#btnColorMode
+#paletteSection
+```
+
+主要函数：
+
+```js
+enterColorMode()
+exitColorMode()
+applyPalette(values)
+renderPalettePresets()
+updatePaletteSwatches()
+applyPreviewBg()
+```
+
+调色模式会隐藏左侧其他 section，只显示配色控制。预设按钮来自 `PALETTE_PRESETS`，恢复默认使用 `PALETTE_DEFAULT`。
+
+`disableTitleShadow` 是复选框，影响 `renderPreview()` 的 CSS 变量和 `renderTitleRgba()` 是否绘制投影。
+
 鼠标放到面板预览按钮上时，会显示：
 
 ```text
@@ -907,6 +964,13 @@ hideHoverInfo()
 | `#guiGrid` | `contextmenu` | 右键菜单 |
 | `#btnPanelImage` | `click` | 上传面板图片 |
 | `#btnClearPanelImage` | `click` | 清除面板图片 |
+| `#btnColorMode` | `click` | 进入调色模式 |
+| `#btnColorExit` | `click` | 退出调色模式 |
+| `#palettePresets` | `click` | 应用预设配色 / 恢复默认 |
+| `#previewBg` | `input` | 修改预览背景，不影响导出资源 |
+| `#disableTitleShadow` | `change` | 启用 / 禁用标题投影 |
+| `#btnDraftHistory` | `click` | 打开历史暂存 |
+| `#draftHistoryList` | `click` | 恢复 / 删除历史暂存 |
 | `#iconPicker` | `click` | 点击遮罩关闭弹窗 |
 | `#pickerSearch` | `input` | 搜索 Lucide 图标 |
 | `#pickerGrid` | `click` | 选择 Lucide 图标 |
@@ -943,7 +1007,7 @@ hideHoverInfo()
 ```text
 点击某个按钮的上传图片
 → 选择 image/*
-→ fileToRgba(file, 64)
+→ openCropper(file, { size: 64 })
 → slotMeta[index].iconRgba = rgba
 → slotMeta[index].iconPreview = dataURL
 → rerender()
@@ -959,7 +1023,7 @@ hideHoverInfo()
 ```text
 点击上传面板图片
 → 选择 image/*
-→ fileToRgba(file, 256)
+→ openCropper(file, { size: 256 })
 → state.panelImageRgba = rgba
 → state.panelImagePreview = dataURL
 → rerender()
@@ -969,7 +1033,18 @@ hideHoverInfo()
 → res_gui/bg.png
 ```
 
-### 13.4 下载完整 ZIP
+### 13.4 草稿恢复
+
+```text
+拖入同一 ini 或点击历史暂存恢复
+→ 读取 localStorage 草稿元信息
+→ 从 IndexedDB 读取原 ini 文本、面板图片和按钮图片
+→ dataUrlToRgba() 还原可导出的 RGBA
+→ 恢复排序、按钮 meta、配色、行为配置
+→ renderSwapList() / rerender()
+```
+
+### 13.5 下载完整 ZIP
 
 ```text
 点击下载完整 ZIP
@@ -992,6 +1067,7 @@ hideHoverInfo()
 3. 能复用现有状态就不要新建平行状态
 4. 修改生成 ini 时，同步检查 `renderIniView()` 和下载结果
 5. 修改资源生成时，同步检查 `buildResources()` 和 ZIP 路径
+6. 修改新增配置项时，同步检查 `loadSettings()`、`saveSettings()`、`flushDraftMeta()`、`loadDraft()` 和历史暂存恢复
 
 ### 14.2 命名约定
 
@@ -1034,6 +1110,7 @@ saveSettings：保存本地设置
 renderPreview：如果影响预览
 buildIni：如果影响生成 ini
 buildResources：如果影响 ZIP 资源
+flushDraftMeta / loadDraft / 历史暂存恢复：如果需要随当前文件保存
 ```
 
 ### 14.5 添加新资源
@@ -1136,11 +1213,11 @@ renderPreview()
 表达式里的逗号
 ```
 
-### 16.2 上传图片不会持久化
+### 16.2 草稿存储依赖浏览器本地数据
 
-刷新页面后，用户上传的按钮图片和面板图片会丢失。
+上传图片和当前文件草稿会存到浏览器本地 `IndexedDB`。
 
-这是有意保持简单，避免把大 data URL 写进 localStorage。
+如果用户清理站点数据、换浏览器、无痕模式退出，历史暂存会丢失。不同浏览器对 `file://` 页面本地存储策略也可能不同。
 
 ### 16.3 Lucide 图标网络依赖
 
@@ -1202,6 +1279,9 @@ draw_2d.hlsl 是否兼容
 25. 右键拆分合并按钮后，恢复为独立按钮，groups 各为 1
 26. 面板拖拽排序后 skip 按钮保持原位，活跃按钮顺序可保存
 27. 面板背景 PNG 分辨率随 panelW × panelH 变化，不再固定 256x256
+28. 调色面板能进入/退出，预设配色和恢复默认能即时刷新预览
+29. 禁用标题文字投影后，网页预览和导出 `title.png` 都不绘制投影
+30. 上传按钮图和面板图后，刷新并恢复草稿，导出 ZIP 仍包含对应图片效果
 
 ## 18. 快速定位表
 
@@ -1215,6 +1295,7 @@ draw_2d.hlsl 是否兼容
 | 离线图标 fallback | `loadLucideIndex`、`BUILTIN_ICON_NAMES` |
 | 按钮列表 | `renderSwapList`、`renderSlotThumb` |
 | 面板预览 | `renderPreview` |
+| 调色面板 | `PALETTE_DEFAULT`、`PALETTE_PRESETS`、`applyPalette`、`renderPalettePresets` |
 | 右键菜单 | `#ctxMenu`、`ctxTargetIdx`、`case "rename"/"key"/"split"/"skip"/"picker"/"upload"/"reset"` |
 | hover 信息 | `hoverText`、`showHoverInfo`、`positionHover` |
 | 自动列数 | `autoCols`、`colsManual` |
@@ -1224,7 +1305,7 @@ draw_2d.hlsl 是否兼容
 | PNG 输出 | `rgbaToPng` |
 | slot 图片合成 | `renderSlotRgba`（canvas: 圆角矩形 + 边框 + 图标 + 文字） |
 | 面板背景 | `renderBgRgba(width, height, opts)`（参数化尺寸，不再硬编码 256x256） |
-| 标题图片 | `renderTitleRgba`（48px 高，白字 + 强调色投影） |
+| 标题图片 | `renderTitleRgba`（48px 高，白字 + 可选投影） |
 | FAB 批量操作 | `enterSelectMode`、`exitSelectMode`、`doSelectConfirm` |
 | 面板拖拽排序 | `panelReorder`、`swapOrder`、`swapSign` |
 | 持久化排序 | `restoreSwapOrder`、`saveSettings` |
@@ -1232,7 +1313,8 @@ draw_2d.hlsl 是否兼容
 | ZIP 打包 | `makeZip` |
 | 下载 | `downloadBlob`、`#btnIni`、`#btnZip` 事件 |
 | 面板图片 | `#btnPanelImage`、`state.panelImageRgba`、`state.panelImagePreview` |
-| localStorage 持久化 | `loadSettings`、`saveSettings` |
+| localStorage 持久化 | `loadSettings`、`saveSettings`、`flushDraftMeta` |
+| IndexedDB 草稿图片 | `dbOpen`、`dbGet`、`dbPut`、`dataUrlToRgba` |
 
 ## 19. 维护建议
 

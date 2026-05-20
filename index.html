@@ -302,8 +302,8 @@
   /* gui panel preview, sized in JS */
   .gui-panel {
     position: relative;
-    border: 3px solid #f2f2f2;
-    border-top-color: var(--accent, var(--hot));
+    border: 3px solid var(--panel-border, #f2f2f2);
+    border-top-color: var(--top-border, var(--hot));
     border-radius: 22px;
     padding: 14px 22px 26px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
@@ -313,7 +313,7 @@
     margin: 0 0 18px;
     color: white;
     font-size: 20px;
-    text-shadow: 2px 2px var(--accent, var(--hot));
+    text-shadow: 2px 2px var(--title-shadow, var(--hot));
     text-align: center;
   }
   .gui-grid {
@@ -325,9 +325,9 @@
     position: relative;
     width: 64px;
     height: 64px;
-    border: 3px solid #fff;
+    border: 3px solid var(--slot-border, #f2f2f2);
     border-radius: 9px;
-    background: rgba(60, 60, 70, .78);
+    background: var(--slot-rgba, rgba(60, 60, 70, .78));
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -336,6 +336,7 @@
     overflow: hidden;
     padding: 2px;
   }
+  .gui-slot:hover { background: var(--slot-hover-rgba, var(--slot-rgba, rgba(60, 60, 70, .78))); }
   .gui-slot.skip { opacity: .25; border-style: dashed; }
   .gui-slot .slot-icon { position: relative; z-index: 1; line-height: 0; }
   .gui-slot svg { width: 28px; height: 28px; color: white; }
@@ -651,13 +652,59 @@
   }
   .status.ok { color: var(--ok); border-color: rgba(116, 224, 154, .3); }
   .status.err { color: var(--err); border-color: rgba(255, 107, 120, .3); }
+
+  /* 调色模式 */
+  .panel-left.color-mode > section:not(.palette-section) { display: none; }
+  .palette-swatch {
+    width: 32px; height: 32px;
+    border: 2px solid var(--line-2);
+    border-radius: 8px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .palette-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .palette-row .field { flex: 1; }
+  .palette-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+  .palette-preset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .palette-preset:hover { border-color: var(--hot); }
+  .palette-preset i {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, var(--preset-a), var(--preset-b));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+  }
+  .preview-stage.solid-bg { background: var(--preview-bg, #0e0d12); }
+
+  /* palette highlight */
+  .palette-highlight {
+    outline: 3px solid var(--hot) !important;
+    outline-offset: 2px;
+    animation: palette-pulse .6s ease-in-out infinite alternate;
+  }
+  @keyframes palette-pulse {
+    from { outline-color: var(--hot); }
+    to { outline-color: var(--warn); }
+  }
+  .palette-desc { display: block; font-size: 11px; color: var(--muted); }
 </style>
 </head>
 <body>
 
 <div class="app">
   <!-- ============ LEFT ============ -->
-  <div class="card panel-left">
+  <div class="card panel-left" id="panelLeft">
 
     <section>
       <h1>
@@ -696,18 +743,18 @@
         <div class="field"><label>列数</label><input id="cols" type="number" min="1" max="8" value="3"></div>
         <div class="field"><label>按钮间距 px</label><input id="gap" type="number" min="4" max="48" value="14"></div>
       </div>
-      <div class="grid-3">
-        <div class="field"><label>背景色</label><input id="bgColor" type="color" value="#23120e"></div>
-        <div class="field"><label>强调色</label><input id="accentColor" type="color" value="#ff4fb3"></div>
-        <div class="field"><label>透明度</label><input id="bgAlpha" type="number" min="0" max="255" value="210"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn ghost" id="btnColorMode" style="flex:1">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M2 12h20"/></svg>
+          调色
+        </button>
+        <button class="btn ghost" id="btnPanelImage" style="flex:1">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          背景图
+        </button>
       </div>
       <div class="panel-img-row">
-        <label>面板背景图</label>
         <div class="panel-img-ctrl">
-          <button class="btn ghost" id="btnPanelImage">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            选择图片
-          </button>
           <button class="icon-btn" id="btnClearPanelImage" title="清除面板背景图">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -757,6 +804,59 @@
       <div id="status" class="status" style="margin-top:10px">等待 ini</div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
         作者 <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · 创作工具 <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · 致谢 <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
+      </div>
+    </section>
+
+    <section class="palette-section" id="paletteSection" hidden>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <h2 style="margin:0">调色</h2>
+        <button class="icon-btn" id="btnColorExit" title="退出调色">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="palette-actions" id="palettePresets"></div>
+
+      <div class="palette-row" data-highlight="#guiPanel">
+        <div class="palette-swatch" id="paletteBgSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>面板背景</label><span class="palette-desc">面板底色填充</span><input id="bgColor" type="color" value="#23120e"></div>
+      </div>
+      <div class="field" style="margin-bottom:8px"><label>透明度</label><span class="palette-desc">面板不透明度 (0-255)</span><input id="bgAlpha" type="number" min="0" max="255" value="210"></div>
+
+      <div class="palette-row" data-highlight="#guiPanel">
+        <div class="palette-swatch" id="paletteAccentSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>顶部边框</label><span class="palette-desc">面板顶部边框色</span><input id="accentColor" type="color" value="#ff4fb3"></div>
+      </div>
+      <div class="palette-row" data-highlight="#guiPanel h3">
+        <div class="palette-swatch" id="paletteTitleShadowSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>标题投影</label><span class="palette-desc">标题文字投影色</span><input id="titleShadowColor" type="color" value="#ff4fb3"></div>
+      </div>
+      <label class="check" style="margin:0 0 8px 40px;font-size:12px;color:var(--muted)"><input id="disableTitleShadow" type="checkbox"> 禁用标题文字投影</label>
+      <div class="palette-row" data-highlight=".gui-slot">
+        <div class="palette-swatch" id="paletteHoverSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>悬停底色</label><span class="palette-desc">按钮悬停时填充色</span><input id="hoverColor" type="color" value="#ff4fb3"></div>
+      </div>
+
+      <div class="palette-row" data-highlight=".gui-slot">
+        <div class="palette-swatch" id="paletteSlotSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>按钮底色</label><span class="palette-desc">按钮默认填充色</span><input id="slotColor" type="color" value="#3c3c46"></div>
+      </div>
+
+      <div class="palette-row" data-highlight="#guiPanel">
+        <div class="palette-swatch" id="palettePanelBorderSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>面板边框</label><span class="palette-desc">面板外边框色</span><input id="panelBorderColor" type="color" value="#f2f2f2"></div>
+      </div>
+      <div class="palette-row" data-highlight=".gui-slot">
+        <div class="palette-swatch" id="paletteSlotBorderSwatch"></div>
+        <div class="field" style="margin-bottom:0"><label>按钮边框</label><span class="palette-desc">按钮外边框色</span><input id="slotBorderColor" type="color" value="#f2f2f2"></div>
+      </div>
+
+      <div style="border-top:1px solid var(--line);margin:8px 0;padding-top:6px">
+        <div class="field" style="margin-bottom:4px;font-size:11px;color:var(--muted)">以下仅供预览观察，不影响导出：</div>
+        <div class="palette-row" data-highlight="#viewPanel">
+          <div class="palette-swatch" id="palettePreviewSwatch"></div>
+          <div class="field" style="margin-bottom:0"><label>预览背景</label><span class="palette-desc">预览区纯色背景</span><input id="previewBg" type="color" value="#0e0d12"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -913,22 +1013,24 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
+    if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
   } catch (e) {}
 }
 function saveSettings() {
   const s = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
   s.showKeyHint = $("showKeyHint").checked;
   s.hideUploadLabel = $("hideUploadLabel").checked;
+  s.disableTitleShadow = $("disableTitleShadow").checked;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
@@ -1021,12 +1123,13 @@ function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
   ui.showKeyHint = $("showKeyHint").checked;
   ui.hideUploadLabel = $("hideUploadLabel").checked;
+  ui.disableTitleShadow = $("disableTitleShadow").checked;
 
   const entry = {
     h, n: state.fileName, t: Date.now(),
@@ -1090,17 +1193,18 @@ async function loadDraft() {
 
     // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
+    if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
 
     // 从 IndexedDB 恢复大图
     const blob = await dbGet(h);
     state.panelImagePreview = blob?.img || null;
-    state.panelImageRgba = null;
+    state.panelImageRgba = await dataUrlToRgba(state.panelImagePreview, 256);
 
     // 恢复排序（先排后覆：重排 swaps/slotMeta 后再恢复 meta）
     if (orderOk) {
@@ -1116,7 +1220,11 @@ async function loadDraft() {
       }
       if (blob?.iconPreviews) {
         for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
-          if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+          if (blob.iconPreviews[i]) {
+            state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+            state.slotMeta[i].iconRgba = await dataUrlToRgba(blob.iconPreviews[i], 64);
+            state.slotMeta[i].iconKind = "upload";
+          }
         }
       }
     }
@@ -1365,6 +1473,23 @@ function rgbaToPng(width, height, rgba) {
   return bytes;
 }
 
+function dataUrlToRgba(dataUrl, size) {
+  if (!dataUrl) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = size; c.height = size;
+      const ctx = c.getContext("2d");
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(ctx.getImageData(0, 0, size, size).data);
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
 function solidRgba(width, height, [r, g, b, a]) {
   const buf = new Uint8Array(width * height * 4);
   for (let i = 0; i < buf.length; i += 4) {
@@ -1500,8 +1625,8 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
   return ctx.getImageData(0, 0, size, size).data;
 }
 
-// 面板背景：256x256 圆角矩形 + 白色边框（与 slot 风格统一）
-function renderBgRgba(width, height, { fill, border = [255,255,255,255] }) {
+  // 面板背景：256x256 圆角矩形 + 白色边框（与 slot 风格统一）
+function renderBgRgba(width, height, { fill, border = [242,242,242,1], topBorder = null }) {
   const bw = 3, r = 22;
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
@@ -1518,25 +1643,40 @@ function renderBgRgba(width, height, { fill, border = [255,255,255,255] }) {
   ctx.lineWidth = bw;
   ctx.stroke();
 
+  // 顶部强调色边框（与 CSS border-top-color 对应）
+  if (topBorder) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, width, r + bw * 2);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.roundRect(bw / 2, bw / 2, width - bw, height - bw, r);
+    ctx.strokeStyle = `rgba(${topBorder.join(",")})`;
+    ctx.lineWidth = bw;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   return ctx.getImageData(0, 0, width, height).data;
 }
 
 // 面板标题：单独渲染为图片（48px 高，宽 = 面板内容区）
-function renderTitleRgba(text, width, accent = [255, 100, 100]) {
+function renderTitleRgba(text, width, shadow = [255, 100, 100], useShadow = true) {
   const height = 48;
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, width, height);
 
-  const [ar, ag, ab] = accent;
+  const [sr, sg, sb] = shadow;
 
-  // 强调色投影
-  ctx.fillStyle = `rgba(${ar},${ag},${ab},0.85)`;
   ctx.font = "bold 18px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, width / 2 + 1.5, height / 2 + 1.5);
+  if (useShadow) {
+    ctx.fillStyle = `rgba(${sr},${sg},${sb},0.85)`;
+    ctx.fillText(text, width / 2 + 1.5, height / 2 + 1.5);
+  }
 
   // 白色主文字
   ctx.fillStyle = "#ffffff";
@@ -2237,6 +2377,12 @@ async function buildResources() {
 
   const [ar, ag, ab] = hexToRgb(accent);
   const [br, bg2, bb] = hexToRgb(bg);
+  const alpha01 = alpha / 255;
+  const [sr, sgg, sbb] = hexToRgb($("slotColor").value);
+  const [hr, hg, hb] = hexToRgb($("hoverColor").value);
+  const [pbor, pbog, pbob] = hexToRgb($("panelBorderColor").value);
+  const [sbor, sbog, sbob] = hexToRgb($("slotBorderColor").value);
+  const titleShadow = hexToRgb($("titleShadowColor").value);
 
   const files = [];
 
@@ -2252,8 +2398,8 @@ async function buildResources() {
   const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
   const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
 
-  // 面板背景（圆角矩形 + 白边框，按实际尺寸）
-  const bgOpts = { fill: [br, bg2, bb, alpha] };
+  // 面板背景（圆角矩形 + 顶部强调色边框，按实际尺寸）
+  const bgOpts = { fill: [br, bg2, bb, alpha01], border: [pbor, pbog, pbob, 1], topBorder: [ar, ag, ab, 1] };
   if (state.panelImageRgba) {
     // 有上传图片：先画背景底色，再叠加图像到内容区
     const bgRgba = renderBgRgba(panelW, panelH, bgOpts);
@@ -2272,7 +2418,7 @@ async function buildResources() {
     bgCtx.beginPath();
     bgCtx.roundRect(bw, bw, cw, ch, radius);
     bgCtx.clip();
-    bgCtx.drawImage(imgCanvas, 0, 0, cw, ch);
+    bgCtx.drawImage(imgCanvas, bw, bw, cw, ch);
     bgCtx.restore();
     files.push({ name: "res_gui/bg.png", data: rgbaToPng(panelW, panelH, bgCtx.getImageData(0, 0, panelW, panelH).data) });
   } else {
@@ -2282,14 +2428,14 @@ async function buildResources() {
   // 标题图片（文字渲染为图片，XXMI 不支持独立文字）
   const titleW = panelW - 6;
   const titleText = ($("title").value || "GUI Menu").trim();
-  files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, [ar, ag, ab])) });
+  files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, titleShadow, !$("disableTitleShadow").checked)) });
   // 每个活跃按钮一张完整 slot 图（圆角矩形 + 白色边框 + 图标 + 文字）
   const active = swaps.map((_, i) => i).filter(i => !meta[i].skip);
   for (let n = 0; n < active.length; n++) {
     const sIdx = active[n];
     const m = meta[sIdx];
-    const slotFill = [60, 60, 70, 200];
-    const hoverFill = [ar, ag, ab, 230];
+    const slotFill = [sr, sgg, sbb, 200 / 255];
+    const hoverFill = [hr, hg, hb, 230 / 255];
     const label = (m.name && !($("hideUploadLabel").checked && m.iconPreview)) ? m.name : "";
 
     // 准备图标数据
@@ -2303,7 +2449,7 @@ async function buildResources() {
       }
     }
 
-    const baseOpts = { border: [255, 255, 255, 255], iconRgba, iconSvg, label };
+    const baseOpts = { border: [sbor, sbog, sbob, 1], iconRgba, iconSvg, label };
     if ($("showKeyHint").checked && swaps[sIdx].key) {
       baseOpts.keyHint = swaps[sIdx].key;
     }
@@ -2442,8 +2588,18 @@ async function renderPreview() {
   const [br, bgg, bb] = hexToRgb(bgC);
 
   const panel = $("guiPanel");
-  panel.style.setProperty("--accent", accent);
+  panel.style.setProperty("--top-border", accent);
   panel.style.setProperty("--bg-rgba", `rgba(${br}, ${bgg}, ${bb}, ${alpha})`);
+  panel.style.setProperty("--title-shadow", $("disableTitleShadow").checked ? "transparent" : $("titleShadowColor").value);
+
+  // 按钮底色 / 悬停底色 / 边框
+  const slotC = $("slotColor").value;
+  const [sr, sg2, sb2] = hexToRgb(slotC);
+  const [hr, hg, hb] = hexToRgb($("hoverColor").value);
+  panel.style.setProperty("--slot-rgba", `rgba(${sr}, ${sg2}, ${sb2}, .78)`);
+  panel.style.setProperty("--slot-hover-rgba", `rgba(${hr}, ${hg}, ${hb}, .9)`);
+  panel.style.setProperty("--panel-border", $("panelBorderColor").value);
+  panel.style.setProperty("--slot-border", $("slotBorderColor").value);
   if (state.panelImagePreview) {
     panel.style.background = `url(${state.panelImagePreview}) center/cover`;
   } else {
@@ -2765,15 +2921,143 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "activeVar", "behavior"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "activeVar", "behavior"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
     rerender();
   });
 });
-["removeKeys", "showKeyHint", "hideUploadLabel"].forEach(id => {
+["removeKeys", "showKeyHint", "hideUploadLabel", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
+});
+
+// --- 调色模式 ---
+const PALETTE_DEFAULT = {
+  bgColor: "#23120e",
+  bgAlpha: "210",
+  accentColor: "#ff4fb3",
+  titleShadowColor: "#ff4fb3",
+  hoverColor: "#ff4fb3",
+  slotColor: "#3c3c46",
+  panelBorderColor: "#f2f2f2",
+  slotBorderColor: "#f2f2f2",
+  previewBg: "#0e0d12",
+  disableTitleShadow: false,
+};
+const PALETTE_PRESETS = [
+  { name: "默认霓虹", values: PALETTE_DEFAULT },
+  { name: "月影紫", values: { bgColor: "#171126", bgAlpha: "222", accentColor: "#9f7aea", titleShadowColor: "#c084fc", hoverColor: "#7c3aed", slotColor: "#27213b", panelBorderColor: "#ded7ff", slotBorderColor: "#b7a8ff", previewBg: "#0b0712" } },
+  { name: "樱桃黑", values: { bgColor: "#260f19", bgAlpha: "224", accentColor: "#ff5f8f", titleShadowColor: "#ff9fbd", hoverColor: "#d81b60", slotColor: "#3b1d2b", panelBorderColor: "#ffd6e5", slotBorderColor: "#ff9fbd", previewBg: "#12070d" } },
+  { name: "青蓝夜", values: { bgColor: "#0b1d26", bgAlpha: "220", accentColor: "#38bdf8", titleShadowColor: "#67e8f9", hoverColor: "#0891b2", slotColor: "#17313d", panelBorderColor: "#b6f3ff", slotBorderColor: "#7dd3fc", previewBg: "#061018" } },
+  { name: "琥珀金", values: { bgColor: "#21170a", bgAlpha: "218", accentColor: "#f59e0b", titleShadowColor: "#facc15", hoverColor: "#b45309", slotColor: "#382a12", panelBorderColor: "#ffe8a3", slotBorderColor: "#fbbf24", previewBg: "#100a03" } },
+  { name: "薄荷绿", values: { bgColor: "#0c1f1a", bgAlpha: "216", accentColor: "#34d399", titleShadowColor: "#86efac", hoverColor: "#059669", slotColor: "#17362e", panelBorderColor: "#c7ffe4", slotBorderColor: "#6ee7b7", previewBg: "#06110e" } },
+  { name: "银白灰", values: { bgColor: "#1f2329", bgAlpha: "226", accentColor: "#cbd5e1", titleShadowColor: "#94a3b8", hoverColor: "#64748b", slotColor: "#2f3540", panelBorderColor: "#f8fafc", slotBorderColor: "#cbd5e1", previewBg: "#111317" } },
+];
+
+function applyPalette(values) {
+  for (const [id, value] of Object.entries(values)) {
+    if (!$(id)) continue;
+    if ($(id).type === "checkbox") $(id).checked = Boolean(value);
+    else $(id).value = value;
+  }
+  applyPreviewBg();
+  updatePaletteSwatches();
+  rerender();
+}
+
+function renderPalettePresets() {
+  const el = $("palettePresets");
+  el.innerHTML = PALETTE_PRESETS.map((preset, idx) => `
+    <button class="palette-preset" data-preset="${idx}" style="--preset-a:${preset.values.accentColor};--preset-b:${preset.values.slotColor}">
+      <i></i>${escapeHtml(preset.name)}
+    </button>
+  `).join("");
+  el.insertAdjacentHTML("beforeend", '<button class="palette-preset" id="btnPaletteReset" style="--preset-a:#ff4fb3;--preset-b:#3c3c46"><i></i>恢复默认</button>');
+}
+
+$("btnColorMode").addEventListener("click", () => enterColorMode());
+$("btnColorExit").addEventListener("click", () => exitColorMode());
+$("palettePresets").addEventListener("click", e => {
+  const reset = e.target.closest("#btnPaletteReset");
+  if (reset) {
+    applyPalette(PALETTE_DEFAULT);
+    toast("已恢复默认配色", "ok");
+    return;
+  }
+  const btn = e.target.closest("[data-preset]");
+  if (!btn) return;
+  const preset = PALETTE_PRESETS[Number(btn.dataset.preset)];
+  if (!preset) return;
+  applyPalette(preset.values);
+  toast(`已应用 ${preset.name}`, "ok");
+});
+
+function enterColorMode() {
+  $("panelLeft").classList.add("color-mode");
+  $("paletteSection").hidden = false;
+  $("viewPanel").classList.add("solid-bg");
+  renderPalettePresets();
+  applyPreviewBg();
+  updatePaletteSwatches();
+}
+
+function exitColorMode() {
+  $("panelLeft").classList.remove("color-mode");
+  $("paletteSection").hidden = true;
+  $("viewPanel").classList.remove("solid-bg");
+}
+
+function updatePaletteSwatches() {
+  $("paletteBgSwatch").style.background = $("bgColor").value;
+  $("paletteAccentSwatch").style.background = $("accentColor").value;
+  $("paletteTitleShadowSwatch").style.background = $("titleShadowColor").value;
+  $("paletteHoverSwatch").style.background = $("hoverColor").value;
+  $("paletteSlotSwatch").style.background = $("slotColor").value;
+  $("palettePanelBorderSwatch").style.background = $("panelBorderColor").value;
+  $("paletteSlotBorderSwatch").style.background = $("slotBorderColor").value;
+  $("palettePreviewSwatch").style.background = $("previewBg").value;
+}
+
+function applyPreviewBg() {
+  $("viewPanel").style.setProperty("--preview-bg", $("previewBg").value);
+}
+
+// swatch 点击打开对应颜色选择器
+[{sw: "paletteBgSwatch", inp: "bgColor"}, {sw: "paletteAccentSwatch", inp: "accentColor"}, {sw: "paletteTitleShadowSwatch", inp: "titleShadowColor"}, {sw: "paletteHoverSwatch", inp: "hoverColor"}, {sw: "paletteSlotSwatch", inp: "slotColor"}, {sw: "palettePanelBorderSwatch", inp: "panelBorderColor"}, {sw: "paletteSlotBorderSwatch", inp: "slotBorderColor"}, {sw: "palettePreviewSwatch", inp: "previewBg"}].forEach(({sw, inp}) => {
+  $(sw).addEventListener("click", () => $(inp).click());
+});
+
+// 颜色 input 变化时联动 swatch
+["bgColor", "accentColor", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor"].forEach(id => {
+  $(id).addEventListener("input", () => {
+    if (!$("paletteSection").hidden) updatePaletteSwatches();
+  });
+});
+
+// previewBg 变化只更新预览背景，不触发完整 rerender
+$("previewBg").addEventListener("input", () => {
+  applyPreviewBg();
+  updatePaletteSwatches();
+  saveSettings();
+});
+
+// 调色板 hover 高亮联动
+$("paletteSection").addEventListener("mouseover", e => {
+  const row = e.target.closest("[data-highlight]");
+  if (!row) return;
+  const sel = row.dataset.highlight;
+  sel.split(",").forEach(s => {
+    document.querySelectorAll(s.trim()).forEach(el => el.classList.add("palette-highlight"));
+  });
+});
+$("paletteSection").addEventListener("mouseout", e => {
+  const row = e.target.closest("[data-highlight]");
+  if (!row) return;
+  const sel = row.dataset.highlight;
+  sel.split(",").forEach(s => {
+    document.querySelectorAll(s.trim()).forEach(el => el.classList.remove("palette-highlight"));
+  });
 });
 
 // 清除全部暂存
@@ -2864,15 +3148,16 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       state.swaps = parseSwaps(state.sections);
       state.slotMeta = state.swaps.map(newSlotMeta);
       // 恢复 UI
-      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "behavior", "activeVar"]) {
+      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
+    if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
-      state.panelImageRgba = null;
+      state.panelImageRgba = await dataUrlToRgba(state.panelImagePreview, 256);
       if ($("panelImageThumb")) {
         if (state.panelImagePreview) {
           $("panelImageThumb").src = state.panelImagePreview;
@@ -2898,7 +3183,11 @@ $("draftHistoryList").addEventListener("click", async (e) => {
         }
         if (blob.iconPreviews) {
           for (let i = 0; i < blob.iconPreviews.length && i < state.slotMeta.length; i++) {
-            if (blob.iconPreviews[i]) state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+            if (blob.iconPreviews[i]) {
+              state.slotMeta[i].iconPreview = blob.iconPreviews[i];
+              state.slotMeta[i].iconRgba = await dataUrlToRgba(blob.iconPreviews[i], 64);
+              state.slotMeta[i].iconKind = "upload";
+            }
           }
         }
       }
@@ -2908,6 +3197,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 [Key*]`;
       updateStatus();
       renderSwapList();
+      applyPreviewBg();
       rerender();
       await saveDraft();
       toast("已恢复暂存", "ok");
@@ -3426,10 +3716,10 @@ $("btnZip").addEventListener("click", async () => {
 
 // 启动
 loadSettings();
+applyPreviewBg();
 renderPreview();
 renderIniView();
 loadLucideIndex(); // 后台预热
 </script>
 </body>
 </html>
-
