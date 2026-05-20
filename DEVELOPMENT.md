@@ -37,6 +37,7 @@ JavaScript 业务逻辑
 .app
 ├─ .panel-left          左侧配置区
 │  ├─ ini 文件选择
+│  ├─ MOD 文件夹选择（File System Access API）
 │  ├─ 面板配置（含调色入口和面板背景图上传）
 │  ├─ 行为配置
 │  ├─ 按钮列表
@@ -56,23 +57,30 @@ JavaScript 业务逻辑
 
 ### 3.1 输入
 
-用户可以通过两种方式加载 ini：
+用户可以通过三种方式加载 ini：
 
 1. 点击左侧文件选择区域
 2. 直接拖入 `.ini` 或 `.txt` 文件
+3. 在支持 File System Access API 的浏览器里选择 MOD 根目录，再选择其中任意子目录里的 `.ini` / `.txt`
 
 入口 DOM：
 
 ```text
 #iniFile
 #drop
+#btnOpenFolder
+#folderIniSelect
 ```
 
 处理函数：
 
 ```js
 loadFile(file)
+pickModFolder()
+loadFolderFile(index)
 ```
+
+文件夹模式会保存 `state.dirHandle`、`state.targetDirHandle` 和 `state.fileHandle`，用于后续写回选中 ini 所在文件夹。
 
 ### 3.2 解析
 
@@ -158,11 +166,12 @@ const DB_NAME = "KeySwapDrafts";
 
 ### 3.4 输出
 
-支持两种下载：
+支持三种输出：
 
 ```text
 只下载 ini
 下载完整 ZIP
+直接写入 MOD 文件夹（Chrome / Edge 等支持 File System Access API 的浏览器）
 ```
 
 下载入口：
@@ -170,6 +179,7 @@ const DB_NAME = "KeySwapDrafts";
 ```js
 #btnIni
 #btnZip
+#btnWriteFolder
 ```
 
 核心函数：
@@ -179,6 +189,7 @@ buildIni()
 buildResources()
 makeZip(files)
 downloadBlob(blob, name)
+writeGeneratedToFolder()
 ```
 
 完整 ZIP 内容大致如下：
@@ -200,6 +211,10 @@ res_gui/slot_hover_01.png
 ```js
 const state = {
   fileName: "",
+  fileHandle: null,
+  dirHandle: null,
+  targetDirHandle: null,
+  folderFiles: [],
   text: "",
   sections: [],
   swaps: [],
@@ -217,6 +232,10 @@ const state = {
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `fileName` | `string` | 当前加载的文件名 |
+| `fileHandle` | `FileSystemFileHandle \| null` | 文件夹模式下当前 ini/txt 的文件句柄 |
+| `dirHandle` | `FileSystemDirectoryHandle \| null` | 文件夹模式下用户选择的根目录句柄 |
+| `targetDirHandle` | `FileSystemDirectoryHandle \| null` | 当前选中 ini/txt 所在目录句柄 |
+| `folderFiles` | `Array` | 根目录和子目录内可选的 ini/txt 文件列表 |
 | `text` | `string` | 原始 ini 文本 |
 | `sections` | `Array` | `parseSections` 的结果 |
 | `swaps` | `Array` | `parseSwaps` 的结果 |
@@ -833,7 +852,7 @@ data-pre="index"
 拆分 → 将合并按钮（groups > 1）按 group 拆回多个独立按钮
 跳过/取消跳过
 从图标库选择 → openPicker()
-上传图标 → fileToRgba(64)
+上传图标 → openCropper(file, { size: 64 })
 重置图标 → suggestIcon()
 ```
 
@@ -957,6 +976,8 @@ applyPreviewBg()
 |---|---|---|
 | `#iniFile` | `change` | 选择 ini 文件 |
 | `#drop` | `dragenter / dragover / dragleave / drop` | 拖拽加载文件 |
+| `#btnOpenFolder` | `click` | 选择 MOD 文件夹 |
+| `#folderIniSelect` | `change` | 加载文件夹内选中的 ini/txt |
 | 配置输入项 | `input` | 保存设置并刷新 |
 | `#swapList` | `click` | 按钮列表操作代理 |
 | `#swapList` | `input` | 修改按钮名 |
@@ -976,6 +997,7 @@ applyPreviewBg()
 | `#pickerGrid` | `click` | 选择 Lucide 图标 |
 | `#btnIni` | `click` | 下载 ini |
 | `#btnZip` | `click` | 下载完整 ZIP |
+| `#btnWriteFolder` | `click` | 直接写入 MOD 文件夹 |
 | `document` | `click` | 关闭右键菜单、收起 FAB 子菜单 |
 | `#ctxMenu` | `click` | 右键菜单项操作 |
 | `#mergeFab` | `click` | 展开/收起 FAB 子菜单 |
@@ -1054,6 +1076,27 @@ applyPreviewBg()
 → downloadBlob(blob, base + ".gui.zip")
 ```
 
+### 13.6 直接写入文件夹
+
+```text
+点击选择 MOD 文件夹
+→ showDirectoryPicker({ mode: "readwrite" })
+→ 递归枚举根目录和子目录里的 .ini / .txt，跳过名称以 DISABLED 开头的文件和文件夹
+→ loadFolderFile(index) 读取选中的文件
+→ 编辑配置
+→ 点击写入文件夹
+→ requestPermission({ mode: "readwrite" })
+→ 写入到当前 ini 所在文件夹：<原文件名>.gui.ini
+→ 写入到当前 ini 所在文件夹：res_gui/draw_2d.hlsl、bg.png、title.png、slot PNG
+→ 如果原文件是 .ini，复制原文到同名 .txt，然后 removeEntry() 删除原 .ini 文件名
+```
+
+直接写入会写回当前选中 ini/txt 所在的文件夹。扫描时会忽略任何名称以 `DISABLED` 开头的文件和文件夹（不区分大小写）。Firefox / Safari 不支持时，按钮会提示继续使用 ZIP。
+
+UI 上会在文件夹入口旁提示：不要选择包含大量 ini/txt 的大目录，否则递归扫描和下拉渲染会变卡；文件夹模式会直接写入文件夹并把原 `.ini` 改为 `.txt`，适合知道自己正在处理哪个 MOD 的用户。
+
+`showDirectoryPicker` 使用固定 `id: FOLDER_PICKER_ID`，并把上次目录句柄以 `LAST_FOLDER_HANDLE_KEY` 存到 IndexedDB。下次选择时会把该句柄作为 `startIn`，让 Chrome / Edge 尽量从上次选择的位置打开。浏览器权限失效、站点数据被清理或 `file://` 策略变化时，仍可能回到用户目录。
+
 ## 14. 开发约定
 
 ### 14.1 修改原则
@@ -1068,6 +1111,7 @@ applyPreviewBg()
 4. 修改生成 ini 时，同步检查 `renderIniView()` 和下载结果
 5. 修改资源生成时，同步检查 `buildResources()` 和 ZIP 路径
 6. 修改新增配置项时，同步检查 `loadSettings()`、`saveSettings()`、`flushDraftMeta()`、`loadDraft()` 和历史暂存恢复
+7. 修改文件夹写入时，同步检查 ZIP 资源路径和 `writeGeneratedToFolder()` 写入路径
 
 ### 14.2 命名约定
 
@@ -1095,6 +1139,7 @@ IniParams[87]
 CommandListGuiDims
 CommandListGuiSlot
 CommandListGuiClick
+writeGeneratedToFolder
 ```
 
 ### 14.4 添加新配置项
@@ -1282,12 +1327,15 @@ draw_2d.hlsl 是否兼容
 28. 调色面板能进入/退出，预设配色和恢复默认能即时刷新预览
 29. 禁用标题文字投影后，网页预览和导出 `title.png` 都不绘制投影
 30. 上传按钮图和面板图后，刷新并恢复草稿，导出 ZIP 仍包含对应图片效果
+31. Chrome / Edge 下选择 MOD 根目录后，能递归列出子目录里的 ini/txt，并忽略 `DISABLED*` 文件/文件夹
+32. 点击写入文件夹后，在选中 ini 所在文件夹生成 `.gui.ini` 和 `res_gui/*`，原 `.ini` 变为 `.txt`
 
 ## 18. 快速定位表
 
 | 想改什么 | 先看哪里 |
 |---|---|
 | 文件加载 | `loadFile`、`parseSections`、`parseSwaps` |
+| 文件夹读写 | `pickModFolder`、`loadFolderFile`、`writeGeneratedToFolder` |
 | [Key*] 解析规则 | `parseSwaps`、`ASSIGN_RE`（含同键同条件合并） |
 | 自动图标 | `KEYWORD_MAP`、`suggestIcon` |
 | 内嵌图标 | `BUILTIN_ICONS`、`loadLucideSvg` |
@@ -1309,7 +1357,7 @@ draw_2d.hlsl 是否兼容
 | FAB 批量操作 | `enterSelectMode`、`exitSelectMode`、`doSelectConfirm` |
 | 面板拖拽排序 | `panelReorder`、`swapOrder`、`swapSign` |
 | 持久化排序 | `restoreSwapOrder`、`saveSettings` |
-| 图片 RGBA | `fileToRgba`（用 data URL，兼容 file:// 协议） |
+| 图片 RGBA | `openCropper`、`dataUrlToRgba` |
 | ZIP 打包 | `makeZip` |
 | 下载 | `downloadBlob`、`#btnIni`、`#btnZip` 事件 |
 | 面板图片 | `#btnPanelImage`、`state.panelImageRgba`、`state.panelImagePreview` |

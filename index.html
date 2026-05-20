@@ -60,14 +60,31 @@
 
   /* ---------- left ---------- */
   .panel-left {
-    overflow: auto;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
     max-height: calc(100vh - 32px);
+    min-height: 0;
   }
   @media (max-width: 1000px) {
-    .panel-left { max-height: none; }
+    .panel-left { max-height: none; overflow: visible; }
   }
-  .panel-left > section { padding: 16px; border-bottom: 1px solid var(--line); }
-  .panel-left > section:last-child { border-bottom: 0; }
+  .panel-left-main { overflow: auto; min-height: 0; }
+  .panel-left-main > section,
+  .panel-left-footer { padding: 16px; border-bottom: 1px solid var(--line); }
+  .panel-left-main > section:last-child { border-bottom: 0; }
+  .panel-left-footer {
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(26,24,34,.96), var(--card) 18%);
+    box-shadow: 0 -12px 24px rgba(0,0,0,.28);
+    z-index: 20;
+  }
+  @media (max-width: 1000px) {
+    .panel-left { display: block; }
+    .panel-left-main { overflow: visible; }
+    .panel-left-footer { position: static; box-shadow: none; }
+  }
   .panel-left h1 {
     margin: 0;
     font-size: 18px;
@@ -653,8 +670,45 @@
   .status.ok { color: var(--ok); border-color: rgba(116, 224, 154, .3); }
   .status.err { color: var(--err); border-color: rgba(255, 107, 120, .3); }
 
+  .folder-help-wrap { position: relative; margin-top: 8px; }
+  .folder-help-trigger {
+    width: 22px;
+    height: 22px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--line-2);
+    border-radius: 50%;
+    color: var(--warn);
+    background: var(--bg-2);
+    font-weight: 800;
+    font-size: 13px;
+    cursor: help;
+  }
+  .folder-help-trigger:hover,
+  .folder-help-trigger:focus { border-color: var(--warn); outline: none; }
+  .folder-help {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 6px;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 120ms, transform 120ms;
+    z-index: 20;
+    box-shadow: 0 10px 24px rgba(0,0,0,.35);
+  }
+  .folder-help-trigger:hover + .folder-help,
+  .folder-help-trigger:focus + .folder-help {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: none;
+  }
+
   /* 调色模式 */
-  .panel-left.color-mode > section:not(.palette-section) { display: none; }
+  .panel-left.color-mode .panel-left-main > section:not(.palette-section),
+  .panel-left.color-mode .panel-left-footer { display: none; }
   .palette-swatch {
     width: 32px; height: 32px;
     border: 2px solid var(--line-2);
@@ -705,6 +759,7 @@
 <div class="app">
   <!-- ============ LEFT ============ -->
   <div class="card panel-left" id="panelLeft">
+    <div class="panel-left-main">
 
     <section>
       <h1>
@@ -720,6 +775,21 @@
         <strong>点击选择，或拖入 ini / txt</strong>
         <small id="fileInfo">还没选文件</small>
       </label>
+      <div class="actions folder-help-wrap" style="margin-top:10px">
+        <button class="btn ghost" id="btnOpenFolder" style="flex:1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+          选择 MOD 文件夹
+        </button>
+        <button class="folder-help-trigger" type="button" aria-label="文件夹模式说明">!</button>
+        <div class="status folder-help">
+          <strong style="color:var(--warn)">文件夹模式说明：</strong>
+          适合 Chrome / Edge。选择 MOD 根目录后，会递归列出其中可处理的 ini / txt，选中目标文件后可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。不要选择包含大量 ini / txt 的大目录，否则扫描和下拉列表会很卡；这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。
+        </div>
+      </div>
+      <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
+        <label>文件夹内 ini / txt（含子文件夹）</label>
+        <select id="folderIniSelect"></select>
+      </div>
     </section>
 
     <section>
@@ -793,20 +863,6 @@
       </div>
     </section>
 
-    <section>
-      <div class="actions">
-        <button class="btn" id="btnZip" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          下载完整 ZIP
-        </button>
-        <button class="btn ghost" id="btnIni" disabled>只下载 ini</button>
-      </div>
-      <div id="status" class="status" style="margin-top:10px">等待 ini</div>
-      <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
-        作者 <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · 创作工具 <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · 致谢 <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
-      </div>
-    </section>
-
     <section class="palette-section" id="paletteSection" hidden>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <h2 style="margin:0">调色</h2>
@@ -859,6 +915,22 @@
         </div>
       </div>
     </section>
+    </div>
+
+    <div class="panel-left-footer">
+      <div class="actions">
+        <button class="btn" id="btnZip" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载完整 ZIP
+        </button>
+        <button class="btn" id="btnWriteFolder" disabled>写入文件夹</button>
+        <button class="btn ghost" id="btnIni" disabled>只下载 ini</button>
+      </div>
+      <div id="status" class="status" style="margin-top:10px">等待 ini</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
+        作者 <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · 创作工具 <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · 致谢 <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
+      </div>
+    </div>
   </div>
 
   <!-- ============ RIGHT ============ -->
@@ -1003,6 +1075,8 @@ function toast(msg, kind = "") {
 
 /* ---------- localStorage ---------- */
 const SETTINGS_KEY = "keyswap-gui-settings-v1";
+const FOLDER_PICKER_ID = "keyswap-gui-mod-folder";
+const LAST_FOLDER_HANDLE_KEY = "__last_mod_folder_handle";
 
 function swapSign(sw) {
   return { s: sw.sections.join("\x01"), k: sw.key, c: sw.condition, t: sw.type || "" };
@@ -1020,6 +1094,7 @@ function loadSettings() {
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
+    if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
   } catch (e) {}
 }
 function saveSettings() {
@@ -1031,6 +1106,7 @@ function saveSettings() {
   s.showKeyHint = $("showKeyHint").checked;
   s.hideUploadLabel = $("hideUploadLabel").checked;
   s.disableTitleShadow = $("disableTitleShadow").checked;
+  if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 
@@ -1983,6 +2059,10 @@ function downloadBlob(blob, name) {
 
 const state = {
   fileName: "",
+  fileHandle: null,
+  dirHandle: null,
+  targetDirHandle: null,
+  folderFiles: [],
   text: "",
   sections: [],
   swaps: [],
@@ -2674,6 +2754,7 @@ function updateStatus() {
   const hasActive = active > 0;
   $("btnZip").disabled = !hasActive;
   $("btnIni").disabled = !hasActive;
+  $("btnWriteFolder").disabled = !hasActive || !state.dirHandle || !state.targetDirHandle || !state.fileHandle;
   if (!total) {
     $("status").className = "status";
     $("status").textContent = "等待 ini";
@@ -2784,7 +2865,16 @@ function restoreSwapOrder() {
   } catch (e) { /* ignore */ }
 }
 
-async function loadFile(file) {
+async function loadFile(file, opts = {}) {
+  if (!opts.keepFolder) {
+    state.fileHandle = null;
+    state.dirHandle = null;
+    state.targetDirHandle = null;
+    state.folderFiles = [];
+    $("folderIniRow").style.display = "none";
+    $("folderIniSelect").innerHTML = "";
+  }
+  if (opts.fileHandle) state.fileHandle = opts.fileHandle;
   state.fileName = file.name;
   try {
     state.text = await file.text();
@@ -2906,6 +2996,12 @@ $("iniFile").addEventListener("change", e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
 });
 
+$("btnOpenFolder").addEventListener("click", () => pickModFolder());
+$("folderIniSelect").addEventListener("change", e => {
+  if (e.target.value === "") return;
+  loadFolderFile(Number(e.target.value));
+});
+
 // 拖放
 const drop = $("drop");
 let dragDepth = 0;
@@ -3021,6 +3117,138 @@ function updatePaletteSwatches() {
 
 function applyPreviewBg() {
   $("viewPanel").style.setProperty("--preview-bg", $("previewBg").value);
+}
+
+async function pickModFolder() {
+  if (!window.showDirectoryPicker) {
+    toast("当前浏览器不支持直接写入文件夹，请继续用 ZIP", "err");
+    return;
+  }
+  try {
+    const dir = await openRememberedDirectoryPicker();
+    state.dirHandle = dir;
+    $("btnOpenFolder").dataset.folderName = dir.name || "MOD 文件夹";
+    $("btnOpenFolder").title = `上次选择：${$("btnOpenFolder").dataset.folderName}`;
+    await dbPut(LAST_FOLDER_HANDLE_KEY, { handle: dir, name: dir.name || "MOD 文件夹" });
+    saveSettings();
+    state.targetDirHandle = null;
+    state.fileHandle = null;
+    state.folderFiles = [];
+    await scanFolderFiles(dir, "", dir);
+    state.folderFiles.sort((a, b) => a.path.localeCompare(b.path, "zh-CN"));
+    if (!state.folderFiles.length) {
+      $("folderIniRow").style.display = "none";
+      $("folderIniSelect").innerHTML = "";
+      updateStatus();
+      toast("这个文件夹及子文件夹里没有 ini / txt", "err");
+      return;
+    }
+    const sel = $("folderIniSelect");
+    sel.innerHTML = '<option value="">请选择要处理的 ini / txt</option>' + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
+    $("folderIniRow").style.display = "grid";
+    $("fileInfo").textContent = `已读取文件夹 · 找到 ${state.folderFiles.length} 个 ini / txt，请选择要处理的文件`;
+    updateStatus();
+    toast("已读取文件夹，请选择 ini", "ok");
+  } catch (e) {
+    if (e.name !== "AbortError") toast("选择文件夹失败", "err");
+  }
+}
+
+async function openRememberedDirectoryPicker() {
+  const opts = { id: FOLDER_PICKER_ID, mode: "readwrite" };
+  const last = await dbGet(LAST_FOLDER_HANDLE_KEY);
+  if (last?.handle) {
+    try {
+      return await window.showDirectoryPicker({ ...opts, startIn: last.handle });
+    } catch (e) {
+      if (e.name === "AbortError") throw e;
+    }
+  }
+  return window.showDirectoryPicker(opts);
+}
+
+async function scanFolderFiles(dirHandle, prefix, targetDirHandle) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (/^disabled/i.test(name)) continue;
+    const path = prefix ? `${prefix}/${name}` : name;
+    if (handle.kind === "file") {
+      if (/\.(ini|txt)$/i.test(name)) state.folderFiles.push({ name, path, handle, dirHandle: targetDirHandle });
+    } else if (handle.kind === "directory") {
+      await scanFolderFiles(handle, path, handle);
+    }
+  }
+}
+
+async function loadFolderFile(index) {
+  const item = state.folderFiles[index];
+  if (!item) return;
+  const file = await item.handle.getFile();
+  state.targetDirHandle = item.dirHandle;
+  await loadFile(file, { keepFolder: true, fileHandle: item.handle });
+  $("fileInfo").textContent = `${item.path} · 找到 ${state.swaps.length} 个 [Key*]`;
+  updateStatus();
+}
+
+async function writeFileHandle(handle, data) {
+  const writable = await handle.createWritable();
+  await writable.write(data);
+  await writable.close();
+}
+
+async function writeGeneratedToFolder() {
+  const targetDir = state.targetDirHandle || state.dirHandle;
+  if (!state.dirHandle || !targetDir || !state.fileHandle) {
+    toast("请先选择文件夹里的 ini", "err");
+    return;
+  }
+  const btn = $("btnWriteFolder");
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 写入中…';
+  try {
+    const perm = await state.dirHandle.requestPermission({ mode: "readwrite" });
+    if (perm !== "granted") throw new Error("没有文件夹写入权限");
+
+    const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
+    const iniHandle = await targetDir.getFileHandle(base + ".gui.ini", { create: true });
+    await writeFileHandle(iniHandle, new Blob([buildIni()], { type: "text/plain;charset=utf-8" }));
+
+    const resDir = await targetDir.getDirectoryHandle("res_gui", { create: true });
+    const resources = await buildResources();
+    for (const file of resources) {
+      const outName = file.name.replace(/^res_gui\//, "");
+      const handle = await resDir.getFileHandle(outName, { create: true });
+      await writeFileHandle(handle, file.data);
+    }
+
+    if (/\.ini$/i.test(state.fileName)) {
+      const txtName = state.fileName.replace(/\.ini$/i, ".txt");
+      const txtHandle = await targetDir.getFileHandle(txtName, { create: true });
+      await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
+      await targetDir.removeEntry(state.fileName);
+      state.fileName = txtName;
+      state.fileHandle = txtHandle;
+      const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
+      const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
+      $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 [Key*] · 已将原 ini 改为 txt`;
+      const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
+      if (current) {
+        current.name = txtName;
+        current.path = current.path.replace(/\.ini$/i, ".txt");
+        current.handle = txtHandle;
+      }
+      const sel = $("folderIniSelect");
+      const selected = sel.value;
+      sel.options[selected].textContent = current?.path || txtName;
+    }
+
+    toast("已写入文件夹", "ok");
+  } catch (e) {
+    toast("写入失败：" + (e.message || e.name || "未知错误"), "err");
+  } finally {
+    btn.innerHTML = orig;
+    updateStatus();
+  }
 }
 
 // swatch 点击打开对应颜色选择器
@@ -3691,6 +3919,8 @@ $("btnIni").addEventListener("click", () => {
   const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
   downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), base + ".gui.ini");
 });
+
+$("btnWriteFolder").addEventListener("click", () => writeGeneratedToFolder());
 
 $("btnZip").addEventListener("click", async () => {
   const btn = $("btnZip");
