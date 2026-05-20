@@ -1093,6 +1093,8 @@ applyPreviewBg()
 
 直接写入会写回当前选中 ini 所在的文件夹。扫描时会忽略任何名称以 `DISABLED` 开头的文件和文件夹（不区分大小写）。Firefox / Safari 不支持时，按钮会提示继续使用 ZIP。
 
+扫描后会通过 `folderScanStats` 显示统计：目录数、文件数、ini/txt 数量、显示数量、忽略 `DISABLED` 数量和读取失败数量。扫描某个子目录失败时只记录错误并继续扫描其它目录。
+
 UI 上会在文件夹入口旁提示：不要选择包含大量 ini 的大目录，否则递归扫描和下拉渲染会变卡；文件夹模式会直接写入文件夹并把原 `.ini` 改为 `.txt`，适合知道自己正在处理哪个 MOD 的用户。
 
 `showDirectoryPicker` 使用固定 `id: FOLDER_PICKER_ID`，并把上次目录句柄以 `LAST_FOLDER_HANDLE_KEY` 存到 IndexedDB。下次选择时会把该句柄作为 `startIn`，让 Chrome / Edge 尽量从上次选择的位置打开。浏览器权限失效、站点数据被清理或 `file://` 策略变化时，仍可能回到用户目录。
