@@ -700,6 +700,8 @@
     z-index: 20;
     box-shadow: 0 10px 24px rgba(0,0,0,.35);
   }
+  .folder-help p { margin: 0 0 8px; }
+  .folder-help p:last-child { margin-bottom: 0; }
   .folder-help-trigger:hover + .folder-help,
   .folder-help-trigger:focus + .folder-help {
     opacity: 1;
@@ -785,7 +787,10 @@
         <button class="folder-help-trigger" type="button" aria-label="文件夹模式说明">!</button>
         <div class="status folder-help">
           <strong style="color:var(--warn)">文件夹模式说明：</strong>
-          适合 Chrome / Edge。选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。<strong>线上网页无法扫描到 ini 文件，只能扫描到 txt 文件；想使用文件夹模式请把网页保存到本地后再打开。</strong>选中目标文件后可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡；这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。
+          <p>选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
+          <p><strong>在线网页只能扫描 txt 文件，无法扫描 ini 文件；如果需要处理 ini，请先把网页保存到本地再打开。</strong>只处理 txt 时可以直接在线使用。</p>
+          <p>选中目标文件后，可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。</p>
+          <p>不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。</p>
         </div>
       </div>
       <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
