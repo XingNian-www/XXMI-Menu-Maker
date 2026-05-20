@@ -9,7 +9,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KeySwap → GUI</title>
+<title>XXMI Menu Maker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='10' y1='8' x2='54' y2='56' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23ff4fb3'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='6' y='6' width='52' height='52' rx='14' fill='%2315131b'/%3E%3Cpath d='M18 20h28M18 32h28M18 44h28' stroke='url(%23g)' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='20' r='5' fill='%23fff'/%3E%3Ccircle cx='40' cy='32' r='5' fill='%23fff'/%3E%3Ccircle cx='30' cy='44' r='5' fill='%23fff'/%3E%3C/svg%3E">
 <style>
   :root {
     color-scheme: dark;
@@ -780,10 +781,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
           选择 MOD 文件夹
         </button>
+        <label class="check" style="font-size:12px;color:var(--muted)"><input id="scanTxtFiles" type="checkbox"> 包含 txt 文件</label>
         <button class="folder-help-trigger" type="button" aria-label="文件夹模式说明">!</button>
         <div class="status folder-help">
           <strong style="color:var(--warn)">文件夹模式说明：</strong>
-          适合 Chrome / Edge。选择 MOD 根目录后，会递归列出其中可处理的 ini / txt，选中目标文件后可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。不要选择包含大量 ini / txt 的大目录，否则扫描和下拉列表会很卡；这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。
+          适合 Chrome / Edge。选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。选中目标文件后可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡；这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。
         </div>
       </div>
       <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
@@ -1094,6 +1096,7 @@ function loadSettings() {
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
+    if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
     if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
   } catch (e) {}
 }
@@ -1106,6 +1109,7 @@ function saveSettings() {
   s.showKeyHint = $("showKeyHint").checked;
   s.hideUploadLabel = $("hideUploadLabel").checked;
   s.disableTitleShadow = $("disableTitleShadow").checked;
+  s.scanTxtFiles = $("scanTxtFiles").checked;
   if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
@@ -3028,6 +3032,12 @@ drop.addEventListener("drop", e => {
   $(id).addEventListener("change", () => { rerender(); });
 });
 
+$("scanTxtFiles").addEventListener("change", async () => {
+  saveSettings();
+  if (!state.dirHandle) return;
+  await refreshFolderFileList();
+});
+
 // --- 调色模式 ---
 const PALETTE_DEFAULT = {
   bgColor: "#23120e",
@@ -3133,22 +3143,8 @@ async function pickModFolder() {
     saveSettings();
     state.targetDirHandle = null;
     state.fileHandle = null;
-    state.folderFiles = [];
-    await scanFolderFiles(dir, "", dir);
-    state.folderFiles.sort((a, b) => a.path.localeCompare(b.path, "zh-CN"));
-    if (!state.folderFiles.length) {
-      $("folderIniRow").style.display = "none";
-      $("folderIniSelect").innerHTML = "";
-      updateStatus();
-      toast("这个文件夹及子文件夹里没有 ini / txt", "err");
-      return;
-    }
-    const sel = $("folderIniSelect");
-    sel.innerHTML = '<option value="">请选择要处理的 ini / txt</option>' + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
-    $("folderIniRow").style.display = "grid";
-    $("fileInfo").textContent = `已读取文件夹 · 找到 ${state.folderFiles.length} 个 ini / txt，请选择要处理的文件`;
-    updateStatus();
-    toast("已读取文件夹，请选择 ini", "ok");
+    await refreshFolderFileList();
+    if (state.folderFiles.length) toast($("scanTxtFiles").checked ? "已读取文件夹，请选择 ini / txt" : "已读取文件夹，请选择 ini", "ok");
   } catch (e) {
     if (e.name !== "AbortError") toast("选择文件夹失败", "err");
   }
@@ -3167,12 +3163,51 @@ async function openRememberedDirectoryPicker() {
   return window.showDirectoryPicker(opts);
 }
 
+async function refreshFolderFileList() {
+  if (!state.dirHandle) return;
+  const selectedValue = $("folderIniSelect").value;
+  const prevPath = selectedValue === "" ? "" : (state.folderFiles[Number(selectedValue)]?.path || "");
+  state.folderFiles = [];
+  await scanFolderFiles(state.dirHandle, "", state.dirHandle);
+  state.folderFiles.sort((a, b) => a.path.localeCompare(b.path, "zh-CN"));
+
+  const sel = $("folderIniSelect");
+  if (!state.folderFiles.length) {
+    state.fileHandle = null;
+    state.targetDirHandle = null;
+    $("folderIniRow").style.display = "none";
+    sel.innerHTML = "";
+    $("fileInfo").textContent = $("scanTxtFiles").checked
+      ? "已读取文件夹 · 没有找到 ini / txt"
+      : "已读取文件夹 · 没有找到 ini";
+    updateStatus();
+    toast($("scanTxtFiles").checked ? "这个文件夹及子文件夹里没有 ini / txt" : "这个文件夹及子文件夹里没有 ini", "err");
+    return;
+  }
+
+  sel.innerHTML = `<option value="">请选择要处理的 ${$("scanTxtFiles").checked ? "ini / txt" : "ini"}</option>` + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
+  $("folderIniRow").style.display = "grid";
+
+  const nextIdx = prevPath ? state.folderFiles.findIndex(f => f.path === prevPath) : -1;
+  if (nextIdx >= 0) {
+    sel.value = String(nextIdx);
+    await loadFolderFile(nextIdx);
+  } else {
+    state.fileHandle = null;
+    state.targetDirHandle = null;
+    updateStatus();
+    $("fileInfo").textContent = `已读取文件夹 · 找到 ${state.folderFiles.length} 个 ${$("scanTxtFiles").checked ? "ini / txt" : "ini"}，请选择要处理的文件`;
+  }
+}
+
 async function scanFolderFiles(dirHandle, prefix, targetDirHandle) {
   for await (const [name, handle] of dirHandle.entries()) {
     if (/^disabled/i.test(name)) continue;
     const path = prefix ? `${prefix}/${name}` : name;
     if (handle.kind === "file") {
-      if (/\.(ini|txt)$/i.test(name)) state.folderFiles.push({ name, path, handle, dirHandle: targetDirHandle });
+      const includeTxt = $("scanTxtFiles").checked;
+      const fileRe = includeTxt ? /\.(ini|txt)$/i : /\.ini$/i;
+      if (fileRe.test(name)) state.folderFiles.push({ name, path, handle, dirHandle: targetDirHandle });
     } else if (handle.kind === "directory") {
       await scanFolderFiles(handle, path, handle);
     }
