@@ -791,6 +791,7 @@
       <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
         <label>文件夹内 ini / txt（含子文件夹）</label>
         <select id="folderIniSelect"></select>
+        <div id="folderScanStats" style="font-size:11px;color:var(--muted);line-height:1.6"></div>
       </div>
     </section>
 
@@ -2067,6 +2068,7 @@ const state = {
   dirHandle: null,
   targetDirHandle: null,
   folderFiles: [],
+  folderScanStats: null,
   text: "",
   sections: [],
   swaps: [],
@@ -2875,8 +2877,10 @@ async function loadFile(file, opts = {}) {
     state.dirHandle = null;
     state.targetDirHandle = null;
     state.folderFiles = [];
+    state.folderScanStats = null;
     $("folderIniRow").style.display = "none";
     $("folderIniSelect").innerHTML = "";
+    $("folderScanStats").textContent = "";
   }
   if (opts.fileHandle) state.fileHandle = opts.fileHandle;
   state.fileName = file.name;
@@ -3168,6 +3172,7 @@ async function refreshFolderFileList() {
   const selectedValue = $("folderIniSelect").value;
   const prevPath = selectedValue === "" ? "" : (state.folderFiles[Number(selectedValue)]?.path || "");
   state.folderFiles = [];
+  state.folderScanStats = { dirs: 0, files: 0, ini: 0, txt: 0, listed: 0, disabled: 0, errors: 0 };
   await scanFolderFiles(state.dirHandle, "", state.dirHandle);
   state.folderFiles.sort((a, b) => a.path.localeCompare(b.path, "zh-CN"));
 
@@ -3175,11 +3180,12 @@ async function refreshFolderFileList() {
   if (!state.folderFiles.length) {
     state.fileHandle = null;
     state.targetDirHandle = null;
-    $("folderIniRow").style.display = "none";
+    $("folderIniRow").style.display = "grid";
     sel.innerHTML = "";
     $("fileInfo").textContent = $("scanTxtFiles").checked
       ? "已读取文件夹 · 没有找到 ini / txt"
       : "已读取文件夹 · 没有找到 ini";
+    renderFolderScanStats();
     updateStatus();
     toast($("scanTxtFiles").checked ? "这个文件夹及子文件夹里没有 ini / txt" : "这个文件夹及子文件夹里没有 ini", "err");
     return;
@@ -3187,6 +3193,7 @@ async function refreshFolderFileList() {
 
   sel.innerHTML = `<option value="">请选择要处理的 ${$("scanTxtFiles").checked ? "ini / txt" : "ini"}</option>` + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
   $("folderIniRow").style.display = "grid";
+  renderFolderScanStats();
 
   const nextIdx = prevPath ? state.folderFiles.findIndex(f => f.path === prevPath) : -1;
   if (nextIdx >= 0) {
@@ -3201,17 +3208,37 @@ async function refreshFolderFileList() {
 }
 
 async function scanFolderFiles(dirHandle, prefix, targetDirHandle) {
-  for await (const [name, handle] of dirHandle.entries()) {
-    if (/^disabled/i.test(name)) continue;
-    const path = prefix ? `${prefix}/${name}` : name;
-    if (handle.kind === "file") {
-      const includeTxt = $("scanTxtFiles").checked;
-      const fileRe = includeTxt ? /\.(ini|txt)$/i : /\.ini$/i;
-      if (fileRe.test(name)) state.folderFiles.push({ name, path, handle, dirHandle: targetDirHandle });
-    } else if (handle.kind === "directory") {
-      await scanFolderFiles(handle, path, handle);
+  try {
+    state.folderScanStats.dirs++;
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (/^disabled/i.test(name)) { state.folderScanStats.disabled++; continue; }
+      const path = prefix ? `${prefix}/${name}` : name;
+      if (handle.kind === "file") {
+        state.folderScanStats.files++;
+        if (/\.ini$/i.test(name)) state.folderScanStats.ini++;
+        if (/\.txt$/i.test(name)) state.folderScanStats.txt++;
+        const includeTxt = $("scanTxtFiles").checked;
+        const fileRe = includeTxt ? /\.(ini|txt)$/i : /\.ini$/i;
+        if (fileRe.test(name)) {
+          state.folderFiles.push({ name, path, handle, dirHandle: targetDirHandle });
+          state.folderScanStats.listed++;
+        }
+      } else if (handle.kind === "directory") {
+        await scanFolderFiles(handle, path, handle);
+      }
     }
+  } catch (e) {
+    state.folderScanStats.errors++;
   }
+}
+
+function renderFolderScanStats() {
+  const s = state.folderScanStats;
+  if (!s) return;
+  const bits = [`目录 ${s.dirs}`, `文件 ${s.files}`, `ini ${s.ini}`, `txt ${s.txt}`, `显示 ${s.listed}`];
+  if (s.disabled) bits.push(`忽略 DISABLED ${s.disabled}`);
+  if (s.errors) bits.push(`读取失败 ${s.errors}`);
+  $("folderScanStats").textContent = "扫描统计：" + bits.join(" · ");
 }
 
 async function loadFolderFile(index) {
