@@ -1086,7 +1086,7 @@ applyPreviewBg()
 → 编辑配置
 → 点击写入文件夹
 → requestPermission({ mode: "readwrite" })
-→ 写入到当前 ini 所在文件夹：默认写回原 .ini 文件名；关闭 useOriginalIniName 或处理 txt 时写入 <原文件名>_gui.ini
+→ 写入到当前 ini/txt 所在文件夹：默认写回原 .ini 文件名，处理 txt 时生成同名 .ini；关闭 useOriginalIniName 时写入 <原文件名>_gui.ini
 → 写入到当前 ini 所在文件夹：res_gui/draw_2d.hlsl、bg.png、title.png、slot PNG
 → 如果原文件是 .ini，复制原文到同名 .txt；关闭 useOriginalIniName 时再 removeEntry() 删除原 .ini 文件名
 ```

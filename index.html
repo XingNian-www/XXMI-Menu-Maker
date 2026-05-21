@@ -860,7 +860,7 @@
         <label class="check" title="勾选后从生成 INI 中删除原文件的 [Key*] 节"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
         <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
-        <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
+        <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
@@ -3270,6 +3270,7 @@ async function writeFileHandle(handle, data) {
 function getOutputIniName() {
   const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
   if ($("useOriginalIniName").checked && /\.ini$/i.test(state.fileName)) return state.fileName;
+  if ($("useOriginalIniName").checked && /\.txt$/i.test(state.fileName)) return base + ".ini";
   return base + "_gui.ini";
 }
 
