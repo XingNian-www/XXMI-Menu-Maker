@@ -195,7 +195,7 @@ writeGeneratedToFolder()
 完整 ZIP 内容大致如下：
 
 ```text
-<原文件名>.gui.ini
+<原文件名>_gui.ini
 res_gui/draw_2d.hlsl
 res_gui/bg.png
 res_gui/title.png
@@ -1086,16 +1086,16 @@ applyPreviewBg()
 → 编辑配置
 → 点击写入文件夹
 → requestPermission({ mode: "readwrite" })
-→ 写入到当前 ini 所在文件夹：<原文件名>.gui.ini
+→ 写入到当前 ini 所在文件夹：默认写回原 .ini 文件名；关闭 useOriginalIniName 或处理 txt 时写入 <原文件名>_gui.ini
 → 写入到当前 ini 所在文件夹：res_gui/draw_2d.hlsl、bg.png、title.png、slot PNG
-→ 如果原文件是 .ini，复制原文到同名 .txt，然后 removeEntry() 删除原 .ini 文件名
+→ 如果原文件是 .ini，复制原文到同名 .txt；关闭 useOriginalIniName 时再 removeEntry() 删除原 .ini 文件名
 ```
 
 直接写入会写回当前选中 ini 所在的文件夹。扫描时会忽略任何名称以 `DISABLED` 开头的文件和文件夹（不区分大小写）。Firefox / Safari 不支持时，按钮会提示继续使用 ZIP。
 
 扫描后会通过 `folderScanStats` 显示统计：目录数、文件数、ini/txt 数量、显示数量、忽略 `DISABLED` 数量和读取失败数量。扫描某个子目录失败时只记录错误并继续扫描其它目录。
 
-UI 上会在文件夹入口旁提示：不要选择包含大量 ini 的大目录，否则递归扫描和下拉渲染会变卡；文件夹模式会直接写入文件夹并把原 `.ini` 改为 `.txt`，适合知道自己正在处理哪个 MOD 的用户。
+UI 上会在文件夹入口旁提示：不要选择包含大量 ini/txt 的大目录，否则递归扫描和下拉渲染会变卡；文件夹模式会直接写入文件夹，默认使用原 `.ini` 文件名并把原内容备份成 `.txt`，适合知道自己正在处理哪个 MOD 的用户。
 
 `showDirectoryPicker` 使用固定 `id: FOLDER_PICKER_ID`，并把上次目录句柄以 `LAST_FOLDER_HANDLE_KEY` 存到 IndexedDB。下次选择时会把该句柄作为 `startIn`，让 Chrome / Edge 尽量从上次选择的位置打开。浏览器权限失效、站点数据被清理或 `file://` 策略变化时，仍可能回到用户目录。
 
@@ -1311,7 +1311,7 @@ draw_2d.hlsl 是否兼容
 10. 上传面板图片后，右侧面板背景同步变化，缩略图显示
 11. 清除面板图片后恢复纯色背景
 12. 点击跳过某按钮后，预览和 ini 都不再包含该按钮
-13. 点击「只下载 ini」能下载 `.gui.ini`
+13. 点击「只下载 ini」能下载 `_gui.ini`，勾选「使用原 ini 名」且当前文件是 ini 时下载原文件名
 14. 点击「下载完整 ZIP」能下载 `.gui.zip`
 15. ZIP 中包含 `res_gui/draw_2d.hlsl`
 16. ZIP 中包含 `bg.png`、`slot_##.png`、`slot_hover_##.png` 和 shader
@@ -1330,7 +1330,7 @@ draw_2d.hlsl 是否兼容
 29. 禁用标题文字投影后，网页预览和导出 `title.png` 都不绘制投影
 30. 上传按钮图和面板图后，刷新并恢复草稿，导出 ZIP 仍包含对应图片效果
 31. Chrome / Edge 下选择 MOD 根目录后，能递归列出子目录里的 ini，并忽略 `DISABLED*` 文件/文件夹
-32. 点击写入文件夹后，在选中 ini 所在文件夹生成 `.gui.ini` 和 `res_gui/*`，原 `.ini` 变为 `.txt`
+32. 点击写入文件夹后，在选中 ini 所在文件夹生成 ini 和 `res_gui/*`，默认写回原 `.ini` 文件名，并把原内容备份成 `.txt`
 
 ## 18. 快速定位表
 

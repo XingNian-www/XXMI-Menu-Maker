@@ -789,8 +789,8 @@
           <strong style="color:var(--warn)">文件夹模式说明：</strong>
           <p>选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
           <p><strong>在线网页只能扫描 txt 文件，无法扫描 ini 文件；如果需要处理 ini，请先把网页保存到本地再打开。</strong>只处理 txt 时可以直接在线使用。</p>
-          <p>选中目标文件后，可直接写入 `.gui.ini` 和 `res_gui`，并默认把原 `.ini` 改为 `.txt`。</p>
-          <p>不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并改名原 ini，请确认自己知道在处理哪个 MOD。</p>
+          <p>选中目标文件后，可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。</p>
+          <p>不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。</p>
         </div>
       </div>
       <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
@@ -860,6 +860,7 @@
         <label class="check" title="勾选后从生成 INI 中删除原文件的 [Key*] 节"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
         <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
+        <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
@@ -1101,6 +1102,7 @@ function loadSettings() {
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
+    if (typeof s.useOriginalIniName === "boolean") $("useOriginalIniName").checked = s.useOriginalIniName;
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
     if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
     if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
@@ -1114,6 +1116,7 @@ function saveSettings() {
   s.removeKeys = $("removeKeys").checked;
   s.showKeyHint = $("showKeyHint").checked;
   s.hideUploadLabel = $("hideUploadLabel").checked;
+  s.useOriginalIniName = $("useOriginalIniName").checked;
   s.disableTitleShadow = $("disableTitleShadow").checked;
   s.scanTxtFiles = $("scanTxtFiles").checked;
   if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
@@ -1215,6 +1218,7 @@ function flushDraftMeta() {
   ui.removeKeys = $("removeKeys").checked;
   ui.showKeyHint = $("showKeyHint").checked;
   ui.hideUploadLabel = $("hideUploadLabel").checked;
+  ui.useOriginalIniName = $("useOriginalIniName").checked;
   ui.disableTitleShadow = $("disableTitleShadow").checked;
 
   const entry = {
@@ -1285,6 +1289,7 @@ async function loadDraft() {
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
+    if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
     if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
 
     // 从 IndexedDB 恢复大图
@@ -3037,7 +3042,7 @@ drop.addEventListener("drop", e => {
     rerender();
   });
 });
-["removeKeys", "showKeyHint", "hideUploadLabel", "disableTitleShadow"].forEach(id => {
+["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
 });
 
@@ -3262,6 +3267,12 @@ async function writeFileHandle(handle, data) {
   await writable.close();
 }
 
+function getOutputIniName() {
+  const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
+  if ($("useOriginalIniName").checked && /\.ini$/i.test(state.fileName)) return state.fileName;
+  return base + "_gui.ini";
+}
+
 async function writeGeneratedToFolder() {
   const targetDir = state.targetDirHandle || state.dirHandle;
   if (!state.dirHandle || !targetDir || !state.fileHandle) {
@@ -3276,8 +3287,35 @@ async function writeGeneratedToFolder() {
     const perm = await state.dirHandle.requestPermission({ mode: "readwrite" });
     if (perm !== "granted") throw new Error("没有文件夹写入权限");
 
-    const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
-    const iniHandle = await targetDir.getFileHandle(base + ".gui.ini", { create: true });
+    let outputName = getOutputIniName();
+    if (/\.ini$/i.test(state.fileName)) {
+      const txtName = state.fileName.replace(/\.ini$/i, ".txt");
+      const txtHandle = await targetDir.getFileHandle(txtName, { create: true });
+      await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
+
+      if (!$("useOriginalIniName").checked) {
+        await targetDir.removeEntry(state.fileName);
+        state.fileName = txtName;
+        state.fileHandle = txtHandle;
+        outputName = getOutputIniName();
+        const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
+        const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
+        $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 [Key*] · 已将原 ini 改为 txt`;
+        const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
+        if (current) {
+          current.name = txtName;
+          current.path = current.path.replace(/\.ini$/i, ".txt");
+          current.handle = txtHandle;
+        }
+        const sel = $("folderIniSelect");
+        const selected = sel.value;
+        sel.options[selected].textContent = current?.path || txtName;
+      } else {
+        $("fileInfo").textContent = `${state.fileName} · 找到 ${state.swaps.length} 个 [Key*] · 已备份原 ini 为 txt`;
+      }
+    }
+
+    const iniHandle = await targetDir.getFileHandle(outputName, { create: true });
     await writeFileHandle(iniHandle, new Blob([buildIni()], { type: "text/plain;charset=utf-8" }));
 
     const resDir = await targetDir.getDirectoryHandle("res_gui", { create: true });
@@ -3286,27 +3324,6 @@ async function writeGeneratedToFolder() {
       const outName = file.name.replace(/^res_gui\//, "");
       const handle = await resDir.getFileHandle(outName, { create: true });
       await writeFileHandle(handle, file.data);
-    }
-
-    if (/\.ini$/i.test(state.fileName)) {
-      const txtName = state.fileName.replace(/\.ini$/i, ".txt");
-      const txtHandle = await targetDir.getFileHandle(txtName, { create: true });
-      await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
-      await targetDir.removeEntry(state.fileName);
-      state.fileName = txtName;
-      state.fileHandle = txtHandle;
-      const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
-      const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
-      $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 [Key*] · 已将原 ini 改为 txt`;
-      const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
-      if (current) {
-        current.name = txtName;
-        current.path = current.path.replace(/\.ini$/i, ".txt");
-        current.handle = txtHandle;
-      }
-      const sel = $("folderIniSelect");
-      const selected = sel.value;
-      sel.options[selected].textContent = current?.path || txtName;
     }
 
     toast("已写入文件夹", "ok");
@@ -3446,10 +3463,11 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
-    if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
-    if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
-    if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
-    if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
+      if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
+      if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
+      if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
+      if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
+      if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
       state.panelImageRgba = await dataUrlToRgba(state.panelImagePreview, 256);
@@ -3983,8 +4001,7 @@ $("pickerGrid").addEventListener("click", async e => {
 // 下载按钮
 $("btnIni").addEventListener("click", () => {
   const text = buildIni();
-  const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
-  downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), base + ".gui.ini");
+  downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), getOutputIniName());
 });
 
 $("btnWriteFolder").addEventListener("click", () => writeGeneratedToFolder());
@@ -3997,7 +4014,7 @@ $("btnZip").addEventListener("click", async () => {
   try {
     const ini = buildIni();
     const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
-    const files = [{ name: base + ".gui.ini", data: ini }];
+    const files = [{ name: getOutputIniName(), data: ini }];
     files.push(...await buildResources());
     const blob = makeZip(files);
     downloadBlob(blob, base + ".gui.zip");
