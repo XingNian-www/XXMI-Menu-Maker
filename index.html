@@ -2556,7 +2556,7 @@ function buildSingleIni() {
   for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
     const type = handlerType(handler, behavior);
     if ((type === "cycle" || type === "toggle") && handler.assignments.length) {
-      L.push(`global ${handler.stepVar} = -1`);
+      L.push(`global ${handler.stepVar} = 0`);
     }
   }
   L.push("");
