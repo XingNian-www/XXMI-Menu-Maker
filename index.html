@@ -825,6 +825,16 @@
         <div class="field"><label>列数</label><input id="cols" type="number" min="1" max="8" value="3"></div>
         <div class="field"><label>按钮间距 px</label><input id="gap" type="number" min="4" max="48" value="14"></div>
       </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>参考分辨率 <span style="font-weight:400;color:var(--muted)">（预览缩放）</span></label>
+        <select id="previewRes">
+          <option value="">×1 适合预览</option>
+          <option value="2560x1440">2560×1440 (2K)</option>
+          <option value="1920x1080">1920×1080 (FHD)</option>
+          <option value="1280x720">1280×720 (HD)</option>
+          <option value="3840x2160">3840×2160 (4K)</option>
+        </select>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <button class="btn ghost" id="btnColorMode" style="flex:1">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M2 12h20"/></svg>
@@ -1097,7 +1107,7 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
@@ -1112,7 +1122,7 @@ function loadSettings() {
 }
 function saveSettings() {
   const s = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
@@ -1215,7 +1225,7 @@ function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
@@ -1287,7 +1297,7 @@ async function loadDraft() {
 
     // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -3020,6 +3030,23 @@ async function renderPreview() {
 
   $("guiTitle").textContent = $("title").value || "GUI Menu";
 
+  // 参考分辨率缩放预览
+  const resVal = $("previewRes").value;
+  const wrap = document.querySelector(".preview-panel-wrap");
+  if (wrap) {
+    if (resVal && resVal.includes("x")) {
+      const [rw, rh] = resVal.split("x").map(Number);
+      if (rw && rh) {
+        const scale = 1080 / rh;
+        wrap.style.transform = `scale(${scale.toFixed(3)})`;
+        wrap.style.transformOrigin = "top center";
+      }
+    } else {
+      wrap.style.transform = "scale(1)";
+      wrap.style.transformOrigin = "top center";
+    }
+  }
+
   const grid = $("guiGrid");
   grid.style.gridTemplateColumns = `repeat(${cols}, 64px)`;
   grid.style.gap = `${gap}px`;
@@ -3342,6 +3369,8 @@ drop.addEventListener("drop", e => {
 ["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "resetActiveOnPresent", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
 });
+
+$("previewRes").addEventListener("change", () => { saveSettings(); rerender(); });
 
 $("scanTxtFiles").addEventListener("change", async () => {
   saveSettings();
@@ -3799,7 +3828,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       state.swaps = parseSwaps(state.sections);
       state.slotMeta = state.swaps.map(newSlotMeta);
       // 恢复 UI
-      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
+      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
       if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
