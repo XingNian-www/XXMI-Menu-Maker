@@ -560,11 +560,15 @@ secs = secs.filter(s => !s.name || !/^Key/i.test(s.name));
 
 `injectPresent(sections)` 会查找原文件中的 `[Present]`。
 
-如果存在，会在 `[Present]` 开头插入：
+如果存在，会在 `[Present]` 开头插入，其中 `$active` 会使用检测到或手动填写的激活变量，例如 `$active0`：
 
 ```ini
-if $active && $gui_menu
-  run = CommandListGuiMenu
+if $active > 0
+  if $gui_menu
+    run = CommandListGuiMenu
+  endif
+else
+  $gui_menu = 0
 endif
 ```
 
