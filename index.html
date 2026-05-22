@@ -708,6 +708,27 @@
     transform: translateY(0);
     pointer-events: none;
   }
+  .beta-active-panel {
+    display: none;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255,255,255,.03);
+  }
+  .beta-active-panel.show { display: grid; gap: 6px; }
+  .beta-active-row { display: flex; gap: 6px; align-items: center; }
+  .beta-active-row input { flex: 1; }
+  .beta-active-remove {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    background: var(--bg-2);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .beta-active-add { justify-self: start; padding: 4px 10px; }
 
   /* 调色模式 */
   .panel-left.color-mode .panel-left-main > section:not(.palette-section),
@@ -862,6 +883,12 @@
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
         <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
         <label class="check" title="用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启"><input id="resetActiveOnPresent" type="checkbox"> 修复跨角色面板</label>
+        <label class="check" title="[Beta] 为多个带 active 字眼的激活变量分别生成面板；普通 MOD 不需要开启"><input id="multiActiveMode" type="checkbox"> [Beta] 多形态角色支持</label>
+      </div>
+      <div class="beta-active-panel" id="multiActivePanel">
+        <div style="font-size:11px;color:var(--muted);line-height:1.5">用于同一 MOD 内多个激活变量的角色/形态。开启后会自动扫描带 active 字眼的变量，也可以手动添加。</div>
+        <div id="multiActiveList"></div>
+        <button class="btn ghost beta-active-add" id="btnAddActiveVar" type="button">+</button>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
@@ -1105,6 +1132,8 @@ function loadSettings() {
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
     if (typeof s.useOriginalIniName === "boolean") $("useOriginalIniName").checked = s.useOriginalIniName;
     if (typeof s.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = s.resetActiveOnPresent;
+    if (typeof s.multiActiveMode === "boolean") $("multiActiveMode").checked = s.multiActiveMode;
+    if (Array.isArray(s.multiActiveVars)) state.multiActiveVars = s.multiActiveVars.filter(isActiveVarName);
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
     if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
     if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
@@ -1120,6 +1149,8 @@ function saveSettings() {
   s.hideUploadLabel = $("hideUploadLabel").checked;
   s.useOriginalIniName = $("useOriginalIniName").checked;
   s.resetActiveOnPresent = $("resetActiveOnPresent").checked;
+  s.multiActiveMode = $("multiActiveMode").checked;
+  s.multiActiveVars = state.multiActiveVars;
   s.disableTitleShadow = $("disableTitleShadow").checked;
   s.scanTxtFiles = $("scanTxtFiles").checked;
   if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
@@ -1223,6 +1254,8 @@ function flushDraftMeta() {
   ui.hideUploadLabel = $("hideUploadLabel").checked;
   ui.useOriginalIniName = $("useOriginalIniName").checked;
   ui.resetActiveOnPresent = $("resetActiveOnPresent").checked;
+  ui.multiActiveMode = $("multiActiveMode").checked;
+  ui.multiActiveVars = state.multiActiveVars;
   ui.disableTitleShadow = $("disableTitleShadow").checked;
 
   const entry = {
@@ -1295,6 +1328,8 @@ async function loadDraft() {
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
     if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
     if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
+    if (typeof d.ui.multiActiveMode === "boolean") $("multiActiveMode").checked = d.ui.multiActiveMode;
+    if (Array.isArray(d.ui.multiActiveVars)) state.multiActiveVars = d.ui.multiActiveVars.filter(isActiveVarName);
     if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
 
     // 从 IndexedDB 恢复大图
@@ -2091,6 +2126,7 @@ const state = {
   panelImagePreview: null,   // string | null, data URL for preview
   // slot 元信息 by index
   slotMeta: [],   // { name, skip, iconKind: 'lucide'|'upload'|'auto', iconName, iconColor, iconRgba (Uint8ClampedArray) }
+  multiActiveVars: [],
   swapOrder: null, // array of swapSign objects, persisted order
   mergeMode: false,
   fabAction: "", // "merge" | "skip" | "reset"
@@ -2138,6 +2174,54 @@ function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function isActiveVarName(value) {
+  return /^\$[A-Za-z0-9_]*active[A-Za-z0-9_]*$/i.test((value || "").trim());
+}
+
+function uniqueActiveVars(vars) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of vars) {
+    const v = (raw || "").trim();
+    if (!isActiveVarName(v) || seen.has(v.toLowerCase())) continue;
+    seen.add(v.toLowerCase());
+    out.push(v);
+  }
+  return out;
+}
+
+function scanActiveVarsFromSections(sections) {
+  const vars = [];
+  for (const sec of sections) {
+    for (const line of sec.lines || []) {
+      const matches = line.match(/\$[A-Za-z0-9_]*active[A-Za-z0-9_]*/gi);
+      if (matches) vars.push(...matches);
+    }
+  }
+  return uniqueActiveVars(vars).sort((a, b) => a.localeCompare(b));
+}
+
+function renderMultiActiveVars() {
+  const panel = $("multiActivePanel");
+  if (!panel) return;
+  panel.classList.toggle("show", $("multiActiveMode").checked);
+  const list = $("multiActiveList");
+  const vars = state.multiActiveVars.length ? state.multiActiveVars : scanActiveVarsFromSections(state.sections);
+  if (!state.multiActiveVars.length) state.multiActiveVars = vars;
+  list.innerHTML = state.multiActiveVars.map((v, i) => `
+    <div class="beta-active-row">
+      <input data-active-var="${i}" value="${escapeHtml(v)}" placeholder="$active">
+      <button class="beta-active-remove" data-active-remove="${i}" type="button" title="删除">×</button>
+    </div>
+  `).join("");
+}
+
+function setMultiActiveVars(vars) {
+  state.multiActiveVars = uniqueActiveVars(vars);
+  renderMultiActiveVars();
+  rerender();
+}
+
 let colsManual = false;
 
 function autoCols(activeCount) {
@@ -2170,7 +2254,7 @@ function clickKey() {
 }
 
 // 把 [Present] 注入 GUI 调用；如果原文件没有，新建一个
-function injectPresent(sections, activeVar, shouldResetActive) {
+function injectPresent(sections, activeVar, shouldResetActive, menuCommand = "CommandListGuiMenu") {
   let hasPresent = false;
   const resetLine = `post ${activeVar} = 0`;
   const out = sections.map(sec => {
@@ -2183,7 +2267,7 @@ function injectPresent(sections, activeVar, shouldResetActive) {
     // 在 [Present] 头部插入 GUI 渲染触发
     lines.splice(1, 0,
       "if $gui_menu",
-      "  run = CommandListGuiMenu",
+      `  run = ${menuCommand}`,
       "endif",
       ""
     );
@@ -2192,7 +2276,307 @@ function injectPresent(sections, activeVar, shouldResetActive) {
   return { sections: out, hasPresent };
 }
 
+function safeIdent(text) {
+  return (text || "").replace(/^\$/, "").replace(/[^A-Za-z0-9_]/g, "_") || "active";
+}
+
+function sectionSuffix(index, activeVar) {
+  return `Beta${index + 1}_${safeIdent(activeVar)}`;
+}
+
+function conditionHasActiveVar(condition, activeVar) {
+  if (!condition) return false;
+  return new RegExp(`(^|[^A-Za-z0-9_])${activeVar.replace(/[$]/g, "\\$")}(?![A-Za-z0-9_])`, "i").test(condition);
+}
+
+function getBetaPanels() {
+  const vars = uniqueActiveVars(state.multiActiveVars.length ? state.multiActiveVars : scanActiveVarsFromSections(state.sections));
+  return vars.map((activeVar, panelIndex) => {
+    const indices = state.swaps
+      .map((sw, i) => ({ sw, i }))
+      .filter(({ sw, i }) => !state.slotMeta[i]?.skip && conditionHasActiveVar(sw.condition, activeVar))
+      .map(({ i }) => i);
+    return { activeVar, panelIndex, suffix: sectionSuffix(panelIndex, activeVar), indices };
+  }).filter(panel => panel.indices.length);
+}
+
+function buildBetaIni() {
+  const panels = getBetaPanels();
+  if (!panels.length) return buildSingleIni();
+
+  const cols = Math.max(1, Number($("cols").value) || 3);
+  const gap = Math.max(0, Number($("gap").value) || 14);
+  const behavior = $("behavior").value;
+  const slotSize = 64;
+  const padding = 16;
+  const resetActiveOnPresent = $("resetActiveOnPresent").checked;
+  const primaryActive = panels[0].activeVar;
+
+  let secs = state.sections;
+  if ($("removeKeys").checked) secs = secs.filter(s => !s.name || !/^Key/i.test(s.name));
+  const inj = injectPresent(secs, primaryActive, resetActiveOnPresent, "CommandListGuiMenuBeta");
+  secs = inj.sections;
+  let body = secs.map(s => s.lines.join("\n")).join("\n").trim();
+
+  const L = [];
+  L.push("");
+  L.push("; =====================================================");
+  L.push("; GUI menu beta multi-active — generated by KeySwap → GUI webui");
+  L.push("; =====================================================");
+  L.push("");
+
+  if (!inj.hasPresent) {
+    L.push("[Present]");
+    L.push("if $gui_menu");
+    L.push("  run = CommandListGuiMenuBeta");
+    L.push("endif");
+    if (resetActiveOnPresent) L.push(`post ${primaryActive} = 0`);
+    L.push("");
+  }
+
+  L.push("[Constants]");
+  L.push("global $gui_menu = 0");
+  L.push("global $gui_hover = 0");
+  L.push("global $gui_hovered = 0");
+  L.push("global $gui_clicked = 0");
+  L.push("global $gui_slot = 0");
+  L.push("global $gui_hold = 0");
+  L.push("global $gui_drag = 0");
+  L.push("global $gui_ww");
+  L.push("global $gui_wh");
+  L.push("global $gui_cpx");
+  L.push("global $gui_cpy");
+  L.push("global $gui_cox");
+  L.push("global $gui_coy");
+  L.push("global persist $gui_mx = 0.05");
+  L.push("global persist $gui_my = 0.20");
+  for (const panel of panels) {
+    panel.indices.forEach((sIdx, n) => {
+      const swap = state.swaps[sIdx];
+      if (swap.type === "action") return;
+      for (let g = 0; g < swap.groups.length; g++) {
+        const groupSuffix = swap.groups.length > 1 ? `_${g}` : "";
+        L.push(`global persist $gui_step_${panel.suffix}_${n + 1}${groupSuffix} = 0`);
+      }
+    });
+  }
+  L.push("");
+
+  L.push("[KeyGuiMenu]");
+  L.push(`condition = ${panels.map(p => `${p.activeVar} > 0`).join(" || ")}`);
+  L.push(`key = ${$("menuKey").value.trim() || "alt"}`);
+  L.push("type = hold");
+  L.push("$gui_menu = 1");
+  L.push("");
+
+  L.push("[KeyGuiHold]");
+  L.push("condition = $gui_menu == 1 && $gui_hover == 0");
+  L.push(`key = ${clickKey()}`);
+  L.push("type = hold");
+  L.push("$gui_hold = 1");
+  L.push("");
+
+  L.push("[KeyGuiClick]");
+  L.push("condition = $gui_menu == 1 && $gui_hover == 1");
+  L.push(`key = ${clickKey()}`);
+  L.push("run = CommandListGuiClickBeta");
+  L.push("");
+
+  L.push("[CommandListGuiDims]");
+  L.push("if window_width != 0");
+  L.push("  $gui_ww = window_width");
+  L.push("  $gui_wh = window_height");
+  L.push("elif rt_width != 0");
+  L.push("  $gui_ww = rt_width");
+  L.push("  $gui_wh = rt_height");
+  L.push("else");
+  L.push("  $gui_ww = res_width");
+  L.push("  $gui_wh = res_height");
+  L.push("endif");
+  L.push("if cursor_x != 0 && cursor_y != 0");
+  L.push("  $gui_cpx = cursor_x");
+  L.push("  $gui_cpy = cursor_y");
+  L.push("elif cursor_window_x != 0 && cursor_window_y != 0");
+  L.push("  $gui_cpx = cursor_window_x / $gui_ww");
+  L.push("  $gui_cpy = cursor_window_y / $gui_wh");
+  L.push("else");
+  L.push("  $gui_cpx = cursor_screen_x / $gui_ww");
+  L.push("  $gui_cpy = cursor_screen_y / $gui_wh");
+  L.push("endif");
+  L.push("");
+
+  L.push("[CommandListGuiMenuBeta]");
+  panels.forEach(panel => {
+    L.push(`${panel.panelIndex === 0 ? "if" : "elif"} ${panel.activeVar} > 0`);
+    L.push(`  run = CommandListGuiMenu${panel.suffix}`);
+  });
+  L.push("endif");
+  L.push("");
+
+  L.push("[CommandListGuiClickBeta]");
+  panels.forEach(panel => {
+    L.push(`${panel.panelIndex === 0 ? "if" : "elif"} ${panel.activeVar} > 0`);
+    L.push(`  run = CommandListGuiClick${panel.suffix}`);
+  });
+  L.push("endif");
+  L.push("");
+
+  for (const panel of panels) {
+    const active = panel.indices;
+    const rows = Math.max(1, Math.ceil(active.length / cols));
+    const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
+    const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
+
+    L.push(`[CommandListGuiMenu${panel.suffix}]`);
+    L.push("run = CommandListGuiDims");
+    L.push(`run = CommandListGuiBg${panel.suffix}`);
+    L.push(`run = CommandListGuiSlots${panel.suffix}`);
+    L.push("");
+
+    L.push(`[CommandListGuiBg${panel.suffix}]`);
+    L.push(`x87 = ${panelW} / $gui_ww`);
+    L.push(`y87 = ${panelH} / $gui_wh`);
+    L.push("z87 = $gui_mx");
+    L.push("w87 = $gui_my");
+    L.push("if $gui_drag == 0");
+    L.push("  if $gui_hold && $gui_cpx > $gui_mx && $gui_cpx < ($gui_mx + x87) && $gui_cpy > $gui_my && $gui_cpy < ($gui_my + y87)");
+    L.push("    $gui_cox = $gui_cpx - $gui_mx");
+    L.push("    $gui_coy = $gui_cpy - $gui_my");
+    L.push("    $gui_drag = 1");
+    L.push("  endif");
+    L.push("else");
+    L.push("  if $gui_hold");
+    L.push("    $gui_mx = $gui_cpx - $gui_cox");
+    L.push("    $gui_my = $gui_cpy - $gui_coy");
+    L.push("  else");
+    L.push("    $gui_drag = 0");
+    L.push("  endif");
+    L.push("  z87 = $gui_mx");
+    L.push("  w87 = $gui_my");
+    L.push("endif");
+    L.push(`ps-t100 = ResourceGuiBg${panel.suffix}`);
+    L.push("run = CustomShaderGuiDraw");
+    L.push(`x87 = ${panelW - 6} / $gui_ww`);
+    L.push("y87 = 48 / $gui_wh");
+    L.push(`z87 = $gui_mx + 3 / $gui_ww`);
+    L.push(`w87 = $gui_my + 3 / $gui_wh`);
+    L.push(`ps-t100 = ResourceGuiTitle${panel.suffix}`);
+    L.push("run = CustomShaderGuiDraw");
+    L.push("");
+
+    L.push(`[CommandListGuiSlots${panel.suffix}]`);
+    L.push("$gui_hover = 0");
+    L.push("$gui_hovered = 0");
+    L.push("$gui_slot = 0");
+    active.forEach((sIdx, n) => {
+      const c = n % cols, r = Math.floor(n / cols);
+      const px = padding + c * (slotSize + gap);
+      const py = padding + 48 + r * (slotSize + gap);
+      L.push(`; slot ${n + 1}: ${state.slotMeta[sIdx].name}`);
+      L.push(`x87 = ${slotSize} / $gui_ww`);
+      L.push(`y87 = ${slotSize} / $gui_wh`);
+      L.push(`z87 = $gui_mx + ${px} / $gui_ww`);
+      L.push(`w87 = $gui_my + ${py} / $gui_wh`);
+      L.push(`$gui_slot = ${n + 1}`);
+      L.push(`run = CommandListGuiSlot${panel.suffix}`);
+    });
+    L.push("");
+
+    L.push(`[CommandListGuiSlot${panel.suffix}]`);
+    L.push("if $gui_cpx > z87 && $gui_cpx < (z87 + x87) && $gui_cpy > w87 && $gui_cpy < (w87 + y87)");
+    L.push("  $gui_hover = 1");
+    L.push("  $gui_hovered = $gui_slot");
+    L.push("endif");
+    active.forEach((sIdx, n) => {
+      L.push(`${n === 0 ? "if" : "elif"} $gui_slot == ${n + 1}`);
+      L.push(`  if $gui_hovered == ${n + 1}`);
+      L.push(`    ps-t100 = ResourceGuiSlotHover${panel.suffix}_${n + 1}`);
+      L.push("  else");
+      L.push(`    ps-t100 = ResourceGuiSlot${panel.suffix}_${n + 1}`);
+      L.push("  endif");
+    });
+    if (active.length) L.push("endif");
+    L.push("run = CustomShaderGuiDraw");
+    L.push("");
+
+    L.push(`[CommandListGuiClick${panel.suffix}]`);
+    L.push("$gui_clicked = $gui_hovered");
+    active.forEach((sIdx, n) => {
+      const swap = state.swaps[sIdx];
+      const m = state.slotMeta[sIdx];
+      L.push(`${n === 0 ? "if" : "elif"} $gui_clicked == ${n + 1}`);
+      L.push(`  ; ${m.name}`);
+      const cond = swap.condition ? swap.condition.replace(/!=\s*0\b/g, "> 0") : "";
+      if (cond) L.push(`  if ${cond}`);
+      if (swap.type === "action") {
+        for (const cmd of swap.commandLists) L.push(`  run = ${cmd}`);
+      } else if (behavior === "toggle") {
+        for (const a of swap.assignments) L.push(`  ${a.variable} = 1 - ${a.variable}`);
+      } else {
+        const multiGroup = swap.groups.length > 1;
+        for (let g = 0; g < swap.groups.length; g++) {
+          const grp = swap.groups[g];
+          const groupSuffix = multiGroup ? `_${g}` : "";
+          const drv = `$gui_step_${panel.suffix}_${n + 1}${groupSuffix}`;
+          const grpSteps = Math.max(...grp.assignments.map(a => a.values.length));
+          L.push(`  ${drv} = ${drv} + 1`);
+          L.push(`  if ${drv} >= ${grpSteps}`);
+          L.push(`    ${drv} = 0`);
+          L.push("  endif");
+          for (let step = 0; step < grpSteps; step++) {
+            L.push(`  ${step === 0 ? "if" : "elif"} ${drv} == ${step}`);
+            for (const a of grp.assignments) {
+              const v = a.values[step] !== undefined ? a.values[step] : a.values[a.values.length - 1];
+              L.push(`    ${a.variable} = ${v}`);
+            }
+          }
+          L.push("  endif");
+        }
+      }
+      if (cond) L.push("  endif");
+    });
+    if (active.length) L.push("endif");
+    L.push("");
+  }
+
+  L.push("[CustomShaderGuiDraw]");
+  L.push("vs = res_gui\\draw_2d.hlsl");
+  L.push("ps = res_gui\\draw_2d.hlsl");
+  L.push("blend = ADD SRC_ALPHA INV_SRC_ALPHA");
+  L.push("cull = none");
+  L.push("topology = triangle_strip");
+  L.push("run = BuiltInCommandListUnbindAllRenderTargets");
+  L.push("o0 = set_viewport bb");
+  L.push("draw = 4, 0");
+  L.push("");
+
+  for (const panel of panels) {
+    L.push(`[ResourceGuiBg${panel.suffix}]`);
+    L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_bg.png`);
+    L.push("");
+    L.push(`[ResourceGuiTitle${panel.suffix}]`);
+    L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_title.png`);
+    L.push("");
+    panel.indices.forEach((sIdx, n) => {
+      const idx = String(n + 1).padStart(2, "0");
+      L.push(`[ResourceGuiSlot${panel.suffix}_${n + 1}]`);
+      L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_slot_${idx}.png`);
+      L.push("");
+      L.push(`[ResourceGuiSlotHover${panel.suffix}_${n + 1}]`);
+      L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_slot_hover_${idx}.png`);
+      L.push("");
+    });
+  }
+
+  return body + "\n" + L.join("\n");
+}
+
 function buildIni() {
+  if ($("multiActiveMode").checked) return buildBetaIni();
+  return buildSingleIni();
+}
+
+function buildSingleIni() {
   const swaps = state.swaps;
   const meta = state.slotMeta;
   const cols = Math.max(1, Number($("cols").value) || 3);
@@ -2475,6 +2859,8 @@ function buildIni() {
  * ============================================================ */
 
 async function buildResources() {
+  if ($("multiActiveMode").checked) return buildBetaResources();
+
   const meta = state.slotMeta;
   const swaps = state.swaps;
   const accent = $("accentColor").value;
@@ -2566,6 +2952,95 @@ async function buildResources() {
     const idx = String(n + 1).padStart(2, "0");
     files.push({ name: `res_gui/slot_${idx}.png`, data: rgbaToPng(64, 64, slotRgba) });
     files.push({ name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(64, 64, hoverRgba) });
+  }
+
+  return files;
+}
+
+async function buildBetaResources() {
+  const panels = getBetaPanels();
+  if (!panels.length) return buildResourcesSingle();
+  return buildResourcesForPanels(panels);
+}
+
+async function buildResourcesSingle() {
+  const wasChecked = $("multiActiveMode").checked;
+  $("multiActiveMode").checked = false;
+  try {
+    return await buildResources();
+  } finally {
+    $("multiActiveMode").checked = wasChecked;
+  }
+}
+
+async function buildResourcesForPanels(panels) {
+  const meta = state.slotMeta;
+  const swaps = state.swaps;
+  const accent = $("accentColor").value;
+  const bg = $("bgColor").value;
+  const alpha = Math.max(0, Math.min(255, Number($("bgAlpha").value) || 200));
+
+  const [ar, ag, ab] = hexToRgb(accent);
+  const [br, bg2, bb] = hexToRgb(bg);
+  const alpha01 = alpha / 255;
+  const [sr, sgg, sbb] = hexToRgb($("slotColor").value);
+  const [hr, hg, hb] = hexToRgb($("hoverColor").value);
+  const [pbor, pbog, pbob] = hexToRgb($("panelBorderColor").value);
+  const [sbor, sbog, sbob] = hexToRgb($("slotBorderColor").value);
+  const titleShadow = hexToRgb($("titleShadowColor").value);
+  const cols = Math.max(1, Number($("cols").value) || 3);
+  const gap = Math.max(0, Number($("gap").value) || 14);
+  const slotSize = 64, padding = 16;
+  const modName = state.fileName.replace(/\.[^.]+$/, "") || "MOD";
+  const files = [{ name: "res_gui/draw_2d.hlsl", data: SHADER_TEXT }];
+
+  for (const panel of panels) {
+    const rows = Math.max(1, Math.ceil(panel.indices.length / cols));
+    const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
+    const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
+    const bgOpts = { fill: [br, bg2, bb, alpha01], border: [pbor, pbog, pbob, 1], topBorder: [ar, ag, ab, 1] };
+
+    if (state.panelImageRgba) {
+      const bgRgba = renderBgRgba(panelW, panelH, bgOpts);
+      const bgCanvas = document.createElement("canvas");
+      bgCanvas.width = panelW; bgCanvas.height = panelH;
+      const bgCtx = bgCanvas.getContext("2d");
+      bgCtx.putImageData(new ImageData(bgRgba, panelW, panelH), 0, 0);
+      const bw = 3, radius = 22;
+      const imgCanvas = document.createElement("canvas");
+      imgCanvas.width = 256; imgCanvas.height = 256;
+      imgCanvas.getContext("2d").putImageData(new ImageData(state.panelImageRgba, 256, 256), 0, 0);
+      bgCtx.save();
+      bgCtx.beginPath();
+      bgCtx.roundRect(bw, bw, panelW - bw * 2, panelH - bw * 2, radius);
+      bgCtx.clip();
+      bgCtx.drawImage(imgCanvas, bw, bw, panelW - bw * 2, panelH - bw * 2);
+      bgCtx.restore();
+      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_bg.png`, data: rgbaToPng(panelW, panelH, bgCtx.getImageData(0, 0, panelW, panelH).data) });
+    } else {
+      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_bg.png`, data: rgbaToPng(panelW, panelH, renderBgRgba(panelW, panelH, bgOpts)) });
+    }
+
+    const titleW = panelW - 6;
+    const titleText = `${modName}-${panel.activeVar.replace(/^\$/, "")}`;
+    files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_title.png`, data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, titleShadow, !$("disableTitleShadow").checked)) });
+
+    for (let n = 0; n < panel.indices.length; n++) {
+      const sIdx = panel.indices[n];
+      const m = meta[sIdx];
+      const label = (m.name && !($("hideUploadLabel").checked && m.iconPreview)) ? m.name : "";
+      let iconRgba = m.iconRgba || null;
+      let iconSvg = null;
+      if (!iconRgba) {
+        const svg = await loadLucideSvg(m.iconName);
+        if (svg) iconSvg = colorizeSvg(svg, m.iconColor);
+      }
+      const baseOpts = { border: [sbor, sbog, sbob, 1], iconRgba, iconSvg, label };
+      if ($("showKeyHint").checked && swaps[sIdx].key) baseOpts.keyHint = swaps[sIdx].key;
+      const idx = String(n + 1).padStart(2, "0");
+      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_slot_${idx}.png`, data: rgbaToPng(64, 64, await renderSlotRgba({ ...baseOpts, fill: [sr, sgg, sbb, 200 / 255] })) });
+      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_slot_hover_${idx}.png`, data: rgbaToPng(64, 64, await renderSlotRgba({ ...baseOpts, fill: [hr, hg, hb, 230 / 255] })) });
+    }
   }
 
   return files;
@@ -2913,6 +3388,9 @@ async function loadFile(file, opts = {}) {
   state.sections = parseSections(state.text);
   state.swaps = parseSwaps(state.sections);
   state.slotMeta = state.swaps.map(newSlotMeta);
+  if (!$('multiActiveMode').checked || !state.multiActiveVars.length) {
+    state.multiActiveVars = scanActiveVarsFromSections(state.sections);
+  }
 
   // 恢复保存的排序
 
@@ -2957,6 +3435,7 @@ async function loadFile(file, opts = {}) {
   }
 
   renderSwapList();
+  renderMultiActiveVars();
   rerender();
   // 初次加载立即保存草稿（不受防抖影响）
   await saveDraft();
@@ -3054,6 +3533,34 @@ drop.addEventListener("drop", e => {
 });
 ["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "resetActiveOnPresent", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
+});
+
+$("multiActiveMode").addEventListener("change", () => {
+  if (!state.multiActiveVars.length) state.multiActiveVars = scanActiveVarsFromSections(state.sections);
+  renderMultiActiveVars();
+  rerender();
+});
+
+$("btnAddActiveVar").addEventListener("click", () => {
+  state.multiActiveVars.push("");
+  renderMultiActiveVars();
+  saveSettings();
+});
+
+$("multiActiveList").addEventListener("input", e => {
+  const input = e.target.closest("[data-active-var]");
+  if (!input) return;
+  state.multiActiveVars[Number(input.dataset.activeVar)] = input.value.trim();
+  saveSettings();
+  rerender();
+});
+
+$("multiActiveList").addEventListener("click", e => {
+  const btn = e.target.closest("[data-active-remove]");
+  if (!btn) return;
+  state.multiActiveVars.splice(Number(btn.dataset.activeRemove), 1);
+  renderMultiActiveVars();
+  rerender();
 });
 
 $("scanTxtFiles").addEventListener("change", async () => {
@@ -3479,6 +3986,8 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
       if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
       if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
+      if (typeof d.ui.multiActiveMode === "boolean") $("multiActiveMode").checked = d.ui.multiActiveMode;
+      if (Array.isArray(d.ui.multiActiveVars)) state.multiActiveVars = d.ui.multiActiveVars.filter(isActiveVarName);
       if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
@@ -4042,6 +4551,7 @@ $("btnZip").addEventListener("click", async () => {
 
 // 启动
 loadSettings();
+renderMultiActiveVars();
 applyPreviewBg();
 renderPreview();
 renderIniView();
