@@ -325,18 +325,18 @@
   /* gui panel preview, sized in JS */
   .gui-panel {
     position: relative;
-    border: 3px solid var(--panel-border, #f2f2f2);
+    border: calc(var(--panel-border-w, 3) * 1px) solid var(--panel-border-c, #f2f2f2);
     border-top-color: var(--top-border, var(--hot));
-    border-radius: 22px;
+    border-radius: calc(var(--panel-radius, 22) * 1px);
     padding: 14px 22px 26px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
     background: var(--bg-rgba, rgba(35, 18, 14, .82));
   }
   .gui-panel h3 {
-    margin: 0 0 18px;
+    margin: 0 0 calc(var(--title-margin, 18) * 1px);
     color: white;
-    font-size: 20px;
-    text-shadow: 2px 2px var(--title-shadow, var(--hot));
+    font-size: calc(var(--title-fs, 20) * 1px);
+    text-shadow: calc(var(--title-shadow-off, 2) * 1px) calc(var(--title-shadow-off, 2) * 1px) var(--title-shadow, var(--hot));
     text-align: center;
   }
   .gui-grid {
@@ -346,10 +346,10 @@
   }
   .gui-slot {
     position: relative;
-    width: 64px;
-    height: 64px;
-    border: 3px solid var(--slot-border, #f2f2f2);
-    border-radius: 9px;
+    width: var(--slot-size, 64px);
+    height: var(--slot-size, 64px);
+    border: calc(var(--slot-border-w, 3) * 1px) solid var(--slot-border-c, #f2f2f2);
+    border-radius: calc(var(--slot-radius, 9) * 1px);
     background: var(--slot-rgba, rgba(60, 60, 70, .78));
     display: flex;
     flex-direction: column;
@@ -362,7 +362,7 @@
   .gui-slot:hover { background: var(--slot-hover-rgba, var(--slot-rgba, rgba(60, 60, 70, .78))); }
   .gui-slot.skip { opacity: .25; border-style: dashed; }
   .gui-slot .slot-icon { position: relative; z-index: 1; line-height: 0; }
-  .gui-slot svg { width: 28px; height: 28px; color: white; }
+  .gui-slot svg { width: var(--slot-icon-size, 28px); height: var(--slot-icon-size, 28px); color: white; }
   .gui-slot .slot-img-bg {
     position: absolute;
     inset: 3px;
@@ -375,12 +375,12 @@
   .gui-slot .slot-label {
     position: relative;
     z-index: 1;
-    font-size: 11px;
+    font-size: calc(var(--slot-label-fs, 11) * 1px);
     font-weight: 700;
     color: #ccc;
     line-height: 1;
     text-align: center;
-    max-width: 56px;
+    max-width: calc(var(--slot-size, 64px) - 8px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -390,7 +390,7 @@
     z-index: 1;
     bottom: 1px;
     right: 3px;
-    font-size: 8px;
+    font-size: calc(var(--slot-key-fs, 8) * 1px);
     color: rgba(255,255,255,.5);
     line-height: 1;
     pointer-events: none;
@@ -825,15 +825,21 @@
         <div class="field"><label>列数</label><input id="cols" type="number" min="1" max="8" value="3"></div>
         <div class="field"><label>按钮间距 px</label><input id="gap" type="number" min="4" max="48" value="14"></div>
       </div>
-      <div class="field" style="margin-bottom:10px">
-        <label>参考分辨率 <span style="font-weight:400;color:var(--muted)">（预览缩放）</span></label>
-        <select id="previewRes">
-          <option value="">×1 适合预览</option>
-          <option value="2560x1440">2560×1440 (2K)</option>
-          <option value="1920x1080">1920×1080 (FHD)</option>
-          <option value="1280x720">1280×720 (HD)</option>
-          <option value="3840x2160">3840×2160 (4K)</option>
-        </select>
+      <div class="grid-2" style="margin-bottom:10px">
+        <div class="field">
+          <label>参考分辨率 <span style="font-weight:400;color:var(--muted)">（预览缩放）</span></label>
+          <select id="previewRes">
+            <option value="">×1 适合预览</option>
+            <option value="2560x1440">2560×1440 (2K)</option>
+            <option value="1920x1080">1920×1080 (FHD)</option>
+            <option value="1280x720">1280×720 (HD)</option>
+            <option value="3840x2160">3840×2160 (4K)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>面板缩放 <span style="font-weight:400;color:var(--muted)">（游戏内实际大小）</span></label>
+          <input id="panelScale" type="number" min="0.5" max="2" step="0.25" value="1">
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <button class="btn ghost" id="btnColorMode" style="flex:1">
@@ -1107,7 +1113,7 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
@@ -1122,7 +1128,7 @@ function loadSettings() {
 }
 function saveSettings() {
   const s = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
@@ -1225,7 +1231,7 @@ function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
@@ -1297,7 +1303,7 @@ async function loadDraft() {
 
     // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -1664,8 +1670,9 @@ function measureTextWidth(text, font) {
 
 async function renderSlotRgba({ fill, border = [255,255,255,255],
                                  iconSvg = null, iconRgba = null, iconRgbaSize = 64,
-                                 label = "", keyHint = "" }) {
-  const size = 64, bw = 3, r = 9;
+                                 label = "", keyHint = "", size = 64 }) {
+  const s = size / 64;
+  const bw = Math.round(3 * s), r = Math.round(9 * s);
   const canvas = document.createElement("canvas");
   canvas.width = size; canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -1692,10 +1699,10 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
     ctx.fillStyle = `rgba(${fill.join(",")})`;
     ctx.fill();
 
-    // 图标：28x28 靠上居中
-    const iconW = 28, iconH = 28;
+    // 图标：按比例缩放
+    const iconW = Math.round(28 * s), iconH = Math.round(28 * s);
     const iconX = cx + (cw - iconW) / 2;
-    const iconY = cy + 5;
+    const iconY = cy + Math.round(5 * s);
 
     if (iconSvg) {
       try {
@@ -1729,13 +1736,14 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
   ctx.clip();
 
   // 文字标签：底部居中，单行截断
-  const labelFont = "bold 11px system-ui, -apple-system, sans-serif";
+  const labelFs = Math.round(11 * s);
+  const labelFont = `bold ${labelFs}px system-ui, -apple-system, sans-serif`;
   if (label) {
     ctx.font = labelFont;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     let displayLabel = label;
-    const maxW = cw - 4;
+    const maxW = cw - Math.round(4 * s);
     if (measureTextWidth(displayLabel, labelFont) > maxW) {
       while (measureTextWidth(displayLabel + "…", labelFont) > maxW && displayLabel.length > 1) {
         displayLabel = displayLabel.slice(0, -1);
@@ -1744,28 +1752,30 @@ async function renderSlotRgba({ fill, border = [255,255,255,255],
     }
     // 上传图片模式下加半透明底条保证文字可读
     if (iconRgba) {
-      const labelY = cy + cw - 14;
+      const labelY = cy + cw - Math.round(14 * s);
       const tw = measureTextWidth(displayLabel, labelFont);
       ctx.fillStyle = "rgba(0,0,0,0.5)";
-      ctx.fillRect(cx + (cw - tw) / 2 - 4, labelY - 8, tw + 8, 16);
+      ctx.fillRect(cx + (cw - tw) / 2 - Math.round(4 * s), labelY - Math.round(8 * s), tw + Math.round(8 * s), Math.round(16 * s));
     }
     ctx.fillStyle = iconRgba ? "#ffffff" : "#cccccc";
-    ctx.fillText(displayLabel, cx + cw / 2, cy + cw - 13);
+    ctx.fillText(displayLabel, cx + cw / 2, cy + cw - Math.round(13 * s));
   }
 
   // 按键提示：右下角小字（与原 Key 节并存时有用）
   if (keyHint) {
-    ctx.font = "bold 8px system-ui, -apple-system, sans-serif";
+    const hintFs = Math.round(8 * s);
+    const hintFont = `bold ${hintFs}px system-ui, -apple-system, sans-serif`;
+    ctx.font = hintFont;
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
     // 上传图片模式下加半透明底保证可读
     if (iconRgba) {
       ctx.fillStyle = "rgba(0,0,0,0.5)";
-      const kw = measureTextWidth(keyHint, "bold 8px system-ui, -apple-system, sans-serif");
-      ctx.fillRect(cx + cw - kw - 4, cy + cw - 14, kw + 4, 14);
+      const kw = measureTextWidth(keyHint, hintFont);
+      ctx.fillRect(cx + cw - kw - Math.round(4 * s), cy + cw - Math.round(14 * s), kw + Math.round(4 * s), Math.round(14 * s));
     }
     ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText(keyHint, cx + cw - 2, cy + cw - 2);
+    ctx.fillText(keyHint, cx + cw - Math.round(2 * s), cy + cw - Math.round(2 * s));
   }
 
   ctx.restore();
@@ -1808,9 +1818,9 @@ function renderBgRgba(width, height, { fill, border = [242,242,242,1], topBorder
   return ctx.getImageData(0, 0, width, height).data;
 }
 
-// 面板标题：单独渲染为图片（48px 高，宽 = 面板内容区）
-function renderTitleRgba(text, width, shadow = [255, 100, 100], useShadow = true) {
-  const height = 48;
+// 面板标题：单独渲染为图片
+function renderTitleRgba(text, width, scale, shadow = [255, 100, 100], useShadow = true) {
+  const height = Math.round(32 * scale);
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext("2d");
@@ -1818,12 +1828,14 @@ function renderTitleRgba(text, width, shadow = [255, 100, 100], useShadow = true
 
   const [sr, sg, sb] = shadow;
 
-  ctx.font = "bold 18px system-ui, -apple-system, sans-serif";
+  const fontSize = Math.round(18 * scale);
+  ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (useShadow) {
     ctx.fillStyle = `rgba(${sr},${sg},${sb},0.85)`;
-    ctx.fillText(text, width / 2 + 1.5, height / 2 + 1.5);
+    const shadowOffset = Math.round(1.5 * scale);
+    ctx.fillText(text, width / 2 + shadowOffset, height / 2 + shadowOffset);
   }
 
   // 白色主文字
@@ -2288,7 +2300,7 @@ let colsManual = false;
 function autoCols(activeCount) {
   if (activeCount <= 1) return 1;
   const gap = Math.max(0, Number($("gap").value) || 14);
-  const pad = 16, slot = 64, titleH = 48;
+  const pad = 16, slot = 64, titleH = 32;
   let best = 1, bestDiff = Infinity;
   for (let c = 1; c <= Math.min(activeCount, 8); c++) {
     const r = Math.ceil(activeCount / c);
@@ -2510,14 +2522,15 @@ function buildSingleIni() {
   const title = ($("title").value || "GUI Menu").trim();
   const removeKeys = $("removeKeys").checked;
   const behavior = $("behavior").value;
-  const slotSize = 64;
-  const padding = 16;
+  const panelScale = Math.max(0.5, Math.min(2, Number($("panelScale").value) || 1));
+  const slotSize = Math.round(64 * panelScale);
+  const padding = Math.round(16 * panelScale);
 
   // 活跃 slot 索引列表（去掉 skip）
   const active = swaps.map((s, i) => i).filter(i => !meta[i].skip);
   const rows = Math.ceil(active.length / cols);
-  const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
-  const panelH = padding + 48 /* title bar */ + rows * slotSize + (rows - 1) * gap + padding;
+  const panelW = padding * 2 + cols * slotSize + (cols - 1) * Math.round(gap * panelScale);
+  const panelH = padding + Math.round(32 * panelScale) /* title bar */ + rows * slotSize + (rows - 1) * Math.round(gap * panelScale) + padding;
 
   // ---- 处理原 sections ----
   let secs = rewriteKeySections(state.sections, swaps, removeKeys, behavior);
@@ -2650,10 +2663,10 @@ function buildSingleIni() {
   L.push("ps-t100 = ResourceGuiBg");
   L.push("run = CustomShaderGuiDraw");
   // 标题（图片化文字，XXMI 不支持独立文字渲染）
-  L.push(`x87 = ${panelW - 6} / $gui_ww`);
-  L.push("y87 = 48 / $gui_wh");
-  L.push(`z87 = $gui_mx + 3 / $gui_ww`);
-  L.push(`w87 = $gui_my + 3 / $gui_wh`);
+  L.push(`x87 = ${panelW - Math.round(6 * panelScale)} / $gui_ww`);
+  L.push(`y87 = ${Math.round(32 * panelScale)} / $gui_wh`);
+  L.push(`z87 = $gui_mx + ${Math.round(3 * panelScale)} / $gui_ww`);
+  L.push(`w87 = $gui_my + ${Math.round(3 * panelScale)} / $gui_wh`);
   L.push("ps-t100 = ResourceGuiTitle");
   L.push("run = CustomShaderGuiDraw");
   L.push("");
@@ -2665,8 +2678,10 @@ function buildSingleIni() {
   L.push("$gui_slot = 0");
   active.forEach((sIdx, n) => {
     const c = n % cols, r = Math.floor(n / cols);
-    const px = padding + c * (slotSize + gap);
-    const py = padding + 48 + r * (slotSize + gap);
+    const scaledGap = Math.round(gap * panelScale);
+    const titleH = Math.round(32 * panelScale);
+    const px = padding + c * (slotSize + scaledGap);
+    const py = padding + titleH + r * (slotSize + scaledGap);
     L.push(`; slot ${n + 1}: ${state.slotMeta[sIdx].name}`);
     L.push(`x87 = ${slotSize} / $gui_ww`);
     L.push(`y87 = ${slotSize} / $gui_wh`);
@@ -2774,9 +2789,10 @@ async function buildResources() {
   const gap = Math.max(0, Number($("gap").value) || 14);
   const activeCount = swaps.filter((_, i) => !meta[i].skip).length;
   const rows = Math.max(1, Math.ceil(activeCount / cols));
-  const slotSize = 64, padding = 16;
-  const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
-  const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
+  const panelScale = Math.max(0.5, Math.min(2, Number($("panelScale").value) || 1));
+  const slotSize = Math.round(64 * panelScale), padding = Math.round(16 * panelScale);
+  const panelW = padding * 2 + cols * slotSize + (cols - 1) * Math.round(gap * panelScale);
+  const panelH = padding + Math.round(32 * panelScale) + rows * slotSize + (rows - 1) * Math.round(gap * panelScale) + padding;
 
   // 面板背景（圆角矩形 + 顶部强调色边框，按实际尺寸）
   const bgOpts = { fill: [br, bg2, bb, alpha01], border: [pbor, pbog, pbob, 1], topBorder: [ar, ag, ab, 1] };
@@ -2806,9 +2822,9 @@ async function buildResources() {
   }
 
   // 标题图片（文字渲染为图片，XXMI 不支持独立文字）
-  const titleW = panelW - 6;
+  const titleW = panelW - Math.round(6 * panelScale);
   const titleText = ($("title").value || "GUI Menu").trim();
-  files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, titleShadow, !$("disableTitleShadow").checked)) });
+  files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, Math.round(32 * panelScale), renderTitleRgba(titleText, titleW, panelScale, titleShadow, !$("disableTitleShadow").checked)) });
   // 每个活跃按钮一张完整 slot 图（圆角矩形 + 白色边框 + 图标 + 文字）
   const active = swaps.map((_, i) => i).filter(i => !meta[i].skip);
   const showKey = $("showKeyHint").checked;
@@ -2837,14 +2853,14 @@ async function buildResources() {
     }
 
     const [slotRgba, hoverRgba] = await Promise.all([
-      renderSlotRgba({ ...baseOpts, fill: slotFill }),
-      renderSlotRgba({ ...baseOpts, fill: hoverFill }),
+      renderSlotRgba({ ...baseOpts, fill: slotFill, size: slotSize }),
+      renderSlotRgba({ ...baseOpts, fill: hoverFill, size: slotSize }),
     ]);
 
     const idx = String(n + 1).padStart(2, "0");
     return [
-      { name: `res_gui/slot_${idx}.png`, data: rgbaToPng(64, 64, slotRgba) },
-      { name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(64, 64, hoverRgba) },
+      { name: `res_gui/slot_${idx}.png`, data: rgbaToPng(slotSize, slotSize, slotRgba) },
+      { name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(slotSize, slotSize, hoverRgba) },
     ];
   });
 
@@ -3048,8 +3064,23 @@ async function renderPreview() {
   }
 
   const grid = $("guiGrid");
-  grid.style.gridTemplateColumns = `repeat(${cols}, 64px)`;
-  grid.style.gap = `${gap}px`;
+  const previewScale = Math.max(0.5, Math.min(2, Number($("panelScale").value) || 1));
+  const scaledSlotSize = Math.round(64 * previewScale);
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${scaledSlotSize}px)`;
+  grid.style.gap = `${Math.round(gap * previewScale)}px`;
+  // 同步 CSS 变量到面板
+  grid.style.setProperty("--slot-size", scaledSlotSize + "px");
+  grid.style.setProperty("--slot-icon-size", Math.round(28 * previewScale) + "px");
+  grid.style.setProperty("--slot-label-fs", Math.round(11 * previewScale));
+  grid.style.setProperty("--slot-key-fs", Math.round(8 * previewScale));
+  const panelEl = $("guiPanel");
+  panelEl.style.setProperty("--slot-border-w", Math.round(3 * previewScale));
+  panelEl.style.setProperty("--slot-radius", Math.round(9 * previewScale));
+  panelEl.style.setProperty("--panel-border-w", Math.round(3 * previewScale));
+  panelEl.style.setProperty("--panel-radius", Math.round(22 * previewScale));
+  panelEl.style.setProperty("--title-fs", Math.round(20 * previewScale));
+  panelEl.style.setProperty("--title-margin", Math.round(18 * previewScale));
+  panelEl.style.setProperty("--title-shadow-off", Math.round(2 * previewScale));
   grid.classList.toggle("merge-mode-on", state.mergeMode);
 
   const showKey = $("showKeyHint").checked;
@@ -3359,7 +3390,7 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "behavior"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "behavior", "panelScale"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
@@ -3828,7 +3859,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       state.swaps = parseSwaps(state.sections);
       state.slotMeta = state.swaps.map(newSlotMeta);
       // 恢复 UI
-      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes"]) {
+      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
       if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
