@@ -32,9 +32,15 @@ https://xingnian-www.github.io/XXMI-Menu-Maker/
 - 调色面板支持预设配色、恢复默认、边框/hover/标题投影细调
 - 自动暂存当前编辑状态，包含排序、名称、配色和上传图片
 - 可选修复原 MOD 激活条件错误导致的跨角色呼出面板
-- [Beta] 多形态角色支持：按 `$active` / `$black_active` 等激活变量生成独立面板
+- 严格按原始 `key` 生成 GUI slot，同 key 下多个 `[Key*]` 会保留各自条件并一起参与点击判断
 - Chrome / Edge 支持直接写入 MOD 文件夹，ZIP 下载仍作为通用兜底
 - 生成完整 ZIP：INI + PNG 纹理 + HLSL 着色器
+
+## 严格映射
+
+GUI 点击一次等价于按下原始 INI 里的同一个 `key` 一次。比如两个 `[KeySwap]` 都绑定 `key = 5`，但分别使用 `$active == 1` 和 `$black_active == 1`，生成后同一个 GUI 按钮会分别判断这两个条件；两个条件同时成立时，两段逻辑都会执行。
+
+生成的 GUI 和保留的键盘快捷键共用同一份 `CommandListCycle...` 和 `$ks_step_*` 计数器，所以鼠标点击和键盘按键交替使用时不会错位。重复档位会原样保留，不会根据当前变量值反推下一档。
 
 ## 兼容性
 

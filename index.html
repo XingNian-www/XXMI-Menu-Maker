@@ -305,6 +305,11 @@
       radial-gradient(circle at 70% 80%, #1f3850, transparent 60%),
       #0e0d12;
   }
+  .preview-panel-wrap {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+  }
   .preview-empty {
     position: absolute;
     display: flex;
@@ -708,28 +713,6 @@
     transform: translateY(0);
     pointer-events: none;
   }
-  .beta-active-panel {
-    display: none;
-    margin-top: 8px;
-    padding: 8px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: rgba(255,255,255,.03);
-  }
-  .beta-active-panel.show { display: grid; gap: 6px; }
-  .beta-active-row { display: flex; gap: 6px; align-items: center; }
-  .beta-active-row input { flex: 1; }
-  .beta-active-remove {
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--line-2);
-    border-radius: 8px;
-    background: var(--bg-2);
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .beta-active-add { justify-self: start; padding: 4px 10px; }
-
   /* 调色模式 */
   .panel-left.color-mode .panel-left-main > section:not(.palette-section),
   .panel-left.color-mode .panel-left-footer { display: none; }
@@ -864,31 +847,19 @@
 
     <section>
       <h2>3. 行为</h2>
-      <div class="grid-2" style="margin-bottom:10px">
-        <div class="field">
-          <label>点击效果</label>
-          <select id="behavior">
-            <option value="cycle">按 KeySwap 表循环</option>
-            <option value="toggle">仅 0 / 1 切换（多变量同步）</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>激活变量</label>
-          <input id="activeVar" value="$active" placeholder="$active">
-        </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>点击效果</label>
+        <select id="behavior">
+          <option value="cycle">按原始 KeySwap 表循环</option>
+        </select>
       </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">GUI 显示条件会从原始 `[Key*] condition` 自动扫描；点击行为完全按原始 key 和各自 condition 执行。</div>
       <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:2px">
         <label class="check" title="勾选后从生成 INI 中删除原文件的 [Key*] 节"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
         <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
         <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
         <label class="check" title="用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启"><input id="resetActiveOnPresent" type="checkbox"> 修复跨角色面板</label>
-        <label class="check" title="[Beta] 为多个带 active 字眼的激活变量分别生成面板；普通 MOD 不需要开启"><input id="multiActiveMode" type="checkbox"> [Beta] 多形态角色支持</label>
-      </div>
-      <div class="beta-active-panel" id="multiActivePanel">
-        <div style="font-size:11px;color:var(--muted);line-height:1.5">用于同一 MOD 内多个激活变量的角色/形态。开启后会自动扫描带 active 字眼的变量，也可以手动添加。</div>
-        <div id="multiActiveList"></div>
-        <button class="btn ghost beta-active-add" id="btnAddActiveVar" type="button">+</button>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
@@ -977,9 +948,11 @@
     </div>
     <div class="preview-body">
       <div id="viewPanel" class="preview-stage">
-        <div class="gui-panel" id="guiPanel">
-          <h3 id="guiTitle">GUI Menu</h3>
-          <div class="gui-grid" id="guiGrid"></div>
+        <div class="preview-panel-wrap">
+          <div class="gui-panel" id="guiPanel">
+            <h3 id="guiTitle">GUI Menu</h3>
+            <div class="gui-grid" id="guiGrid"></div>
+          </div>
         </div>
         <div class="preview-empty" id="panelEmpty">
           <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -1124,7 +1097,7 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
@@ -1132,8 +1105,6 @@ function loadSettings() {
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
     if (typeof s.useOriginalIniName === "boolean") $("useOriginalIniName").checked = s.useOriginalIniName;
     if (typeof s.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = s.resetActiveOnPresent;
-    if (typeof s.multiActiveMode === "boolean") $("multiActiveMode").checked = s.multiActiveMode;
-    if (Array.isArray(s.multiActiveVars)) state.multiActiveVars = s.multiActiveVars.filter(isActiveVarName);
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
     if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
     if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
@@ -1141,7 +1112,7 @@ function loadSettings() {
 }
 function saveSettings() {
   const s = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
@@ -1149,8 +1120,6 @@ function saveSettings() {
   s.hideUploadLabel = $("hideUploadLabel").checked;
   s.useOriginalIniName = $("useOriginalIniName").checked;
   s.resetActiveOnPresent = $("resetActiveOnPresent").checked;
-  s.multiActiveMode = $("multiActiveMode").checked;
-  s.multiActiveVars = state.multiActiveVars;
   s.disableTitleShadow = $("disableTitleShadow").checked;
   s.scanTxtFiles = $("scanTxtFiles").checked;
   if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
@@ -1246,7 +1215,7 @@ function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
+  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
@@ -1254,8 +1223,6 @@ function flushDraftMeta() {
   ui.hideUploadLabel = $("hideUploadLabel").checked;
   ui.useOriginalIniName = $("useOriginalIniName").checked;
   ui.resetActiveOnPresent = $("resetActiveOnPresent").checked;
-  ui.multiActiveMode = $("multiActiveMode").checked;
-  ui.multiActiveVars = state.multiActiveVars;
   ui.disableTitleShadow = $("disableTitleShadow").checked;
 
   const entry = {
@@ -1320,7 +1287,7 @@ async function loadDraft() {
 
     // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
+    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -1328,8 +1295,6 @@ async function loadDraft() {
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
     if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
     if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
-    if (typeof d.ui.multiActiveMode === "boolean") $("multiActiveMode").checked = d.ui.multiActiveMode;
-    if (Array.isArray(d.ui.multiActiveVars)) state.multiActiveVars = d.ui.multiActiveVars.filter(isActiveVarName);
     if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
 
     // 从 IndexedDB 恢复大图
@@ -1373,95 +1338,137 @@ async function loadDraft() {
 const SECTION_RE = /^\s*\[([^\]]+)\]\s*$/;
 const ASSIGN_RE = /^\s*(\$[A-Za-z0-9_]+)\s*=\s*([^;]+?)\s*$/;
 
+function stripInlineComment(line) {
+  return (line || "").split(";")[0].trim();
+}
+
+function normalizedKeyType(type) {
+  const normalized = (type || "cycle").trim().toLowerCase() || "cycle";
+  return normalized === "toggle" ? "cycle" : normalized;
+}
+
 function parseSections(text) {
   const out = [];
   let name = null, lines = [];
+  let index = 0;
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
     const m = line.match(SECTION_RE);
     if (m) {
-      out.push({ name, lines });
+      out.push({ name, lines, index: index++ });
       name = m[1].trim();
       lines = [line];
     } else {
       lines.push(line);
     }
   }
-  out.push({ name, lines });
+  out.push({ name, lines, index: index++ });
   return out;
 }
 
 function parseSwaps(sections) {
-  const raw = [];
+  const handlers = [];
   for (const sec of sections) {
     if (!sec.name || !/^Key/i.test(sec.name)) continue;
-    let key = "", condition = "", assignments = [], commandLists = [];
+    if (/^KeyGui(?:Menu|Hold|Click)$/i.test(sec.name)) continue;
+    let key = "", condition = "", type = "", assignments = [], commandLists = [], entries = [], rawEntries = [];
     for (const line of sec.lines.slice(1)) {
       const s = line.trim();
       if (!s || s.startsWith(";")) continue;
       const low = s.toLowerCase();
-      if (low.startsWith("key") && s.includes("=")) {
+      if (/^key\s*=/.test(low)) {
         key = s.split("=").slice(1).join("=").trim();
         continue;
       }
-      if (low.startsWith("condition") && s.includes("=")) {
+      if (/^condition\s*=/.test(low)) {
         condition = s.split("=").slice(1).join("=").trim();
         continue;
       }
-      if (low.startsWith("type")) continue;
-      if (low.startsWith("run") && s.includes("=")) {
-        commandLists.push(s.split("=").slice(1).join("=").trim());
+      if (/^type\s*=/.test(low)) {
+        type = normalizedKeyType(s.split("=").slice(1).join("="));
         continue;
       }
-      const m = s.match(ASSIGN_RE);
+      if (/^run\s*=/.test(low)) {
+        const target = s.split("=").slice(1).join("=").trim();
+        commandLists.push(target);
+        entries.push({ kind: "run", target, raw: s });
+        continue;
+      }
+      const m = stripInlineComment(s).match(ASSIGN_RE);
       if (m) {
         const values = m[2].split(",").map(v => v.trim()).filter(Boolean);
-        assignments.push({ variable: m[1], values });
+        const entry = { kind: "assign", variable: m[1], values, raw: s };
+        assignments.push(entry);
+        entries.push(entry);
+        continue;
       }
+      rawEntries.push(s);
+      entries.push({ kind: "raw", line: s });
     }
-    if (commandLists.length || assignments.length) {
-      raw.push({ section: sec.name, key, condition, assignments, commandLists });
+    if (commandLists.length || assignments.length || rawEntries.length) {
+      handlers.push({ section: sec.name, sourceIndex: sec.index, key, condition, type, assignments, commandLists, entries, rawEntries });
     }
   }
 
-  // 按 (type, key, condition) 合并：action 类型只跟 action 合并
+  return buildKeySlots(handlers);
+}
+
+function buildKeySlots(handlers) {
+  const used = new Set();
+  handlers.forEach((handler, i) => {
+    const base = safeIdent(handler.section || `KeyHandler${i + 1}`) || `KeyHandler${i + 1}`;
+    let ident = base, n = 2;
+    while (used.has(ident.toLowerCase())) ident = `${base}_${n++}`;
+    used.add(ident.toLowerCase());
+    handler.sections = [handler.section];
+    handler.steps = handler.assignments.length ? Math.max(...handler.assignments.map(a => a.values.length)) : 0;
+    handler.commandName = `CommandListCycle${ident}`;
+    handler.stepVar = `$ks_step_${ident}`;
+  });
+
   const groups = new Map();
-  for (const sw of raw) {
-    const typeTag = sw.commandLists.length ? "run" : (sw.key || "cycle");
-    const gk = sw.key ? `${typeTag}\x00${sw.key}\x00${sw.condition}` : `\x00${sw.section}\x00${raw.indexOf(sw)}`;
-    if (!groups.has(gk)) groups.set(gk, []);
-    groups.get(gk).push(sw);
+  for (const handler of handlers) {
+    const groupKey = handler.key ? `key\x00${handler.key}` : `section\x00${handler.section}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(handler);
   }
 
-  const swaps = [];
-  for (const group of groups.values()) {
-    const isAction = group[0].commandLists.length > 0;
-    const allSections = group.map(s => s.section);
-    if (isAction) {
-      // action 类型：合并所有 run 命令
-      swaps.push({
-        sections: allSections,
-        key: group[0].key,
-        condition: group[0].condition,
-        type: "action",
-        commandLists: group.flatMap(s => s.commandLists),
-        assignments: [],
-        groups: group.map(s => ({ assignments: s.assignments })),
-      });
-    } else {
-      // cycle/toggle 类型（跟随全局行为选择器）
-      const allAssignments = group.flatMap(s => s.assignments);
-      swaps.push({
-        sections: allSections,
-        key: group[0].key,
-        condition: group[0].condition,
-        assignments: allAssignments,
-        steps: Math.max(...allAssignments.map(a => a.values.length)),
-        groups: group.map(s => ({ assignments: s.assignments })),
-      });
-    }
-  }
+  return [...groups.values()].map(group => {
+    const assignments = group.flatMap(h => h.assignments);
+    const commandLists = group.flatMap(h => h.commandLists);
+    const rawEntries = group.flatMap(h => h.rawEntries);
+    const entries = group.flatMap(h => h.entries);
+    const types = [...new Set(group.map(h => h.type || "").filter(Boolean))];
+    return {
+      keySlot: true,
+      handlers: group,
+      sections: group.map(h => h.section),
+      key: group[0].key,
+      condition: group.map(h => h.condition).filter(Boolean).join(" || "),
+      type: types.length === 1 ? types[0] : (types.length ? "mixed" : ""),
+      assignments,
+      steps: assignments.length ? Math.max(...assignments.map(a => a.values.length)) : 0,
+      commandLists,
+      rawEntries,
+      entries,
+      groups: group.map(h => ({
+        section: h.section,
+        condition: h.condition,
+        type: h.type,
+        assignments: h.assignments,
+        entries: h.entries,
+        commandLists: h.commandLists,
+        rawEntries: h.rawEntries,
+        commandName: h.commandName,
+        stepVar: h.stepVar,
+      })),
+    };
+  });
+}
 
-  return swaps;
+function setKeySlotKey(slot, key) {
+  slot.key = key;
+  for (const handler of slot.handlers || []) handler.key = key;
+  for (const group of slot.groups || []) group.key = key;
 }
 
 /* ============================================================
@@ -2126,7 +2133,6 @@ const state = {
   panelImagePreview: null,   // string | null, data URL for preview
   // slot 元信息 by index
   slotMeta: [],   // { name, skip, iconKind: 'lucide'|'upload'|'auto', iconName, iconColor, iconRgba (Uint8ClampedArray) }
-  multiActiveVars: [],
   swapOrder: null, // array of swapSign objects, persisted order
   mergeMode: false,
   fabAction: "", // "merge" | "skip" | "reset"
@@ -2150,7 +2156,7 @@ function newSlotMeta(swap) {
 
   // 无后缀或纯数字时退回变量名（action 类型用命令列表名）
   if (!label) {
-    if (swap.type === "action" && swap.commandLists.length) {
+    if (!swap.assignments.length && swap.commandLists.length) {
       label = swap.commandLists.join(" / ");
     } else {
       label = swap.assignments
@@ -2178,6 +2184,32 @@ function isActiveVarName(value) {
   return /^\$[A-Za-z0-9_]*active[A-Za-z0-9_]*$/i.test((value || "").trim());
 }
 
+function parseActiveInput(value) {
+  const raw = (value || "").trim();
+  const m = raw.match(/^(\$[A-Za-z0-9_]*active[A-Za-z0-9_]*)\s*(==|=|!=|>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)$/i);
+  if (m) {
+    const op = m[2] === "=" ? "==" : m[2];
+    return { activeVar: m[1], op, value: m[3], conditionExpr: `${m[1]} ${op} ${m[3]}` };
+  }
+  if (isActiveVarName(raw)) return { activeVar: raw, conditionExpr: raw };
+  return null;
+}
+
+function uniqueActiveInputs(inputs) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of inputs) {
+    const parsed = parseActiveInput(raw);
+    if (!parsed) continue;
+    const normalized = parsed.op ? parsed.conditionExpr : parsed.activeVar;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(normalized);
+  }
+  return out;
+}
+
 function uniqueActiveVars(vars) {
   const seen = new Set();
   const out = [];
@@ -2190,36 +2222,55 @@ function uniqueActiveVars(vars) {
   return out;
 }
 
-function scanActiveVarsFromSections(sections) {
-  const vars = [];
-  for (const sec of sections) {
-    for (const line of sec.lines || []) {
-      const matches = line.match(/\$[A-Za-z0-9_]*active[A-Za-z0-9_]*/gi);
-      if (matches) vars.push(...matches);
+function reverseConditionOp(op) {
+  const normalized = op === "=" ? "==" : op;
+  if (normalized === ">") return "<";
+  if (normalized === "<") return ">";
+  if (normalized === ">=") return "<=";
+  if (normalized === "<=") return ">=";
+  return normalized;
+}
+
+function extractActiveInputsFromCondition(condition) {
+  const inputs = [];
+  const activeName = String.raw`\$[A-Za-z0-9_]*active[A-Za-z0-9_]*`;
+  const numberValue = String.raw`-?\d+(?:\.\d+)?`;
+  const opPart = String.raw`==|=|!=|>=|<=|>|<`;
+  const compareRe = new RegExp(`(${activeName})\\s*(${opPart})\\s*(${numberValue})|(${numberValue})\\s*(${opPart})\\s*(${activeName})`, "gi");
+  const covered = [];
+  let m;
+  while ((m = compareRe.exec(condition || ""))) {
+    if (m[1]) {
+      const op = m[2] === "=" ? "==" : m[2];
+      inputs.push(`${m[1]} ${op} ${m[3]}`);
+      covered.push([m.index, m.index + m[0].length]);
+    } else if (m[6]) {
+      inputs.push(`${m[6]} ${reverseConditionOp(m[5])} ${m[4]}`);
+      covered.push([m.index, m.index + m[0].length]);
     }
   }
-  return uniqueActiveVars(vars).sort((a, b) => a.localeCompare(b));
+
+  const activeRe = new RegExp(activeName, "gi");
+  while ((m = activeRe.exec(condition || ""))) {
+    const start = m.index;
+    if (covered.some(([from, to]) => start >= from && start < to)) continue;
+    inputs.push(m[0]);
+  }
+  return inputs;
 }
 
-function renderMultiActiveVars() {
-  const panel = $("multiActivePanel");
-  if (!panel) return;
-  panel.classList.toggle("show", $("multiActiveMode").checked);
-  const list = $("multiActiveList");
-  const vars = state.multiActiveVars.length ? state.multiActiveVars : scanActiveVarsFromSections(state.sections);
-  if (!state.multiActiveVars.length) state.multiActiveVars = vars;
-  list.innerHTML = state.multiActiveVars.map((v, i) => `
-    <div class="beta-active-row">
-      <input data-active-var="${i}" value="${escapeHtml(v)}" placeholder="$active">
-      <button class="beta-active-remove" data-active-remove="${i}" type="button" title="删除">×</button>
-    </div>
-  `).join("");
-}
-
-function setMultiActiveVars(vars) {
-  state.multiActiveVars = uniqueActiveVars(vars);
-  renderMultiActiveVars();
-  rerender();
+function scanActiveVarsFromSections(sections) {
+  const inputs = [];
+  for (const sec of sections) {
+    if (!sec.name || !/^Key/i.test(sec.name)) continue;
+    for (const line of sec.lines || []) {
+      const s = line.trim();
+      if (!/^condition\s*=/i.test(s)) continue;
+      const condition = s.split("=").slice(1).join("=").trim();
+      inputs.push(...extractActiveInputsFromCondition(condition));
+    }
+  }
+  return uniqueActiveInputs(inputs).sort((a, b) => a.localeCompare(b));
 }
 
 let colsManual = false;
@@ -2253,20 +2304,64 @@ function clickKey() {
   return "no_ctrl no_shift alt VK_LBUTTON";
 }
 
+function generatedPresentBlockEnd(lines, start, menuCommand) {
+  const first = (lines[start] || "").trim();
+  if (!/^if\b/i.test(first) || !/\$gui_menu\b/i.test(first)) return -1;
+  let depth = 0;
+  for (let i = start; i < lines.length; i++) {
+    const s = (lines[i] || "").trim();
+    if (/^if\b/i.test(s)) depth++;
+    if (/^endif\b/i.test(s)) {
+      depth--;
+      if (depth === 0) {
+        const inner = lines.slice(start + 1, i).map(line => line.trim()).filter(Boolean);
+        const isGenerated = inner.length === 1 && inner[0].toLowerCase() === `run = ${menuCommand}`.toLowerCase();
+        if (!isGenerated) return -1;
+        return lines[i + 1]?.trim() === "" ? i + 2 : i + 1;
+      }
+    }
+  }
+  return -1;
+}
+
+function stripGeneratedPresentBlocks(lines, menuCommand) {
+  const out = lines.slice(0, 1);
+  for (let i = 1; i < lines.length;) {
+    const end = generatedPresentBlockEnd(lines, i, menuCommand);
+    if (end >= 0) {
+      i = end;
+      continue;
+    }
+    out.push(lines[i++]);
+  }
+  return out;
+}
+
 // 把 [Present] 注入 GUI 调用；如果原文件没有，新建一个
-function injectPresent(sections, activeVar, shouldResetActive, menuCommand = "CommandListGuiMenu") {
+function injectPresent(sections, activeVar, shouldResetActive, menuCommand = "CommandListGuiMenu", resetActiveVars = [activeVar]) {
   let hasPresent = false;
-  const resetLine = `post ${activeVar} = 0`;
+  const activeExpr = (activeVar || "").trim();
+  const presentCondition = activeExpr ? `if $gui_menu && (${activeExpr})` : "if $gui_menu";
+  const seenResetVars = new Set();
+  const resetLines = [];
+  for (const raw of resetActiveVars) {
+    const v = (raw || "").trim();
+    if (!/^\$[A-Za-z0-9_]+$/.test(v) || seenResetVars.has(v.toLowerCase())) continue;
+    seenResetVars.add(v.toLowerCase());
+    resetLines.push(`post ${v} = 0`);
+  }
   const out = sections.map(sec => {
     if (!sec.name || sec.name.toLowerCase() !== "present") return sec;
     hasPresent = true;
-    const lines = [...sec.lines];
-    if (shouldResetActive && !lines.some(line => line.trim().toLowerCase() === resetLine.toLowerCase())) {
-      lines.push(resetLine);
+    const lines = stripGeneratedPresentBlocks(sec.lines, menuCommand);
+    if (shouldResetActive) {
+      for (const resetLine of resetLines) {
+        if (!lines.some(line => line.trim().toLowerCase() === resetLine.toLowerCase())) lines.push(resetLine);
+      }
     }
     // 在 [Present] 头部插入 GUI 渲染触发
     lines.splice(1, 0,
-      "if $gui_menu",
+      presentCondition,
       `  run = ${menuCommand}`,
       "endif",
       ""
@@ -2280,299 +2375,120 @@ function safeIdent(text) {
   return (text || "").replace(/^\$/, "").replace(/[^A-Za-z0-9_]/g, "_") || "active";
 }
 
-function sectionSuffix(index, activeVar) {
-  return `Beta${index + 1}_${safeIdent(activeVar)}`;
+function valueAtStep(assignment, step) {
+  return assignment.values[step] !== undefined ? assignment.values[step] : assignment.values[assignment.values.length - 1];
 }
 
-function conditionHasActiveVar(condition, activeVar) {
-  if (!condition) return false;
-  return new RegExp(`(^|[^A-Za-z0-9_])${activeVar.replace(/[$]/g, "\\$")}(?![A-Za-z0-9_])`, "i").test(condition);
-}
-
-function getBetaPanels() {
-  const vars = uniqueActiveVars(state.multiActiveVars.length ? state.multiActiveVars : scanActiveVarsFromSections(state.sections));
-  return vars.map((activeVar, panelIndex) => {
-    const indices = state.swaps
-      .map((sw, i) => ({ sw, i }))
-      .filter(({ sw, i }) => !state.slotMeta[i]?.skip && conditionHasActiveVar(sw.condition, activeVar))
-      .map(({ i }) => i);
-    return { activeVar, panelIndex, suffix: sectionSuffix(panelIndex, activeVar), indices };
-  }).filter(panel => panel.indices.length);
-}
-
-function buildBetaIni() {
-  const panels = getBetaPanels();
-  if (!panels.length) return buildSingleIni();
-
-  const cols = Math.max(1, Number($("cols").value) || 3);
-  const gap = Math.max(0, Number($("gap").value) || 14);
-  const behavior = $("behavior").value;
-  const slotSize = 64;
-  const padding = 16;
-  const resetActiveOnPresent = $("resetActiveOnPresent").checked;
-  const primaryActive = panels[0].activeVar;
-
-  let secs = state.sections;
-  if ($("removeKeys").checked) secs = secs.filter(s => !s.name || !/^Key/i.test(s.name));
-  const inj = injectPresent(secs, primaryActive, resetActiveOnPresent, "CommandListGuiMenuBeta");
-  secs = inj.sections;
-  let body = secs.map(s => s.lines.join("\n")).join("\n").trim();
-
-  const L = [];
-  L.push("");
-  L.push("; =====================================================");
-  L.push("; GUI menu beta multi-active — generated by KeySwap → GUI webui");
-  L.push("; =====================================================");
-  L.push("");
-
-  if (!inj.hasPresent) {
-    L.push("[Present]");
-    L.push("if $gui_menu");
-    L.push("  run = CommandListGuiMenuBeta");
-    L.push("endif");
-    if (resetActiveOnPresent) L.push(`post ${primaryActive} = 0`);
-    L.push("");
+function emitApplyEntriesForStep(L, indent, entries, step) {
+  for (const entry of entries || []) {
+    if (entry.kind === "assign") {
+      L.push(`${indent}${entry.variable} = ${valueAtStep(entry, step)}`);
+    } else if (entry.kind === "run") {
+      L.push(`${indent}run = ${entry.target}`);
+    } else if (entry.kind === "raw") {
+      L.push(`${indent}${entry.line}`);
+    }
   }
+}
 
-  L.push("[Constants]");
-  L.push("global $gui_menu = 0");
-  L.push("global $gui_hover = 0");
-  L.push("global $gui_hovered = 0");
-  L.push("global $gui_clicked = 0");
-  L.push("global $gui_slot = 0");
-  L.push("global $gui_hold = 0");
-  L.push("global $gui_drag = 0");
-  L.push("global $gui_ww");
-  L.push("global $gui_wh");
-  L.push("global $gui_cpx");
-  L.push("global $gui_cpy");
-  L.push("global $gui_cox");
-  L.push("global $gui_coy");
-  L.push("global persist $gui_mx = 0.05");
-  L.push("global persist $gui_my = 0.20");
-  for (const panel of panels) {
-    panel.indices.forEach((sIdx, n) => {
-      const swap = state.swaps[sIdx];
-      if (swap.type === "action") return;
-      for (let g = 0; g < swap.groups.length; g++) {
-        const groupSuffix = swap.groups.length > 1 ? `_${g}` : "";
-        L.push(`global persist $gui_step_${panel.suffix}_${n + 1}${groupSuffix} = 0`);
-      }
-    });
+function emitRunEntries(L, indent, entries) {
+  for (const entry of entries || []) {
+    if (entry.kind === "assign") {
+      const v = entry.values.length ? entry.values[entry.values.length - 1] : "0";
+      L.push(`${indent}${entry.variable} = ${v}`);
+    } else if (entry.kind === "run") {
+      L.push(`${indent}run = ${entry.target}`);
+    } else if (entry.kind === "raw") {
+      L.push(`${indent}${entry.line}`);
+    }
+  }
+}
+
+function emitApplyCycleStep(L, indent, drv, grp, grpSteps) {
+  L.push(`${indent}${drv} = ${drv} + 1`);
+  L.push(`${indent}if ${drv} >= ${grpSteps}`);
+  L.push(`${indent}  ${drv} = 0`);
+  L.push(`${indent}endif`);
+  for (let step = 0; step < grpSteps; step++) {
+    L.push(`${indent}${step === 0 ? "if" : "elif"} ${drv} == ${step}`);
+    emitApplyEntriesForStep(L, `${indent}  `, grp.entries || grp.assignments, step);
+  }
+  L.push(`${indent}endif`);
+}
+
+function getRenderActiveCondition() {
+  const parts = [];
+  for (const input of scanActiveVarsFromSections(state.sections)) {
+    const parsed = parseActiveInput(input);
+    if (parsed?.op) parts.push(parsed.conditionExpr);
+    else if (parsed?.activeVar) parts.push(parsed.activeVar);
+    else if ((input || "").trim()) parts.push(input.trim());
+  }
+  return parts.join(" || ");
+}
+
+function getRenderResetVars() {
+  return uniqueActiveVars(scanActiveVarsFromSections(state.sections).map(input => parseActiveInput(input)?.activeVar).filter(Boolean));
+}
+
+function handlerType(handler, fallback = "cycle") {
+  return normalizedKeyType(handler.type || fallback);
+}
+
+function emitKeyHandlerCommandList(L, handler, fallbackBehavior = "cycle") {
+  L.push(`[${handler.commandName}]`);
+  const type = handlerType(handler, fallbackBehavior);
+  if ((type === "cycle" || type === "toggle") && handler.assignments.length) {
+    emitApplyCycleStep(L, "", handler.stepVar, handler, handler.steps || Math.max(...handler.assignments.map(a => a.values.length)));
+  } else {
+    emitRunEntries(L, "", handler.entries);
   }
   L.push("");
+}
 
-  L.push("[KeyGuiMenu]");
-  L.push(`condition = ${panels.map(p => `${p.activeVar} > 0`).join(" || ")}`);
-  L.push(`key = ${$("menuKey").value.trim() || "alt"}`);
-  L.push("type = hold");
-  L.push("$gui_menu = 1");
-  L.push("");
+function emitGuiRunHandler(L, indent, handler) {
+  const cond = handler.condition || "";
+  if (cond) L.push(`${indent}if ${cond}`);
+  L.push(`${indent}${cond ? "  " : ""}run = ${handler.commandName}`);
+  if (cond) L.push(`${indent}endif`);
+}
 
-  L.push("[KeyGuiHold]");
-  L.push("condition = $gui_menu == 1 && $gui_hover == 0");
-  L.push(`key = ${clickKey()}`);
-  L.push("type = hold");
-  L.push("$gui_hold = 1");
-  L.push("");
+function preservedKeySectionLines(sec) {
+  const preserved = [];
+  for (const line of sec.lines.slice(1)) {
+    const s = line.trim();
+    const low = s.toLowerCase();
+    if (!s || s.startsWith(";")) {
+      preserved.push(line);
+      continue;
+    }
+    if (/^(key|condition|type|run)\s*=/.test(low)) continue;
+    if (stripInlineComment(s).match(ASSIGN_RE)) continue;
+    preserved.push(line);
+  }
+  while (preserved.length && !preserved[preserved.length - 1].trim()) preserved.pop();
+  return preserved;
+}
 
-  L.push("[KeyGuiClick]");
-  L.push("condition = $gui_menu == 1 && $gui_hover == 1");
-  L.push(`key = ${clickKey()}`);
-  L.push("run = CommandListGuiClickBeta");
-  L.push("");
-
-  L.push("[CommandListGuiDims]");
-  L.push("if window_width != 0");
-  L.push("  $gui_ww = window_width");
-  L.push("  $gui_wh = window_height");
-  L.push("elif rt_width != 0");
-  L.push("  $gui_ww = rt_width");
-  L.push("  $gui_wh = rt_height");
-  L.push("else");
-  L.push("  $gui_ww = res_width");
-  L.push("  $gui_wh = res_height");
-  L.push("endif");
-  L.push("if cursor_x != 0 && cursor_y != 0");
-  L.push("  $gui_cpx = cursor_x");
-  L.push("  $gui_cpy = cursor_y");
-  L.push("elif cursor_window_x != 0 && cursor_window_y != 0");
-  L.push("  $gui_cpx = cursor_window_x / $gui_ww");
-  L.push("  $gui_cpy = cursor_window_y / $gui_wh");
-  L.push("else");
-  L.push("  $gui_cpx = cursor_screen_x / $gui_ww");
-  L.push("  $gui_cpy = cursor_screen_y / $gui_wh");
-  L.push("endif");
-  L.push("");
-
-  L.push("[CommandListGuiMenuBeta]");
-  panels.forEach(panel => {
-    L.push(`${panel.panelIndex === 0 ? "if" : "elif"} ${panel.activeVar} > 0`);
-    L.push(`  run = CommandListGuiMenu${panel.suffix}`);
+function rewriteKeySections(sections, swaps, removeKeys, fallbackBehavior = "cycle") {
+  if (removeKeys) return sections.filter(s => !s.name || !/^Key/i.test(s.name));
+  const handlers = new Map(swaps.flatMap(sw => (sw.handlers || []).map(handler => [handler.sourceIndex, handler])));
+  return sections.map(sec => {
+    if (!sec.name || !/^Key/i.test(sec.name)) return sec;
+    const handler = handlers.get(sec.index);
+    if (!handler) return sec;
+    const lines = [`[${sec.name}]`];
+    if (handler.key) lines.push(`key = ${handler.key}`);
+    if (handler.condition) lines.push(`condition = ${handler.condition}`);
+    const type = handlerType(handler, fallbackBehavior);
+    if (type === "hold") lines.push("type = hold");
+    lines.push(...preservedKeySectionLines(sec));
+    lines.push(`run = ${handler.commandName}`);
+    return { name: sec.name, lines };
   });
-  L.push("endif");
-  L.push("");
-
-  L.push("[CommandListGuiClickBeta]");
-  panels.forEach(panel => {
-    L.push(`${panel.panelIndex === 0 ? "if" : "elif"} ${panel.activeVar} > 0`);
-    L.push(`  run = CommandListGuiClick${panel.suffix}`);
-  });
-  L.push("endif");
-  L.push("");
-
-  for (const panel of panels) {
-    const active = panel.indices;
-    const rows = Math.max(1, Math.ceil(active.length / cols));
-    const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
-    const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
-
-    L.push(`[CommandListGuiMenu${panel.suffix}]`);
-    L.push("run = CommandListGuiDims");
-    L.push(`run = CommandListGuiBg${panel.suffix}`);
-    L.push(`run = CommandListGuiSlots${panel.suffix}`);
-    L.push("");
-
-    L.push(`[CommandListGuiBg${panel.suffix}]`);
-    L.push(`x87 = ${panelW} / $gui_ww`);
-    L.push(`y87 = ${panelH} / $gui_wh`);
-    L.push("z87 = $gui_mx");
-    L.push("w87 = $gui_my");
-    L.push("if $gui_drag == 0");
-    L.push("  if $gui_hold && $gui_cpx > $gui_mx && $gui_cpx < ($gui_mx + x87) && $gui_cpy > $gui_my && $gui_cpy < ($gui_my + y87)");
-    L.push("    $gui_cox = $gui_cpx - $gui_mx");
-    L.push("    $gui_coy = $gui_cpy - $gui_my");
-    L.push("    $gui_drag = 1");
-    L.push("  endif");
-    L.push("else");
-    L.push("  if $gui_hold");
-    L.push("    $gui_mx = $gui_cpx - $gui_cox");
-    L.push("    $gui_my = $gui_cpy - $gui_coy");
-    L.push("  else");
-    L.push("    $gui_drag = 0");
-    L.push("  endif");
-    L.push("  z87 = $gui_mx");
-    L.push("  w87 = $gui_my");
-    L.push("endif");
-    L.push(`ps-t100 = ResourceGuiBg${panel.suffix}`);
-    L.push("run = CustomShaderGuiDraw");
-    L.push(`x87 = ${panelW - 6} / $gui_ww`);
-    L.push("y87 = 48 / $gui_wh");
-    L.push(`z87 = $gui_mx + 3 / $gui_ww`);
-    L.push(`w87 = $gui_my + 3 / $gui_wh`);
-    L.push(`ps-t100 = ResourceGuiTitle${panel.suffix}`);
-    L.push("run = CustomShaderGuiDraw");
-    L.push("");
-
-    L.push(`[CommandListGuiSlots${panel.suffix}]`);
-    L.push("$gui_hover = 0");
-    L.push("$gui_hovered = 0");
-    L.push("$gui_slot = 0");
-    active.forEach((sIdx, n) => {
-      const c = n % cols, r = Math.floor(n / cols);
-      const px = padding + c * (slotSize + gap);
-      const py = padding + 48 + r * (slotSize + gap);
-      L.push(`; slot ${n + 1}: ${state.slotMeta[sIdx].name}`);
-      L.push(`x87 = ${slotSize} / $gui_ww`);
-      L.push(`y87 = ${slotSize} / $gui_wh`);
-      L.push(`z87 = $gui_mx + ${px} / $gui_ww`);
-      L.push(`w87 = $gui_my + ${py} / $gui_wh`);
-      L.push(`$gui_slot = ${n + 1}`);
-      L.push(`run = CommandListGuiSlot${panel.suffix}`);
-    });
-    L.push("");
-
-    L.push(`[CommandListGuiSlot${panel.suffix}]`);
-    L.push("if $gui_cpx > z87 && $gui_cpx < (z87 + x87) && $gui_cpy > w87 && $gui_cpy < (w87 + y87)");
-    L.push("  $gui_hover = 1");
-    L.push("  $gui_hovered = $gui_slot");
-    L.push("endif");
-    active.forEach((sIdx, n) => {
-      L.push(`${n === 0 ? "if" : "elif"} $gui_slot == ${n + 1}`);
-      L.push(`  if $gui_hovered == ${n + 1}`);
-      L.push(`    ps-t100 = ResourceGuiSlotHover${panel.suffix}_${n + 1}`);
-      L.push("  else");
-      L.push(`    ps-t100 = ResourceGuiSlot${panel.suffix}_${n + 1}`);
-      L.push("  endif");
-    });
-    if (active.length) L.push("endif");
-    L.push("run = CustomShaderGuiDraw");
-    L.push("");
-
-    L.push(`[CommandListGuiClick${panel.suffix}]`);
-    L.push("$gui_clicked = $gui_hovered");
-    active.forEach((sIdx, n) => {
-      const swap = state.swaps[sIdx];
-      const m = state.slotMeta[sIdx];
-      L.push(`${n === 0 ? "if" : "elif"} $gui_clicked == ${n + 1}`);
-      L.push(`  ; ${m.name}`);
-      const cond = swap.condition ? swap.condition.replace(/!=\s*0\b/g, "> 0") : "";
-      if (cond) L.push(`  if ${cond}`);
-      if (swap.type === "action") {
-        for (const cmd of swap.commandLists) L.push(`  run = ${cmd}`);
-      } else if (behavior === "toggle") {
-        for (const a of swap.assignments) L.push(`  ${a.variable} = 1 - ${a.variable}`);
-      } else {
-        const multiGroup = swap.groups.length > 1;
-        for (let g = 0; g < swap.groups.length; g++) {
-          const grp = swap.groups[g];
-          const groupSuffix = multiGroup ? `_${g}` : "";
-          const drv = `$gui_step_${panel.suffix}_${n + 1}${groupSuffix}`;
-          const grpSteps = Math.max(...grp.assignments.map(a => a.values.length));
-          L.push(`  ${drv} = ${drv} + 1`);
-          L.push(`  if ${drv} >= ${grpSteps}`);
-          L.push(`    ${drv} = 0`);
-          L.push("  endif");
-          for (let step = 0; step < grpSteps; step++) {
-            L.push(`  ${step === 0 ? "if" : "elif"} ${drv} == ${step}`);
-            for (const a of grp.assignments) {
-              const v = a.values[step] !== undefined ? a.values[step] : a.values[a.values.length - 1];
-              L.push(`    ${a.variable} = ${v}`);
-            }
-          }
-          L.push("  endif");
-        }
-      }
-      if (cond) L.push("  endif");
-    });
-    if (active.length) L.push("endif");
-    L.push("");
-  }
-
-  L.push("[CustomShaderGuiDraw]");
-  L.push("vs = res_gui\\draw_2d.hlsl");
-  L.push("ps = res_gui\\draw_2d.hlsl");
-  L.push("blend = ADD SRC_ALPHA INV_SRC_ALPHA");
-  L.push("cull = none");
-  L.push("topology = triangle_strip");
-  L.push("run = BuiltInCommandListUnbindAllRenderTargets");
-  L.push("o0 = set_viewport bb");
-  L.push("draw = 4, 0");
-  L.push("");
-
-  for (const panel of panels) {
-    L.push(`[ResourceGuiBg${panel.suffix}]`);
-    L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_bg.png`);
-    L.push("");
-    L.push(`[ResourceGuiTitle${panel.suffix}]`);
-    L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_title.png`);
-    L.push("");
-    panel.indices.forEach((sIdx, n) => {
-      const idx = String(n + 1).padStart(2, "0");
-      L.push(`[ResourceGuiSlot${panel.suffix}_${n + 1}]`);
-      L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_slot_${idx}.png`);
-      L.push("");
-      L.push(`[ResourceGuiSlotHover${panel.suffix}_${n + 1}]`);
-      L.push(`filename = res_gui\\beta_${panel.panelIndex + 1}_slot_hover_${idx}.png`);
-      L.push("");
-    });
-  }
-
-  return body + "\n" + L.join("\n");
 }
 
 function buildIni() {
-  if ($("multiActiveMode").checked) return buildBetaIni();
   return buildSingleIni();
 }
 
@@ -2594,13 +2510,11 @@ function buildSingleIni() {
   const panelH = padding + 48 /* title bar */ + rows * slotSize + (rows - 1) * gap + padding;
 
   // ---- 处理原 sections ----
-  let secs = state.sections;
-  if (removeKeys) {
-    secs = secs.filter(s => !s.name || !/^Key/i.test(s.name));
-  }
-  const av = ($("activeVar").value || "$active").trim();
+  let secs = rewriteKeySections(state.sections, swaps, removeKeys, behavior);
+  const av = getRenderActiveCondition();
+  const resetActiveVars = getRenderResetVars();
   const resetActiveOnPresent = $("resetActiveOnPresent").checked;
-  const inj = injectPresent(secs, av, resetActiveOnPresent);
+  const inj = injectPresent(secs, av, resetActiveOnPresent, "CommandListGuiMenu", resetActiveVars);
   secs = inj.sections;
 
   let body = secs.map(s => s.lines.join("\n")).join("\n").trim();
@@ -2616,10 +2530,10 @@ function buildSingleIni() {
 
   if (!inj.hasPresent) {
     L.push("[Present]");
-    L.push(`if ${av} && $gui_menu`);
+    L.push(av ? `if $gui_menu && (${av})` : "if $gui_menu");
     L.push("  run = CommandListGuiMenu");
     L.push("endif");
-    if (resetActiveOnPresent) L.push(`post ${av} = 0`);
+    if (resetActiveOnPresent) resetActiveVars.forEach(v => L.push(`post ${v} = 0`));
     L.push("");
   }
 
@@ -2639,21 +2553,17 @@ function buildSingleIni() {
   L.push("global $gui_coy");
   L.push("global persist $gui_mx = 0.05");
   L.push("global persist $gui_my = 0.20");
-  // 每个 slot 的 step 索引（action 类型不需要计数器）
-  active.forEach((sIdx, n) => {
-    const swap = swaps[sIdx];
-    if (swap.type === "action") return;
-    const groupCount = swap.groups.length;
-    for (let g = 0; g < groupCount; g++) {
-      const suffix = groupCount > 1 ? `_${g}` : "";
-      L.push(`global persist $gui_step${n + 1}${suffix} = 0`);
+  for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
+    const type = handlerType(handler, behavior);
+    if ((type === "cycle" || type === "toggle") && handler.assignments.length) {
+      L.push(`global ${handler.stepVar} = -1`);
     }
-  });
+  }
   L.push("");
 
   // 呼出键
   L.push("[KeyGuiMenu]");
-  L.push(`condition = ${av} > 0`);
+  if (av) L.push(`condition = ${av}`);
   L.push(`key = ${$("menuKey").value.trim() || "alt"}`);
   L.push("type = hold");
   L.push("$gui_menu = 1");
@@ -2775,7 +2685,7 @@ function buildSingleIni() {
   L.push("run = CustomShaderGuiDraw");
   L.push("");
 
-  // 点击：基于 step 变量循环（修了 GPT 那版的 cycle bug）
+  // 点击：slot 按 key 分组；每个 handler 独立判断原 condition。
   L.push("[CommandListGuiClick]");
   L.push("$gui_clicked = $gui_hovered");
   active.forEach((sIdx, n) => {
@@ -2783,44 +2693,14 @@ function buildSingleIni() {
     const m = state.slotMeta[sIdx];
     L.push(`${n === 0 ? "if" : "elif"} $gui_clicked == ${n + 1}`);
     L.push(`  ; ${m.name}`);
-    const cond = swap.condition ? swap.condition.replace(/!=\s*0\b/g, "> 0") : "";
-    if (cond) L.push(`  if ${cond}`);
-    if (swap.type === "action") {
-      // action 类型：直接执行命令列表
-      for (const cmd of swap.commandLists) {
-        L.push(`  run = ${cmd}`);
-      }
-    } else if (behavior === "toggle") {
-      // toggle：所有变量在 0 / 1 间翻转（含合并按钮）
-      for (const a of swap.assignments) {
-        L.push(`  ${a.variable} = 1 - ${a.variable}`);
-      }
-    } else {
-      // cycle：每组独立计数器
-      const multiGroup = swap.groups.length > 1;
-      for (let g = 0; g < swap.groups.length; g++) {
-        const grp = swap.groups[g];
-        const suffix = multiGroup ? `_${g}` : "";
-        const drv = `$gui_step${n + 1}${suffix}`;
-        const grpSteps = Math.max(...grp.assignments.map(a => a.values.length));
-        L.push(`  ${drv} = ${drv} + 1`);
-        L.push(`  if ${drv} >= ${grpSteps}`);
-        L.push(`    ${drv} = 0`);
-        L.push(`  endif`);
-        for (let step = 0; step < grpSteps; step++) {
-          L.push(`  ${step === 0 ? "if" : "elif"} ${drv} == ${step}`);
-          for (const a of grp.assignments) {
-            const v = a.values[step] !== undefined ? a.values[step] : a.values[a.values.length - 1];
-            L.push(`    ${a.variable} = ${v}`);
-          }
-        }
-        L.push(`  endif`);
-      }
-    }
-    if (cond) L.push(`  endif`);
+    for (const handler of swap.handlers || []) emitGuiRunHandler(L, "  ", handler);
   });
   if (active.length) L.push("endif");
   L.push("");
+
+  for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
+    emitKeyHandlerCommandList(L, handler, behavior);
+  }
 
   // 自定义 shader：使用 SinsOfSeven 的 draw_2d.hlsl
   L.push("[CustomShaderGuiDraw]");
@@ -2859,8 +2739,6 @@ function buildSingleIni() {
  * ============================================================ */
 
 async function buildResources() {
-  if ($("multiActiveMode").checked) return buildBetaResources();
-
   const meta = state.slotMeta;
   const swaps = state.swaps;
   const accent = $("accentColor").value;
@@ -2957,95 +2835,6 @@ async function buildResources() {
   return files;
 }
 
-async function buildBetaResources() {
-  const panels = getBetaPanels();
-  if (!panels.length) return buildResourcesSingle();
-  return buildResourcesForPanels(panels);
-}
-
-async function buildResourcesSingle() {
-  const wasChecked = $("multiActiveMode").checked;
-  $("multiActiveMode").checked = false;
-  try {
-    return await buildResources();
-  } finally {
-    $("multiActiveMode").checked = wasChecked;
-  }
-}
-
-async function buildResourcesForPanels(panels) {
-  const meta = state.slotMeta;
-  const swaps = state.swaps;
-  const accent = $("accentColor").value;
-  const bg = $("bgColor").value;
-  const alpha = Math.max(0, Math.min(255, Number($("bgAlpha").value) || 200));
-
-  const [ar, ag, ab] = hexToRgb(accent);
-  const [br, bg2, bb] = hexToRgb(bg);
-  const alpha01 = alpha / 255;
-  const [sr, sgg, sbb] = hexToRgb($("slotColor").value);
-  const [hr, hg, hb] = hexToRgb($("hoverColor").value);
-  const [pbor, pbog, pbob] = hexToRgb($("panelBorderColor").value);
-  const [sbor, sbog, sbob] = hexToRgb($("slotBorderColor").value);
-  const titleShadow = hexToRgb($("titleShadowColor").value);
-  const cols = Math.max(1, Number($("cols").value) || 3);
-  const gap = Math.max(0, Number($("gap").value) || 14);
-  const slotSize = 64, padding = 16;
-  const modName = state.fileName.replace(/\.[^.]+$/, "") || "MOD";
-  const files = [{ name: "res_gui/draw_2d.hlsl", data: SHADER_TEXT }];
-
-  for (const panel of panels) {
-    const rows = Math.max(1, Math.ceil(panel.indices.length / cols));
-    const panelW = padding * 2 + cols * slotSize + (cols - 1) * gap;
-    const panelH = padding + 48 + rows * slotSize + (rows - 1) * gap + padding;
-    const bgOpts = { fill: [br, bg2, bb, alpha01], border: [pbor, pbog, pbob, 1], topBorder: [ar, ag, ab, 1] };
-
-    if (state.panelImageRgba) {
-      const bgRgba = renderBgRgba(panelW, panelH, bgOpts);
-      const bgCanvas = document.createElement("canvas");
-      bgCanvas.width = panelW; bgCanvas.height = panelH;
-      const bgCtx = bgCanvas.getContext("2d");
-      bgCtx.putImageData(new ImageData(bgRgba, panelW, panelH), 0, 0);
-      const bw = 3, radius = 22;
-      const imgCanvas = document.createElement("canvas");
-      imgCanvas.width = 256; imgCanvas.height = 256;
-      imgCanvas.getContext("2d").putImageData(new ImageData(state.panelImageRgba, 256, 256), 0, 0);
-      bgCtx.save();
-      bgCtx.beginPath();
-      bgCtx.roundRect(bw, bw, panelW - bw * 2, panelH - bw * 2, radius);
-      bgCtx.clip();
-      bgCtx.drawImage(imgCanvas, bw, bw, panelW - bw * 2, panelH - bw * 2);
-      bgCtx.restore();
-      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_bg.png`, data: rgbaToPng(panelW, panelH, bgCtx.getImageData(0, 0, panelW, panelH).data) });
-    } else {
-      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_bg.png`, data: rgbaToPng(panelW, panelH, renderBgRgba(panelW, panelH, bgOpts)) });
-    }
-
-    const titleW = panelW - 6;
-    const titleText = `${modName}-${panel.activeVar.replace(/^\$/, "")}`;
-    files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_title.png`, data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, titleShadow, !$("disableTitleShadow").checked)) });
-
-    for (let n = 0; n < panel.indices.length; n++) {
-      const sIdx = panel.indices[n];
-      const m = meta[sIdx];
-      const label = (m.name && !($("hideUploadLabel").checked && m.iconPreview)) ? m.name : "";
-      let iconRgba = m.iconRgba || null;
-      let iconSvg = null;
-      if (!iconRgba) {
-        const svg = await loadLucideSvg(m.iconName);
-        if (svg) iconSvg = colorizeSvg(svg, m.iconColor);
-      }
-      const baseOpts = { border: [sbor, sbog, sbob, 1], iconRgba, iconSvg, label };
-      if ($("showKeyHint").checked && swaps[sIdx].key) baseOpts.keyHint = swaps[sIdx].key;
-      const idx = String(n + 1).padStart(2, "0");
-      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_slot_${idx}.png`, data: rgbaToPng(64, 64, await renderSlotRgba({ ...baseOpts, fill: [sr, sgg, sbb, 200 / 255] })) });
-      files.push({ name: `res_gui/beta_${panel.panelIndex + 1}_slot_hover_${idx}.png`, data: rgbaToPng(64, 64, await renderSlotRgba({ ...baseOpts, fill: [hr, hg, hb, 230 / 255] })) });
-    }
-  }
-
-  return files;
-}
-
 const SHADER_TEXT = `// **** RESPONSIVE UI SHADER ****
 // Contributors: SinsOfSeven
 // Inspired by VV_Mod_Maker
@@ -3102,6 +2891,37 @@ const I_SVG = {
   skip:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
 };
 
+async function uploadIconForSlot(idx) {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) { resolve(false); return; }
+      try {
+        const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
+        if (!rgba) { resolve(false); return; }
+        const m = state.slotMeta[idx];
+        m.iconRgba = rgba;
+        m.iconKind = "upload";
+        const c = document.createElement("canvas");
+        c.width = 64; c.height = 64;
+        c.getContext("2d").putImageData(new ImageData(rgba, 64, 64), 0, 0);
+        m.iconPreview = c.toDataURL();
+        renderSlotThumb(idx);
+        rerender();
+        toast("图标已上传", "ok");
+        resolve(true);
+      } catch (e) {
+        toast("处理图片失败", "err");
+        resolve(false);
+      }
+    };
+    input.click();
+  });
+}
+
 async function renderSlotThumb(idx) {
   const el = document.querySelector(`[data-thumb="${idx}"]`);
   if (!el) return;
@@ -3127,7 +2947,7 @@ function renderSwapList() {
   }
   list.innerHTML = state.swaps.map((sw, i) => {
     const m = state.slotMeta[i];
-    const meta = sw.type === "action"
+    const meta = !sw.assignments.length && sw.commandLists.length
       ? `⟳ ${sw.commandLists.join(", ")}`
       : sw.assignments.map(a => `${a.variable}×${a.values.length}`).join(", ");
     const nGroups = sw.groups.length;
@@ -3195,7 +3015,7 @@ async function renderPreview() {
   grid.classList.toggle("merge-mode-on", state.mergeMode);
 
   const showKey = $("showKeyHint").checked;
-  const active = state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
+  let active = state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
   grid.innerHTML = active.map(i =>
     `<div class="gui-slot" data-pre="${i}" draggable="true"><input type="checkbox" class="slot-check" data-mcheck="${i}"><span class="slot-icon"></span><span class="slot-label">${escapeHtml(state.slotMeta[i].name)}</span><span class="slot-key"${showKey ? "" : " hidden"}></span></div>`
   ).join("");
@@ -3261,10 +3081,10 @@ function updateStatus() {
     $("status").textContent = "等待 ini";
   } else if (!hasActive) {
     $("status").className = "status err";
-    $("status").textContent = `共 ${total} 组，但全部已跳过`;
+    $("status").textContent = `共 ${total} 个 key slot，但全部已跳过`;
   } else {
     $("status").className = "status ok";
-    $("status").textContent = `共 ${total} 组，${active} 个活跃`;
+    $("status").textContent = `共 ${total} 个 key slot，${active} 个活跃`;
   }
 }
 
@@ -3294,7 +3114,7 @@ function hoverText(idx) {
   html += '<table class="hover-table">';
   html += `<tr><td>Section</td><td><code>${escapeHtml(sw.sections.join(" + "))}</code></td></tr>`;
   html += `<tr><td>Key</td><td>${escapeHtml(sw.key || "无")}</td></tr>`;
-  if (sw.type === "action") {
+  if (!sw.assignments.length && sw.commandLists.length) {
     html += `<tr><td>类型</td><td>⟳ 执行命令</td></tr>`;
     html += '</table>';
     html += '<div class="hover-vars">';
@@ -3388,33 +3208,11 @@ async function loadFile(file, opts = {}) {
   state.sections = parseSections(state.text);
   state.swaps = parseSwaps(state.sections);
   state.slotMeta = state.swaps.map(newSlotMeta);
-  if (!$('multiActiveMode').checked || !state.multiActiveVars.length) {
-    state.multiActiveVars = scanActiveVarsFromSections(state.sections);
-  }
 
   // 恢复保存的排序
 
   // 尝试恢复草稿（含排序和元信息）
   const hasDraft = await loadDraft();
-
-  // 自动检测 MOD 使用的 $active* 变量
-  let hasPlainActive = false;
-  const activeVars = new Set();
-  for (const sec of state.sections) {
-    if (!sec.name) continue;
-    for (const line of sec.lines) {
-      const m = line.match(/\$active\d+/g);
-      if (m) m.forEach(v => activeVars.add(v));
-      if (/\$active\b/.test(line) && !/\$active\d/.test(line)) hasPlainActive = true;
-    }
-  }
-  if (!hasDraft) {
-    if (hasPlainActive) {
-      $("activeVar").value = "$active";
-    } else if (activeVars.size > 0) {
-      $("activeVar").value = [...activeVars].sort()[0];
-    }
-  }
 
   // 自动推算列数（无草稿时）
   if (!hasDraft) {
@@ -3425,7 +3223,7 @@ async function loadFile(file, opts = {}) {
     colsManual = true;
   }
 
-  $("fileInfo").textContent = `${file.name} · 找到 ${state.swaps.length} 个 [Key*]`;
+  $("fileInfo").textContent = `${file.name} · 找到 ${state.swaps.length} 个 key slot`;
   updateStatus();
 
   if (state.swaps.length) {
@@ -3435,7 +3233,6 @@ async function loadFile(file, opts = {}) {
   }
 
   renderSwapList();
-  renderMultiActiveVars();
   rerender();
   // 初次加载立即保存草稿（不受防抖影响）
   await saveDraft();
@@ -3524,7 +3321,7 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "activeVar", "behavior"].forEach(id => {
+["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "behavior"].forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
@@ -3533,34 +3330,6 @@ drop.addEventListener("drop", e => {
 });
 ["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "resetActiveOnPresent", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
-});
-
-$("multiActiveMode").addEventListener("change", () => {
-  if (!state.multiActiveVars.length) state.multiActiveVars = scanActiveVarsFromSections(state.sections);
-  renderMultiActiveVars();
-  rerender();
-});
-
-$("btnAddActiveVar").addEventListener("click", () => {
-  state.multiActiveVars.push("");
-  renderMultiActiveVars();
-  saveSettings();
-});
-
-$("multiActiveList").addEventListener("input", e => {
-  const input = e.target.closest("[data-active-var]");
-  if (!input) return;
-  state.multiActiveVars[Number(input.dataset.activeVar)] = input.value.trim();
-  saveSettings();
-  rerender();
-});
-
-$("multiActiveList").addEventListener("click", e => {
-  const btn = e.target.closest("[data-active-remove]");
-  if (!btn) return;
-  state.multiActiveVars.splice(Number(btn.dataset.activeRemove), 1);
-  renderMultiActiveVars();
-  rerender();
 });
 
 $("scanTxtFiles").addEventListener("change", async () => {
@@ -3774,7 +3543,7 @@ async function loadFolderFile(index) {
   const file = await item.handle.getFile();
   state.targetDirHandle = item.dirHandle;
   await loadFile(file, { keepFolder: true, fileHandle: item.handle });
-  $("fileInfo").textContent = `${item.path} · 找到 ${state.swaps.length} 个 [Key*]`;
+  $("fileInfo").textContent = `${item.path} · 找到 ${state.swaps.length} 个 key slot`;
   updateStatus();
 }
 
@@ -3782,6 +3551,38 @@ async function writeFileHandle(handle, data) {
   const writable = await handle.createWritable();
   await writable.write(data);
   await writable.close();
+}
+
+function timestampForFileName(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+    "-",
+    String(date.getHours()).padStart(2, "0"),
+    String(date.getMinutes()).padStart(2, "0"),
+    String(date.getSeconds()).padStart(2, "0"),
+  ].join("");
+}
+
+async function getBackupFileHandle(dirHandle, txtName) {
+  try {
+    await dirHandle.getFileHandle(txtName);
+  } catch (e) {
+    if (e.name === "NotFoundError") return dirHandle.getFileHandle(txtName, { create: true });
+    throw e;
+  }
+  const base = txtName.replace(/\.txt$/i, "");
+  let backupName = `${base}.backup-${timestampForFileName()}.txt`;
+  for (let i = 2; ; i++) {
+    try {
+      await dirHandle.getFileHandle(backupName);
+      backupName = `${base}.backup-${timestampForFileName()}-${i}.txt`;
+    } catch (e) {
+      if (e.name === "NotFoundError") return dirHandle.getFileHandle(backupName, { create: true });
+      throw e;
+    }
+  }
 }
 
 function getOutputIniName() {
@@ -3808,7 +3609,7 @@ async function writeGeneratedToFolder() {
     let outputName = getOutputIniName();
     if (/\.ini$/i.test(state.fileName)) {
       const txtName = state.fileName.replace(/\.ini$/i, ".txt");
-      const txtHandle = await targetDir.getFileHandle(txtName, { create: true });
+      const txtHandle = await getBackupFileHandle(targetDir, txtName);
       await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
 
       if (!$("useOriginalIniName").checked) {
@@ -3818,7 +3619,7 @@ async function writeGeneratedToFolder() {
         outputName = getOutputIniName();
         const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
         const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
-        $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 [Key*] · 已将原 ini 改为 txt`;
+        $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 key slot · 已将原 ini 改为 txt`;
         const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
         if (current) {
           current.name = txtName;
@@ -3829,7 +3630,7 @@ async function writeGeneratedToFolder() {
         const selected = sel.value;
         sel.options[selected].textContent = current?.path || txtName;
       } else {
-        $("fileInfo").textContent = `${state.fileName} · 找到 ${state.swaps.length} 个 [Key*] · 已备份原 ini 为 txt`;
+        $("fileInfo").textContent = `${state.fileName} · 找到 ${state.swaps.length} 个 key slot · 已备份原 ini 为 txt`;
       }
     }
 
@@ -3978,7 +3779,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       state.swaps = parseSwaps(state.sections);
       state.slotMeta = state.swaps.map(newSlotMeta);
       // 恢复 UI
-      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "activeVar"]) {
+      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior"]) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
       if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -3986,8 +3787,6 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
       if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
       if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
-      if (typeof d.ui.multiActiveMode === "boolean") $("multiActiveMode").checked = d.ui.multiActiveMode;
-      if (Array.isArray(d.ui.multiActiveVars)) state.multiActiveVars = d.ui.multiActiveVars.filter(isActiveVarName);
       if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
@@ -4028,7 +3827,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       $("draftHistory").classList.remove("show");
       $("title").dataset.touched = "1";
       colsManual = true;
-      $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 [Key*]`;
+      $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 key slot`;
       updateStatus();
       renderSwapList();
       applyPreviewBg();
@@ -4108,31 +3907,8 @@ $("swapList").addEventListener("click", async e => {
     case "picker":
       openPicker(idx);
       break;
-    case "upload": {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-        try {
-          const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
-          if (!rgba) return;
-          m.iconRgba = rgba;
-          m.iconKind = "upload";
-          // 预览 dataURL
-          const c = document.createElement("canvas");
-          c.width = 64; c.height = 64;
-          c.getContext("2d").putImageData(new ImageData(rgba, 64, 64), 0, 0);
-          m.iconPreview = c.toDataURL();
-          renderSlotThumb(idx);
-          rerender();
-          toast("图标已上传", "ok");
-        } catch (e) {
-          toast("处理图片失败", "err");
-        }
-      };
-      input.click();
+    case "upload":
+      uploadIconForSlot(idx);
       break;
     }
   }
@@ -4256,19 +4032,26 @@ function doSelectConfirm() {
   switch (state.fabAction) {
     case "merge": {
       if (selected.length < 2) { toast("至少选 2 个才能合并", "ok"); return; }
-      const types = new Set(selected.map(i => state.swaps[i].type || ""));
-      if (types.size > 1) { toast("action 和 cycle 类型不能合并", "err"); return; }
       const first = state.swaps[selected[0]];
-      const isAction = types.has("action");
+      if (!selected.every(i => state.swaps[i].key === first.key)) { toast("严格模式只能合并同一个 key", "err"); return; }
       const allAssignments = selected.flatMap(i => state.swaps[i].assignments);
+      const allEntries = selected.flatMap(i => state.swaps[i].entries || []);
+      const allRawEntries = selected.flatMap(i => state.swaps[i].rawEntries || []);
+      const allCommandLists = selected.flatMap(i => state.swaps[i].commandLists || []);
+      const allHandlers = selected.flatMap(i => state.swaps[i].handlers || []);
+      const types = [...new Set(allHandlers.map(handler => handler.type || "").filter(Boolean))];
       const merged = {
+        keySlot: true,
+        handlers: allHandlers,
         sections: selected.flatMap(i => state.swaps[i].sections),
         key: first.key, condition: first.condition,
-        type: isAction ? "action" : undefined,
+        type: types.length === 1 ? types[0] : (types.length ? "mixed" : ""),
         assignments: allAssignments,
         steps: allAssignments.length ? Math.max(...allAssignments.map(a => a.values.length)) : 0,
         groups: selected.flatMap(i => state.swaps[i].groups),
-        commandLists: isAction ? selected.flatMap(i => state.swaps[i].commandLists) : [],
+        commandLists: allCommandLists,
+        rawEntries: allRawEntries,
+        entries: allEntries,
       };
       selected.sort((a, b) => b - a);
       for (const i of selected) { state.swaps.splice(i, 1); state.slotMeta.splice(i, 1); }
@@ -4369,9 +4152,7 @@ $("guiGrid").addEventListener("contextmenu", e => {
   const m = state.slotMeta[ctxTargetIdx];
   const menu = $("ctxMenu");
   menu.hidden = false;
-  // 拆分仅非 action 的合并按钮（groups > 1）显示
-  const canSplit = state.swaps[ctxTargetIdx].groups.length > 1 && state.swaps[ctxTargetIdx].type !== "action";
-  menu.querySelector("[data-ctx='split']").style.display = canSplit ? "" : "none";
+  menu.querySelector("[data-ctx='split']").style.display = "none";
   // 更新跳过按钮文字
   const skipBtn = menu.querySelector("[data-ctx='skip']");
   skipBtn.textContent = m.skip ? "取消跳过" : "跳过此项";
@@ -4405,37 +4186,15 @@ $("ctxMenu").addEventListener("click", async e => {
       const sw = state.swaps[idx];
       const k = prompt("绑定按键", sw.key);
       if (k !== null) {
-        sw.key = k.trim();
+        setKeySlotKey(sw, k.trim());
+        state.swapOrder = state.swaps.map(swapSign);
         renderSwapList();
         rerender();
       }
       break;
     }
     case "split": {
-      const sw = state.swaps[idx];
-      if (sw.type === "action" || sw.groups.length < 2) break;
-      // 每个 group 生成独立按钮
-      const newSwaps = sw.groups.map(grp => ({
-        sections: [...sw.sections],
-        key: sw.key,
-        condition: sw.condition,
-        assignments: grp.assignments,
-        steps: Math.max(...grp.assignments.map(a => a.values.length)),
-        groups: [{ assignments: grp.assignments }],
-        commandLists: [],
-      }));
-      const newMeta = newSwaps.map(s => newSlotMeta(s));
-      // 在原位置替换
-      state.swaps.splice(idx, 1, ...newSwaps);
-      state.slotMeta.splice(idx, 1, ...newMeta);
-      state.swapOrder = state.swaps.map(swapSign);
-      renderSwapList();
-      if (!colsManual) {
-        const active = state.swaps.filter((_, i) => !state.slotMeta[i].skip).length;
-        if (active) $("cols").value = autoCols(active);
-      }
-      rerender();
-      toast(`已拆分为 ${newSwaps.length} 个按钮`, "ok");
+      toast("严格模式下同 key handler 不能拆分", "err");
       break;
     }
     case "skip":
@@ -4450,30 +4209,9 @@ $("ctxMenu").addEventListener("click", async e => {
     case "picker":
       openPicker(idx);
       break;
-    case "upload": {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) return;
-        try {
-          const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
-          if (!rgba) return;
-          m.iconRgba = rgba;
-          m.iconKind = "upload";
-          const c = document.createElement("canvas");
-          c.width = 64; c.height = 64;
-          c.getContext("2d").putImageData(new ImageData(rgba, 64, 64), 0, 0);
-          m.iconPreview = c.toDataURL();
-          renderSlotThumb(idx);
-          rerender();
-          toast("图标已上传", "ok");
-        } catch (e) { toast("处理图片失败", "err"); }
-      };
-      input.click();
+    case "upload":
+      uploadIconForSlot(idx);
       break;
-    }
     case "reset": {
       const sug = suggestIcon(state.swaps[idx]);
       m.iconKind = "auto";
@@ -4551,7 +4289,6 @@ $("btnZip").addEventListener("click", async () => {
 
 // 启动
 loadSettings();
-renderMultiActiveVars();
 applyPreviewBg();
 renderPreview();
 renderIniView();
