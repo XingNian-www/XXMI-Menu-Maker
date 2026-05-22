@@ -2167,19 +2167,14 @@ function clickKey() {
 // 把 [Present] 注入 GUI 调用；如果原文件没有，新建一个
 function injectPresent(sections) {
   let hasPresent = false;
-  const av = ($("activeVar").value || "$active").trim();
   const out = sections.map(sec => {
     if (!sec.name || sec.name.toLowerCase() !== "present") return sec;
     hasPresent = true;
     const lines = [...sec.lines];
     // 在 [Present] 头部插入 GUI 渲染触发
     lines.splice(1, 0,
-      `if ${av} > 0`,
-      "  if $gui_menu",
-      "    run = CommandListGuiMenu",
-      "  endif",
-      "else",
-      "  $gui_menu = 0",
+      "if $gui_menu",
+      "  run = CommandListGuiMenu",
       "endif",
       ""
     );
@@ -2228,12 +2223,8 @@ function buildIni() {
 
   if (!inj.hasPresent) {
     L.push("[Present]");
-    L.push(`if ${av} > 0`);
-    L.push("  if $gui_menu");
-    L.push("    run = CommandListGuiMenu");
-    L.push("  endif");
-    L.push("else");
-    L.push("  $gui_menu = 0");
+    L.push(`if ${av} && $gui_menu`);
+    L.push("  run = CommandListGuiMenu");
     L.push("endif");
     L.push("");
   }
