@@ -2801,12 +2801,14 @@ async function buildResources() {
   files.push({ name: "res_gui/title.png", data: rgbaToPng(titleW, 48, renderTitleRgba(titleText, titleW, titleShadow, !$("disableTitleShadow").checked)) });
   // 每个活跃按钮一张完整 slot 图（圆角矩形 + 白色边框 + 图标 + 文字）
   const active = swaps.map((_, i) => i).filter(i => !meta[i].skip);
-  for (let n = 0; n < active.length; n++) {
-    const sIdx = active[n];
+  const showKey = $("showKeyHint").checked;
+  const hideUploadLabel = $("hideUploadLabel").checked;
+
+  const slotTasks = active.map(async (sIdx, n) => {
     const m = meta[sIdx];
     const slotFill = [sr, sgg, sbb, 200 / 255];
     const hoverFill = [hr, hg, hb, 230 / 255];
-    const label = (m.name && !($("hideUploadLabel").checked && m.iconPreview)) ? m.name : "";
+    const label = (m.name && !(hideUploadLabel && m.iconPreview)) ? m.name : "";
 
     // 准备图标数据
     let iconRgba = null, iconSvg = null;
@@ -2820,16 +2822,25 @@ async function buildResources() {
     }
 
     const baseOpts = { border: [sbor, sbog, sbob, 1], iconRgba, iconSvg, label };
-    if ($("showKeyHint").checked && swaps[sIdx].key) {
+    if (showKey && swaps[sIdx].key) {
       baseOpts.keyHint = swaps[sIdx].key;
     }
 
-    const slotRgba = await renderSlotRgba({ ...baseOpts, fill: slotFill });
-    const hoverRgba = await renderSlotRgba({ ...baseOpts, fill: hoverFill });
+    const [slotRgba, hoverRgba] = await Promise.all([
+      renderSlotRgba({ ...baseOpts, fill: slotFill }),
+      renderSlotRgba({ ...baseOpts, fill: hoverFill }),
+    ]);
 
     const idx = String(n + 1).padStart(2, "0");
-    files.push({ name: `res_gui/slot_${idx}.png`, data: rgbaToPng(64, 64, slotRgba) });
-    files.push({ name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(64, 64, hoverRgba) });
+    return [
+      { name: `res_gui/slot_${idx}.png`, data: rgbaToPng(64, 64, slotRgba) },
+      { name: `res_gui/slot_hover_${idx}.png`, data: rgbaToPng(64, 64, hoverRgba) },
+    ];
+  });
+
+  const slotResults = await Promise.all(slotTasks);
+  for (const result of slotResults) {
+    files.push(...result);
   }
 
   return files;
@@ -3634,16 +3645,25 @@ async function writeGeneratedToFolder() {
       }
     }
 
-    const iniHandle = await targetDir.getFileHandle(outputName, { create: true });
-    await writeFileHandle(iniHandle, new Blob([buildIni()], { type: "text/plain;charset=utf-8" }));
+    // 并行生成资源文件和 INI
+    const [resources, iniText] = await Promise.all([
+      buildResources(),
+      Promise.resolve(buildIni()),
+    ]);
 
     const resDir = await targetDir.getDirectoryHandle("res_gui", { create: true });
-    const resources = await buildResources();
-    for (const file of resources) {
+    const writeTasks = resources.map(async (file) => {
       const outName = file.name.replace(/^res_gui\//, "");
       const handle = await resDir.getFileHandle(outName, { create: true });
       await writeFileHandle(handle, file.data);
-    }
+    });
+
+    writeTasks.unshift((async () => {
+      const iniHandle = await targetDir.getFileHandle(outputName, { create: true });
+      await writeFileHandle(iniHandle, new Blob([iniText], { type: "text/plain;charset=utf-8" }));
+    })());
+
+    await Promise.all(writeTasks);
 
     toast("已写入文件夹", "ok");
   } catch (e) {
@@ -3911,8 +3931,7 @@ $("swapList").addEventListener("click", async e => {
       uploadIconForSlot(idx);
       break;
     }
-  }
-});
+  });
 
 // 改名
 $("swapList").addEventListener("input", e => {
