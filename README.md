@@ -31,6 +31,7 @@ https://xingnian-www.github.io/XXMI-Menu-Maker/
 - 拖拽排序、合并拆分、批量操作，全在界面上完成
 - 调色面板支持预设配色、恢复默认、边框/hover/标题投影细调
 - 自动暂存当前编辑状态，包含排序、名称、配色和上传图片
+- 可选修复原 MOD 激活条件错误导致的跨角色呼出面板
 - Chrome / Edge 支持直接写入 MOD 文件夹，ZIP 下载仍作为通用兜底
 - 生成完整 ZIP：INI + PNG 纹理 + HLSL 着色器
 

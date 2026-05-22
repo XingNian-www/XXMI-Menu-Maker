@@ -861,6 +861,7 @@
         <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
         <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
+        <label class="check" title="用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启"><input id="resetActiveOnPresent" type="checkbox"> 修复跨角色面板</label>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
     </section>
@@ -1103,6 +1104,7 @@ function loadSettings() {
     if (typeof s.showKeyHint === "boolean") $("showKeyHint").checked = s.showKeyHint;
     if (typeof s.hideUploadLabel === "boolean") $("hideUploadLabel").checked = s.hideUploadLabel;
     if (typeof s.useOriginalIniName === "boolean") $("useOriginalIniName").checked = s.useOriginalIniName;
+    if (typeof s.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = s.resetActiveOnPresent;
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
     if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
     if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
@@ -1117,6 +1119,7 @@ function saveSettings() {
   s.showKeyHint = $("showKeyHint").checked;
   s.hideUploadLabel = $("hideUploadLabel").checked;
   s.useOriginalIniName = $("useOriginalIniName").checked;
+  s.resetActiveOnPresent = $("resetActiveOnPresent").checked;
   s.disableTitleShadow = $("disableTitleShadow").checked;
   s.scanTxtFiles = $("scanTxtFiles").checked;
   if ($("btnOpenFolder").dataset.folderName) s.lastFolderName = $("btnOpenFolder").dataset.folderName;
@@ -1219,6 +1222,7 @@ function flushDraftMeta() {
   ui.showKeyHint = $("showKeyHint").checked;
   ui.hideUploadLabel = $("hideUploadLabel").checked;
   ui.useOriginalIniName = $("useOriginalIniName").checked;
+  ui.resetActiveOnPresent = $("resetActiveOnPresent").checked;
   ui.disableTitleShadow = $("disableTitleShadow").checked;
 
   const entry = {
@@ -1290,6 +1294,7 @@ async function loadDraft() {
     if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
     if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
     if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
+    if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
     if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
 
     // 从 IndexedDB 恢复大图
@@ -2165,12 +2170,16 @@ function clickKey() {
 }
 
 // 把 [Present] 注入 GUI 调用；如果原文件没有，新建一个
-function injectPresent(sections) {
+function injectPresent(sections, activeVar, shouldResetActive) {
   let hasPresent = false;
+  const resetLine = `post ${activeVar} = 0`;
   const out = sections.map(sec => {
     if (!sec.name || sec.name.toLowerCase() !== "present") return sec;
     hasPresent = true;
     const lines = [...sec.lines];
+    if (shouldResetActive && !lines.some(line => line.trim().toLowerCase() === resetLine.toLowerCase())) {
+      lines.push(resetLine);
+    }
     // 在 [Present] 头部插入 GUI 渲染触发
     lines.splice(1, 0,
       "if $gui_menu",
@@ -2205,7 +2214,9 @@ function buildIni() {
   if (removeKeys) {
     secs = secs.filter(s => !s.name || !/^Key/i.test(s.name));
   }
-  const inj = injectPresent(secs);
+  const av = ($("activeVar").value || "$active").trim();
+  const resetActiveOnPresent = $("resetActiveOnPresent").checked;
+  const inj = injectPresent(secs, av, resetActiveOnPresent);
   secs = inj.sections;
 
   let body = secs.map(s => s.lines.join("\n")).join("\n").trim();
@@ -2219,13 +2230,12 @@ function buildIni() {
   L.push("; =====================================================");
   L.push("");
 
-  const av = ($("activeVar").value || "$active").trim();
-
   if (!inj.hasPresent) {
     L.push("[Present]");
     L.push(`if ${av} && $gui_menu`);
     L.push("  run = CommandListGuiMenu");
     L.push("endif");
+    if (resetActiveOnPresent) L.push(`post ${av} = 0`);
     L.push("");
   }
 
@@ -3042,7 +3052,7 @@ drop.addEventListener("drop", e => {
     rerender();
   });
 });
-["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "disableTitleShadow"].forEach(id => {
+["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "resetActiveOnPresent", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
 });
 
@@ -3468,6 +3478,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       if (typeof d.ui.showKeyHint === "boolean") $("showKeyHint").checked = d.ui.showKeyHint;
       if (typeof d.ui.hideUploadLabel === "boolean") $("hideUploadLabel").checked = d.ui.hideUploadLabel;
       if (typeof d.ui.useOriginalIniName === "boolean") $("useOriginalIniName").checked = d.ui.useOriginalIniName;
+      if (typeof d.ui.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = d.ui.resetActiveOnPresent;
       if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
