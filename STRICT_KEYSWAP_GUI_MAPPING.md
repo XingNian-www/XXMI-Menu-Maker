@@ -135,7 +135,7 @@ run = CommandListCycleKeySwap0
 
 ```ini
 [Constants]
-global $ks_step_KeySwap0 = -1
+global $ks_step_KeySwap0 = 0
 
 [CommandListCycleKeySwap0]
 $ks_step_KeySwap0 = $ks_step_KeySwap0 + 1
@@ -156,6 +156,8 @@ elif $ks_step_KeySwap0 == 3
   $piercing2 = 1
 endif
 ```
+
+step 初始为 0，因为 `[Constants]` 中变量的初始值已经对应 step 0。第一次点击 step 0→1 就推进到下一档，与 3DMigoto `type = cycle` 首次按键就改变值的行为一致。若初始为 -1，第一次点击 step -1→0 会将变量设回 `[Constants]` 已存在的值，表现为点击无效。
 
 step 建议使用非 `persist`，更接近原始 `type = cycle` 的运行期计数。若后续确认 3DMigoto/XXMI 的 `type = cycle` 会跨重载持久化，再单独改成 `persist`。
 
