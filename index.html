@@ -864,14 +864,17 @@
     <section>
       <h2>3. 行为</h2>
       <div class="field" style="margin-bottom:10px">
-        <label>点击效果</label>
+        <label>缺失 type 时按此行为处理</label>
         <select id="behavior">
-          <option value="cycle">按原始 KeySwap 表循环</option>
+          <option value="cycle">cycle：按赋值表循环</option>
+          <option value="toggle">toggle：2 档点击切换</option>
+          <option value="hold">hold：2 档点击切换</option>
+          <option value="activate">activate：GUI pulse 短脉冲</option>
         </select>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">GUI 显示条件会从原始 `[Key*] condition` 自动扫描；点击行为完全按原始 key 和各自 condition 执行。</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">原始 Key section 已写 type 时不会被这里覆盖；GUI 显示条件会从原始 `[Key*] condition` 自动扫描，点击按原始 key 和各自 condition 执行。</div>
       <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:2px">
-        <label class="check" title="勾选后从生成 INI 中删除原文件的 [Key*] 节"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
+        <label class="check" title="勾选后删除原 [Key*] 节；activate 键盘原生行为会删除，GUI 使用非严格 pulse 模拟"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
         <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
         <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
         <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
@@ -1352,15 +1355,24 @@ async function loadDraft() {
  * ============================================================ */
 
 const SECTION_RE = /^\s*\[([^\]]+)\]\s*$/;
-const ASSIGN_RE = /^\s*(\$[A-Za-z0-9_]+)\s*=\s*([^;]+?)\s*$/;
+const ASSIGN_RE = /^\s*(\$[A-Za-z0-9_]+|[xyzw](?:\d+)?)\s*=\s*([^;]+?)\s*$/i;
 
 function stripInlineComment(line) {
   return (line || "").split(";")[0].trim();
 }
 
 function normalizedKeyType(type) {
-  const normalized = (type || "cycle").trim().toLowerCase() || "cycle";
-  return normalized === "toggle" ? "cycle" : normalized;
+  return (type || "").trim().toLowerCase();
+}
+
+function isCycleStyleType(type) {
+  return type === "cycle" || type === "toggle" || type === "hold";
+}
+
+function parseKeyValue(raw) {
+  const value = String(raw || "").split("=").slice(1).join("=").trim();
+  if (value === ";") return value;
+  return value.replace(/\s+;.*/, "").trim();
 }
 
 function parseSections(text) {
@@ -1385,14 +1397,14 @@ function parseSwaps(sections) {
   const handlers = [];
   for (const sec of sections) {
     if (!sec.name || !/^Key/i.test(sec.name)) continue;
-    if (/^KeyGui(?:Menu|Hold|Click)$/i.test(sec.name)) continue;
-    let key = "", condition = "", type = "", assignments = [], commandLists = [], entries = [], rawEntries = [];
+    if (/^KeyGui(?:Menu|Hold|Click|RightClick)$/i.test(sec.name)) continue;
+    let keys = [], condition = "", type = "", back = "", wrap = true, assignments = [], commandLists = [], entries = [], rawEntries = [];
     for (const line of sec.lines.slice(1)) {
       const s = line.trim();
       if (!s || s.startsWith(";")) continue;
       const low = s.toLowerCase();
       if (/^key\s*=/.test(low)) {
-        key = s.split("=").slice(1).join("=").trim();
+        keys.push(parseKeyValue(s));
         continue;
       }
       if (/^condition\s*=/.test(low)) {
@@ -1400,11 +1412,22 @@ function parseSwaps(sections) {
         continue;
       }
       if (/^type\s*=/.test(low)) {
-        type = normalizedKeyType(s.split("=").slice(1).join("="));
+        type = normalizedKeyType(stripInlineComment(s).split("=").slice(1).join("="));
+        continue;
+      }
+      if (/^back\s*=/.test(low)) {
+        back = parseKeyValue(s);
+        continue;
+      }
+      if (/^wrap\s*=/.test(low)) {
+        wrap = !/^(false|0|no|off)$/i.test(stripInlineComment(s).split("=").slice(1).join("=").trim());
+        continue;
+      }
+      if (/^(smart|transition|transition_type|delay|release_delay)\s*=/.test(low)) {
         continue;
       }
       if (/^run\s*=/.test(low)) {
-        const target = s.split("=").slice(1).join("=").trim();
+        const target = stripInlineComment(s).split("=").slice(1).join("=").trim();
         commandLists.push(target);
         entries.push({ kind: "run", target, raw: s });
         continue;
@@ -1421,7 +1444,7 @@ function parseSwaps(sections) {
       entries.push({ kind: "raw", line: s });
     }
     if (commandLists.length || assignments.length || rawEntries.length) {
-      handlers.push({ section: sec.name, sourceIndex: sec.index, key, condition, type, assignments, commandLists, entries, rawEntries });
+      handlers.push({ section: sec.name, sourceIndex: sec.index, keys: keys.length ? keys : [""], key: keys[0] || "", condition, type, back, wrap, assignments, commandLists, entries, rawEntries });
     }
   }
 
@@ -1438,17 +1461,22 @@ function buildKeySlots(handlers) {
     handler.sections = [handler.section];
     handler.steps = handler.assignments.length ? Math.max(...handler.assignments.map(a => a.values.length)) : 0;
     handler.commandName = `CommandListCycle${ident}`;
+    handler.backCommandName = `CommandListCycle${ident}Back`;
+    handler.activateCommandName = `CommandListActivate${ident}`;
     handler.stepVar = `$ks_step_${ident}`;
+    handler.activatePulseVar = `$gui_activate_pulse_${ident}`;
   });
 
   const groups = new Map();
   for (const handler of handlers) {
-    const groupKey = handler.key ? `key\x00${handler.key}` : `section\x00${handler.section}`;
-    if (!groups.has(groupKey)) groups.set(groupKey, []);
-    groups.get(groupKey).push(handler);
+    for (const key of handler.keys || [handler.key]) {
+      const groupKey = key ? `key\x00${key}` : `section\x00${handler.section}`;
+      if (!groups.has(groupKey)) groups.set(groupKey, { key, handlers: [] });
+      groups.get(groupKey).handlers.push(handler);
+    }
   }
 
-  return [...groups.values()].map(group => {
+  return [...groups.values()].map(({ key, handlers: group }) => {
     const assignments = group.flatMap(h => h.assignments);
     const commandLists = group.flatMap(h => h.commandLists);
     const rawEntries = group.flatMap(h => h.rawEntries);
@@ -1458,7 +1486,7 @@ function buildKeySlots(handlers) {
       keySlot: true,
       handlers: group,
       sections: group.map(h => h.section),
-      key: group[0].key,
+      key,
       condition: group.map(h => h.condition).filter(Boolean).join(" || "),
       type: types.length === 1 ? types[0] : (types.length ? "mixed" : ""),
       assignments,
@@ -1475,16 +1503,29 @@ function buildKeySlots(handlers) {
         commandLists: h.commandLists,
         rawEntries: h.rawEntries,
         commandName: h.commandName,
+        backCommandName: h.backCommandName,
+        activateCommandName: h.activateCommandName,
         stepVar: h.stepVar,
+        activatePulseVar: h.activatePulseVar,
+        back: h.back,
+        wrap: h.wrap,
       })),
     };
   });
 }
 
 function setKeySlotKey(slot, key) {
+  if ((slot.handlers || []).some(handler => (handler.keys || []).length > 1)) {
+    toast("多 Key 绑定请在原 INI 里修改，避免丢失其它绑定", "err");
+    return false;
+  }
   slot.key = key;
-  for (const handler of slot.handlers || []) handler.key = key;
+  for (const handler of slot.handlers || []) {
+    handler.key = key;
+    handler.keys = [key];
+  }
   for (const group of slot.groups || []) group.key = key;
+  return true;
 }
 
 /* ============================================================
@@ -2326,6 +2367,14 @@ function clickKey() {
   return "no_ctrl no_shift alt VK_LBUTTON";
 }
 
+function rightClickKey() {
+  const m = $("clickMod").value;
+  if (m === "ctrl")  return "no_alt no_shift ctrl VK_RBUTTON";
+  if (m === "shift") return "no_alt shift no_ctrl VK_RBUTTON";
+  if (m === "none")  return "no_ctrl no_shift no_alt VK_RBUTTON";
+  return "no_ctrl no_shift alt VK_RBUTTON";
+}
+
 function generatedPresentBlockEnd(lines, start, menuCommand) {
   const first = (lines[start] || "").trim();
   if (!/^if\b/i.test(first) || !/\$gui_menu\b/i.test(first)) return -1;
@@ -2397,14 +2446,31 @@ function safeIdent(text) {
   return (text || "").replace(/^\$/, "").replace(/[^A-Za-z0-9_]/g, "_") || "active";
 }
 
-function valueAtStep(assignment, step) {
+function parseConstantsInitialValues(sections) {
+  const values = new Map();
+  for (const sec of sections || []) {
+    if (!sec.name || sec.name.toLowerCase() !== "constants") continue;
+    for (const line of sec.lines.slice(1)) {
+      const raw = stripInlineComment(line).replace(/^\s*global\s+(?:persist\s+)?/i, "").trim();
+      const m = raw.match(ASSIGN_RE);
+      if (m && !values.has(m[1].toLowerCase())) values.set(m[1].toLowerCase(), m[2].trim());
+    }
+  }
+  return values;
+}
+
+function valueAtStep(assignment, step, type, constants) {
+  if (type === "toggle" || type === "hold") {
+    if (step === 0) return constants?.get(assignment.variable.toLowerCase()) ?? "0";
+    return assignment.values[0] !== undefined ? assignment.values[0] : "0";
+  }
   return assignment.values[step] !== undefined ? assignment.values[step] : assignment.values[assignment.values.length - 1];
 }
 
-function emitApplyEntriesForStep(L, indent, entries, step) {
+function emitApplyEntriesForStep(L, indent, entries, step, type, constants) {
   for (const entry of entries || []) {
     if (entry.kind === "assign") {
-      L.push(`${indent}${entry.variable} = ${valueAtStep(entry, step)}`);
+      L.push(`${indent}${entry.variable} = ${valueAtStep(entry, step, type, constants)}`);
     } else if (entry.kind === "run") {
       L.push(`${indent}run = ${entry.target}`);
     } else if (entry.kind === "raw") {
@@ -2426,14 +2492,32 @@ function emitRunEntries(L, indent, entries) {
   }
 }
 
-function emitApplyCycleStep(L, indent, drv, grp, grpSteps) {
-  L.push(`${indent}${drv} = ${drv} + 1`);
-  L.push(`${indent}if ${drv} >= ${grpSteps}`);
-  L.push(`${indent}  ${drv} = 0`);
+function emitActivateEntries(L, indent, entries) {
+  for (const entry of entries || []) {
+    if (entry.kind === "assign") {
+      const v = entry.values.length ? entry.values[0] : "0";
+      L.push(`${indent}${entry.variable} = ${v}`);
+    } else if (entry.kind === "run") {
+      L.push(`${indent}run = ${entry.target}`);
+    } else if (entry.kind === "raw") {
+      L.push(`${indent}${entry.line}`);
+    }
+  }
+}
+
+function emitApplyCycleStep(L, indent, drv, grp, grpSteps, type, constants, direction = 1) {
+  L.push(`${indent}${drv} = ${drv} ${direction < 0 ? "-" : "+"} 1`);
+  if (direction < 0) {
+    L.push(`${indent}if ${drv} < 0`);
+    L.push(`${indent}  ${drv} = ${grp.wrap === false ? 0 : Math.max(0, grpSteps - 1)}`);
+  } else {
+    L.push(`${indent}if ${drv} >= ${grpSteps}`);
+    L.push(`${indent}  ${drv} = ${grp.wrap === false ? Math.max(0, grpSteps - 1) : 0}`);
+  }
   L.push(`${indent}endif`);
   for (let step = 0; step < grpSteps; step++) {
     L.push(`${indent}${step === 0 ? "if" : "elif"} ${drv} == ${step}`);
-    emitApplyEntriesForStep(L, `${indent}  `, grp.entries || grp.assignments, step);
+    emitApplyEntriesForStep(L, `${indent}  `, grp.entries || grp.assignments, step, type, constants);
   }
   L.push(`${indent}endif`);
 }
@@ -2453,25 +2537,76 @@ function getRenderResetVars() {
   return uniqueActiveVars(scanActiveVarsFromSections(state.sections).map(input => parseActiveInput(input)?.activeVar).filter(Boolean));
 }
 
-function handlerType(handler, fallback = "cycle") {
-  return normalizedKeyType(handler.type || fallback);
+function explicitHandlerType(handler) {
+  return normalizedKeyType(handler.type);
 }
 
-function emitKeyHandlerCommandList(L, handler, fallbackBehavior = "cycle") {
+function effectiveHandlerType(handler, fallbackBehavior) {
+  return explicitHandlerType(handler) || normalizedKeyType(fallbackBehavior || "activate");
+}
+
+function isActivateType(type) {
+  return type === "activate";
+}
+
+function handlerStepCount(handler, type) {
+  if (type === "toggle" || type === "hold") return 2;
+  return handler.steps || Math.max(...handler.assignments.map(a => a.values.length));
+}
+
+function emitKeyHandlerCommandList(L, handler, fallbackBehavior = "cycle", constants = new Map()) {
+  const type = effectiveHandlerType(handler, fallbackBehavior);
+  if (isActivateType(type)) return;
   L.push(`[${handler.commandName}]`);
-  const type = handlerType(handler, fallbackBehavior);
-  if ((type === "cycle" || type === "toggle") && handler.assignments.length) {
-    emitApplyCycleStep(L, "", handler.stepVar, handler, handler.steps || Math.max(...handler.assignments.map(a => a.values.length)));
+  if (isCycleStyleType(type) && handler.assignments.length) {
+    emitApplyCycleStep(L, "", handler.stepVar, handler, handlerStepCount(handler, type), type, constants);
   } else {
     emitRunEntries(L, "", handler.entries);
   }
   L.push("");
+  if (type === "cycle" && handler.back && handler.assignments.length) {
+    L.push(`[${handler.backCommandName}]`);
+    emitApplyCycleStep(L, "", handler.stepVar, handler, handlerStepCount(handler, type), type, constants, -1);
+    L.push("");
+  }
 }
 
-function emitGuiRunHandler(L, indent, handler) {
+function emitActivateCommandList(L, handler) {
+  L.push(`[${handler.activateCommandName}]`);
+  emitActivateEntries(L, "", handler.entries);
+  if (handler.assignments.length) L.push(`${handler.activatePulseVar} = 1`);
+  L.push("");
+}
+
+function emitActivateResetCommandList(L, handlers, constants) {
+  const withAssignments = handlers.filter(handler => handler.assignments.length);
+  if (!withAssignments.length) return;
+  L.push("[CommandListGuiActivateReset]");
+  for (const handler of withAssignments) {
+    L.push(`if ${handler.activatePulseVar} == 1`);
+    for (const assignment of handler.assignments) {
+      L.push(`  ${assignment.variable} = ${constants.get(assignment.variable.toLowerCase()) ?? "0"}`);
+    }
+    L.push(`  ${handler.activatePulseVar} = 0`);
+    L.push("endif");
+  }
+  L.push("");
+}
+
+function emitGuiRunHandler(L, indent, handler, fallbackBehavior = "cycle") {
+  const cond = handler.condition || "";
+  const commandName = isActivateType(effectiveHandlerType(handler, fallbackBehavior)) ? handler.activateCommandName : handler.commandName;
+  if (cond) L.push(`${indent}if ${cond}`);
+  L.push(`${indent}${cond ? "  " : ""}run = ${commandName}`);
+  if (cond) L.push(`${indent}endif`);
+}
+
+function emitGuiRunHandlerBack(L, indent, handler, fallbackBehavior = "cycle") {
+  const type = effectiveHandlerType(handler, fallbackBehavior);
+  if (type !== "cycle" || !handler.back) return;
   const cond = handler.condition || "";
   if (cond) L.push(`${indent}if ${cond}`);
-  L.push(`${indent}${cond ? "  " : ""}run = ${handler.commandName}`);
+  L.push(`${indent}${cond ? "  " : ""}run = ${handler.backCommandName}`);
   if (cond) L.push(`${indent}endif`);
 }
 
@@ -2484,7 +2619,7 @@ function preservedKeySectionLines(sec) {
       preserved.push(line);
       continue;
     }
-    if (/^(key|condition|type|run)\s*=/.test(low)) continue;
+    if (/^(key|condition|type|run|back|wrap|smart|transition|transition_type|delay|release_delay)\s*=/.test(low)) continue;
     if (stripInlineComment(s).match(ASSIGN_RE)) continue;
     preserved.push(line);
   }
@@ -2492,22 +2627,47 @@ function preservedKeySectionLines(sec) {
   return preserved;
 }
 
+function uniqueHandlers(swaps) {
+  const seen = new Set();
+  const out = [];
+  for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
+    const key = handler.sourceIndex;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(handler);
+  }
+  return out;
+}
+
+function emitRewrittenKeySection(out, sec, handler, commandName, keyOverride = null) {
+  const lines = [`[${sec.name}${keyOverride ? "Back" : ""}]`];
+  const keys = keyOverride ? [keyOverride] : (handler.keys || [handler.key]);
+  for (const key of keys) if (key) lines.push(`key = ${key}`);
+  if (handler.condition) lines.push(`condition = ${handler.condition}`);
+  if (!keyOverride) lines.push(...preservedKeySectionLines(sec).filter(line => !line.trim() || line.trim().startsWith(";")));
+  lines.push(`run = ${commandName}`);
+  out.push({ name: `${sec.name}${keyOverride ? "Back" : ""}`, lines });
+}
+
 function rewriteKeySections(sections, swaps, removeKeys, fallbackBehavior = "cycle") {
-  if (removeKeys) return sections.filter(s => !s.name || !/^Key/i.test(s.name));
   const handlers = new Map(swaps.flatMap(sw => (sw.handlers || []).map(handler => [handler.sourceIndex, handler])));
-  return sections.map(sec => {
-    if (!sec.name || !/^Key/i.test(sec.name)) return sec;
+  const out = [];
+  for (const sec of sections) {
+    if (!sec.name || !/^Key/i.test(sec.name)) { out.push(sec); continue; }
     const handler = handlers.get(sec.index);
-    if (!handler) return sec;
-    const lines = [`[${sec.name}]`];
-    if (handler.key) lines.push(`key = ${handler.key}`);
-    if (handler.condition) lines.push(`condition = ${handler.condition}`);
-    const type = handlerType(handler, fallbackBehavior);
-    if (type === "hold") lines.push("type = hold");
-    lines.push(...preservedKeySectionLines(sec));
-    lines.push(`run = ${handler.commandName}`);
-    return { name: sec.name, lines };
-  });
+    if (!handler) { out.push(sec); continue; }
+    const type = effectiveHandlerType(handler, fallbackBehavior);
+    if (isActivateType(type)) {
+      if (!removeKeys) out.push(sec);
+      continue;
+    }
+    if (removeKeys) continue;
+    emitRewrittenKeySection(out, sec, handler, handler.commandName);
+    if (type === "cycle" && handler.back && handler.assignments.length) {
+      emitRewrittenKeySection(out, sec, handler, handler.backCommandName, handler.back);
+    }
+  }
+  return out;
 }
 
 function buildIni() {
@@ -2533,12 +2693,23 @@ function buildSingleIni() {
   const panelH = padding + Math.round(32 * panelScale) /* title bar */ + rows * slotSize + (rows - 1) * Math.round(gap * panelScale) + padding;
 
   // ---- 处理原 sections ----
+  const constants = parseConstantsInitialValues(state.sections);
   let secs = rewriteKeySections(state.sections, swaps, removeKeys, behavior);
   const av = getRenderActiveCondition();
   const resetActiveVars = getRenderResetVars();
   const resetActiveOnPresent = $("resetActiveOnPresent").checked;
+  const allHandlers = uniqueHandlers(swaps);
+  const activateHandlers = allHandlers.filter(handler => isActivateType(effectiveHandlerType(handler, behavior)));
+  const hasActivateReset = activateHandlers.some(handler => handler.assignments.length);
   const inj = injectPresent(secs, av, resetActiveOnPresent, "CommandListGuiMenu", resetActiveVars);
   secs = inj.sections;
+  if (hasActivateReset) {
+    const present = secs.find(sec => sec.name && sec.name.toLowerCase() === "present");
+    const resetLine = "post run = CommandListGuiActivateReset";
+    if (present && !present.lines.some(line => line.trim().toLowerCase() === resetLine.toLowerCase())) {
+      present.lines.push(resetLine);
+    }
+  }
 
   let body = secs.map(s => s.lines.join("\n")).join("\n").trim();
 
@@ -2548,6 +2719,8 @@ function buildSingleIni() {
   L.push("; =====================================================");
   L.push("; GUI menu — generated by KeySwap → GUI webui");
   L.push("; Shader: draw_2d.hlsl  (IniParams[87].xy = size, .zw = offset)");
+  L.push(`; Missing Key type fallback: ${normalizedKeyType(behavior || "activate")}`);
+  L.push("; Activate GUI pulse: enabled (non-strict, not fully equivalent to native activate)");
   L.push("; =====================================================");
   L.push("");
 
@@ -2557,6 +2730,7 @@ function buildSingleIni() {
     L.push("  run = CommandListGuiMenu");
     L.push("endif");
     if (resetActiveOnPresent) resetActiveVars.forEach(v => L.push(`post ${v} = 0`));
+    if (hasActivateReset) L.push("post run = CommandListGuiActivateReset");
     L.push("");
   }
 
@@ -2565,6 +2739,7 @@ function buildSingleIni() {
   L.push("global $gui_hover = 0");
   L.push("global $gui_hovered = 0");
   L.push("global $gui_clicked = 0");
+  L.push("global $gui_right_clicked = 0");
   L.push("global $gui_slot = 0");
   L.push("global $gui_hold = 0");
   L.push("global $gui_drag = 0");
@@ -2576,10 +2751,13 @@ function buildSingleIni() {
   L.push("global $gui_coy");
   L.push("global persist $gui_mx = 0.05");
   L.push("global persist $gui_my = 0.20");
-  for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
-    const type = handlerType(handler, behavior);
-    if ((type === "cycle" || type === "toggle") && handler.assignments.length) {
+  for (const handler of allHandlers) {
+    const type = effectiveHandlerType(handler, behavior);
+    if (isCycleStyleType(type) && handler.assignments.length) {
       L.push(`global ${handler.stepVar} = 0`);
+    }
+    if (isActivateType(type) && handler.assignments.length) {
+      L.push(`global ${handler.activatePulseVar} = 0`);
     }
   }
   L.push("");
@@ -2607,6 +2785,12 @@ function buildSingleIni() {
   L.push("run = CommandListGuiClick");
   L.push("");
 
+  L.push("[KeyGuiRightClick]");
+  L.push("condition = $gui_menu == 1 && $gui_hover == 1");
+  L.push(`key = ${rightClickKey()}`);
+  L.push("run = CommandListGuiRightClick");
+  L.push("");
+
   // 维度计算（参考 XXMI-Libs-Package 内置变量）
   L.push("[CommandListGuiDims]");
   L.push("if window_width != 0");
@@ -2622,9 +2806,6 @@ function buildSingleIni() {
   L.push("if cursor_x != 0 && cursor_y != 0");
   L.push("  $gui_cpx = cursor_x");
   L.push("  $gui_cpy = cursor_y");
-  L.push("elif cursor_window_x != 0 && cursor_window_y != 0");
-  L.push("  $gui_cpx = cursor_window_x / $gui_ww");
-  L.push("  $gui_cpy = cursor_window_y / $gui_wh");
   L.push("else");
   L.push("  $gui_cpx = cursor_screen_x / $gui_ww");
   L.push("  $gui_cpy = cursor_screen_y / $gui_wh");
@@ -2718,14 +2899,30 @@ function buildSingleIni() {
     const m = state.slotMeta[sIdx];
     L.push(`${n === 0 ? "if" : "elif"} $gui_clicked == ${n + 1}`);
     L.push(`  ; ${m.name}`);
-    for (const handler of swap.handlers || []) emitGuiRunHandler(L, "  ", handler);
+    for (const handler of swap.handlers || []) emitGuiRunHandler(L, "  ", handler, behavior);
   });
   if (active.length) L.push("endif");
   L.push("");
 
-  for (const handler of swaps.flatMap(sw => sw.handlers || [])) {
-    emitKeyHandlerCommandList(L, handler, behavior);
+  L.push("[CommandListGuiRightClick]");
+  L.push("$gui_right_clicked = $gui_hovered");
+  active.forEach((sIdx, n) => {
+    const swap = swaps[sIdx];
+    const m = state.slotMeta[sIdx];
+    L.push(`${n === 0 ? "if" : "elif"} $gui_right_clicked == ${n + 1}`);
+    L.push(`  ; ${m.name}`);
+    for (const handler of swap.handlers || []) emitGuiRunHandlerBack(L, "  ", handler, behavior);
+  });
+  if (active.length) L.push("endif");
+  L.push("");
+
+  for (const handler of allHandlers) {
+    emitKeyHandlerCommandList(L, handler, behavior, constants);
   }
+  for (const handler of activateHandlers) {
+    emitActivateCommandList(L, handler);
+  }
+  emitActivateResetCommandList(L, activateHandlers, constants);
 
   // 自定义 shader：使用 SinsOfSeven 的 draw_2d.hlsl
   L.push("[CustomShaderGuiDraw]");
@@ -4265,10 +4462,11 @@ $("ctxMenu").addEventListener("click", async e => {
       const sw = state.swaps[idx];
       const k = prompt("绑定按键", sw.key);
       if (k !== null) {
-        setKeySlotKey(sw, k.trim());
-        state.swapOrder = state.swaps.map(swapSign);
-        renderSwapList();
-        rerender();
+        if (setKeySlotKey(sw, k.trim())) {
+          state.swapOrder = state.swaps.map(swapSign);
+          renderSwapList();
+          rerender();
+        }
       }
       break;
     }
