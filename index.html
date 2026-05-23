@@ -850,6 +850,7 @@
         <div class="field">
           <label>参考分辨率 <span style="font-weight:400;color:var(--muted)">（预览缩放）</span></label>
           <select id="previewRes">
+            <option value="auto">自动匹配当前屏幕</option>
             <option value="">×1 适合预览</option>
             <option value="2560x1440">2560×1440 (2K)</option>
             <option value="1920x1080">1920×1080 (FHD)</option>
@@ -1114,6 +1115,39 @@ function escapeHtml(s) {
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+const PREVIEW_RES_OPTIONS = [
+  { value: "1280x720", w: 1280, h: 720 },
+  { value: "1920x1080", w: 1920, h: 1080 },
+  { value: "2560x1440", w: 2560, h: 1440 },
+  { value: "3840x2160", w: 3840, h: 2160 },
+];
+
+function getAutoPreviewRes() {
+  const dpr = window.devicePixelRatio || 1;
+  const screenInfo = window.screen || {};
+  const sw = screenInfo.width || window.innerWidth || 1920;
+  const sh = screenInfo.height || window.innerHeight || 1080;
+  const w = Math.max(sw, sh) * dpr;
+  const h = Math.min(sw, sh) * dpr;
+  let best = PREVIEW_RES_OPTIONS[0];
+  let bestScore = Infinity;
+  for (const opt of PREVIEW_RES_OPTIONS) {
+    const score = Math.abs(Math.log(opt.w / w)) + Math.abs(Math.log(opt.h / h));
+    if (score < bestScore) {
+      best = opt;
+      bestScore = score;
+    }
+  }
+  return best.value;
+}
+
+function updateAutoPreviewResLabel() {
+  const autoOption = $("previewRes")?.querySelector('option[value="auto"]');
+  if (!autoOption) return;
+  const autoRes = PREVIEW_RES_OPTIONS.find(opt => opt.value === getAutoPreviewRes());
+  autoOption.textContent = autoRes ? `自动匹配当前屏幕（${autoRes.w}×${autoRes.h}）` : "自动匹配当前屏幕";
 }
 
 /* ---------- toast ---------- */
@@ -3269,7 +3303,9 @@ async function renderPreview() {
   $("guiTitle").textContent = $("title").value || "GUI Menu";
 
   // 参考分辨率缩放预览
-  const resVal = $("previewRes").value;
+  const selectedRes = $("previewRes").value;
+  const resVal = selectedRes === "auto" ? getAutoPreviewRes() : selectedRes;
+  updateAutoPreviewResLabel();
   const wrap = document.querySelector(".preview-panel-wrap");
   if (wrap) {
     if (resVal && resVal.includes("x")) {
@@ -3624,6 +3660,11 @@ drop.addEventListener("drop", e => {
 });
 
 $("previewRes").addEventListener("change", () => { saveSettings(); rerender(); });
+window.addEventListener("resize", () => {
+  if ($("previewRes").value !== "auto") return;
+  updateAutoPreviewResLabel();
+  rerender();
+});
 
 $("scanTxtFiles").addEventListener("change", async () => {
   saveSettings();
@@ -4622,6 +4663,7 @@ $("btnZip").addEventListener("click", async () => {
 
 // 启动
 loadSettings();
+updateAutoPreviewResLabel();
 applyPreviewBg();
 renderPreview();
 renderIniView();
