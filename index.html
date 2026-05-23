@@ -1117,6 +1117,13 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+function fileNameOnly(name, fallback = "mod") {
+  const parts = String(name || "").split(/[\\/]+/).filter(Boolean);
+  const leaf = (parts.pop() || fallback).trim();
+  if (!leaf || leaf === "." || leaf === "..") return fallback;
+  return leaf;
+}
+
 const PREVIEW_RES_OPTIONS = [
   { value: "1280x720", w: 1280, h: 720 },
   { value: "1920x1080", w: 1920, h: 1080 },
@@ -3920,9 +3927,10 @@ async function getBackupFileHandle(dirHandle, txtName) {
 }
 
 function getOutputIniName() {
-  const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
-  if ($("useOriginalIniName").checked && /\.ini$/i.test(state.fileName)) return state.fileName;
-  if ($("useOriginalIniName").checked && /\.txt$/i.test(state.fileName)) return base + ".ini";
+  const name = fileNameOnly(state.fileName);
+  const base = name.replace(/\.[^.]+$/, "") || "mod";
+  if ($("useOriginalIniName").checked && /\.ini$/i.test(name)) return name;
+  if ($("useOriginalIniName").checked && /\.txt$/i.test(name)) return base + ".ini";
   return base + "_gui.ini";
 }
 
@@ -3940,14 +3948,15 @@ async function writeGeneratedToFolder() {
     const perm = await state.dirHandle.requestPermission({ mode: "readwrite" });
     if (perm !== "granted") throw new Error("没有文件夹写入权限");
 
+    const sourceName = fileNameOnly(state.fileName);
     let outputName = getOutputIniName();
-    if (/\.ini$/i.test(state.fileName)) {
-      const txtName = state.fileName.replace(/\.ini$/i, ".txt");
+    if (/\.ini$/i.test(sourceName)) {
+      const txtName = sourceName.replace(/\.ini$/i, ".txt");
       const txtHandle = await getBackupFileHandle(targetDir, txtName);
       await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
 
       if (!$("useOriginalIniName").checked) {
-        await targetDir.removeEntry(state.fileName);
+        await targetDir.removeEntry(sourceName);
         state.fileName = txtName;
         state.fileHandle = txtHandle;
         outputName = getOutputIniName();
@@ -3964,7 +3973,7 @@ async function writeGeneratedToFolder() {
         const selected = sel.value;
         sel.options[selected].textContent = current?.path || txtName;
       } else {
-        $("fileInfo").textContent = `${state.fileName} · 找到 ${state.swaps.length} 个 key slot · 已备份原 ini 为 txt`;
+        $("fileInfo").textContent = `${sourceName} · 找到 ${state.swaps.length} 个 key slot · 已备份原 ini 为 txt`;
       }
     }
 
@@ -4646,7 +4655,7 @@ $("btnZip").addEventListener("click", async () => {
   btn.innerHTML = '<span class="spinner"></span> 生成中…';
   try {
     const ini = buildIni();
-    const base = state.fileName.replace(/\.[^.]+$/, "") || "mod";
+    const base = fileNameOnly(state.fileName).replace(/\.[^.]+$/, "") || "mod";
     const files = [{ name: getOutputIniName(), data: ini }];
     files.push(...await buildResources());
     const blob = makeZip(files);
