@@ -833,6 +833,36 @@
     to { outline-color: var(--warn); }
   }
   .palette-desc { display: block; font-size: 11px; color: var(--muted); }
+  .title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .lang-wrap {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .lang-wrap svg {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .lang-switch {
+    width: auto;
+    min-width: 112px;
+    padding: 5px 8px 5px 28px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
 </style>
 </head>
 <body>
@@ -843,68 +873,77 @@
     <div class="panel-left-main">
 
     <section>
-      <h1>
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--hot)"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        KeySwap → GUI <small>本地工具，不上传文件</small>
-      </h1>
+      <div class="title-row">
+        <h1>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--hot)"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          KeySwap → GUI <small data-i18n="tagline">本地工具，不上传文件</small>
+        </h1>
+        <div class="lang-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/><path d="M12 2a15.3 15.3 0 0 0 0 20"/></svg>
+          <select id="langSelect" class="lang-switch" data-i18n-title="language">
+            <option value="zh-CN">中文</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
+      </div>
     </section>
 
     <section>
-      <h2>1. 选择 ini</h2>
+      <h2 data-i18n="sectionFile">1. 选择 ini</h2>
       <label class="drop" id="drop">
         <input id="iniFile" type="file" accept=".ini,.txt">
-        <strong>点击选择，或拖入 ini / txt</strong>
-        <small id="fileInfo">还没选文件</small>
+        <strong data-i18n="dropChoose">点击选择，或拖入 ini / txt</strong>
+        <small id="fileInfo" data-i18n="fileNone">还没选文件</small>
       </label>
       <div class="actions folder-help-wrap" style="margin-top:10px">
         <button class="btn ghost" id="btnOpenFolder" style="flex:1">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-          选择 MOD 文件夹
+          <span data-i18n="chooseModFolder">选择 MOD 文件夹</span>
         </button>
-        <label class="check" style="font-size:12px;color:var(--muted)"><input id="scanTxtFiles" type="checkbox"> 包含 txt 文件</label>
-        <button class="folder-help-trigger" type="button" aria-label="文件夹模式说明">!</button>
+        <label class="check" style="font-size:12px;color:var(--muted)"><input id="scanTxtFiles" type="checkbox"> <span data-i18n="includeTxt">包含 txt 文件</span></label>
+        <button class="folder-help-trigger" type="button" aria-label="文件夹模式说明" data-i18n-aria-label="folderHelpAria">!</button>
         <div class="status folder-help">
-          <strong style="color:var(--warn)">文件夹模式说明：</strong>
-          <p>选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
-          <p><strong>在线网页只能扫描 txt 文件，无法扫描 ini 文件；如果需要处理 ini，请先把网页保存到本地再打开。</strong>只处理 txt 时可以直接在线使用。</p>
-          <p>选中目标文件后，可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。</p>
-          <p>不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。</p>
+          <strong style="color:var(--warn)" data-i18n="folderHelpTitle">文件夹模式说明：</strong>
+          <p data-i18n="folderHelp1">选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
+          <p><strong data-i18n="folderHelp2">在线网页只能扫描 txt 文件，无法扫描 ini 文件；如果需要处理 ini，请先把网页保存到本地再打开。</strong><span data-i18n="folderHelp2b">只处理 txt 时可以直接在线使用。</span></p>
+          <p data-i18n="folderHelp3">选中目标文件后，可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。</p>
+          <p data-i18n="folderHelp4">不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。</p>
         </div>
       </div>
       <div class="field" id="folderIniRow" style="margin-top:10px;display:none">
-        <label>文件夹内 ini / txt（含子文件夹）</label>
+        <label data-i18n="folderIniLabel">文件夹内 ini / txt（含子文件夹）</label>
         <select id="folderIniSelect"></select>
         <div id="folderScanStats" style="font-size:11px;color:var(--muted);line-height:1.6"></div>
       </div>
     </section>
 
     <section>
-      <h2>2. 面板</h2>
+      <h2 data-i18n="sectionPanel">2. 面板</h2>
       <div class="field" style="margin-bottom:10px">
-        <label>标题</label>
-        <input id="title" value="GUI Menu" placeholder="显示在面板顶部">
+        <label data-i18n="titleLabel">标题</label>
+        <input id="title" value="GUI Menu" placeholder="显示在面板顶部" data-i18n-placeholder="titlePlaceholder">
       </div>
       <div class="grid-2" style="margin-bottom:10px">
-        <div class="field"><label>呼出键</label><input id="menuKey" value="alt"></div>
-        <div class="field"><label>点击修饰</label>
+        <div class="field"><label data-i18n="menuKeyLabel">呼出键</label><input id="menuKey" value="alt"></div>
+        <div class="field"><label data-i18n="clickModLabel">点击修饰</label>
           <select id="clickMod">
-            <option value="alt">ALT + 左键</option>
-            <option value="ctrl">CTRL + 左键</option>
-            <option value="shift">SHIFT + 左键</option>
-            <option value="none">仅左键</option>
+            <option value="alt" data-i18n="clickAlt">ALT + 左键</option>
+            <option value="ctrl" data-i18n="clickCtrl">CTRL + 左键</option>
+            <option value="shift" data-i18n="clickShift">SHIFT + 左键</option>
+            <option value="none" data-i18n="clickNone">仅左键</option>
           </select>
         </div>
       </div>
       <div class="grid-2" style="margin-bottom:10px">
-        <div class="field"><label>列数</label><input id="cols" type="number" min="1" max="8" value="3"></div>
-        <div class="field"><label>按钮间距 px</label><input id="gap" type="number" min="4" max="48" value="14"></div>
+        <div class="field"><label data-i18n="colsLabel">列数</label><input id="cols" type="number" min="1" max="8" value="3"></div>
+        <div class="field"><label data-i18n="gapLabel">按钮间距 px</label><input id="gap" type="number" min="4" max="48" value="14"></div>
       </div>
       <div class="grid-2" style="margin-bottom:10px">
         <div class="field">
-          <label>参考分辨率 <span style="font-weight:400;color:var(--muted)">（预览缩放）</span></label>
+          <label><span data-i18n="previewResLabel">参考分辨率</span> <span style="font-weight:400;color:var(--muted)" data-i18n="previewResHint">（预览缩放）</span></label>
           <select id="previewRes">
-            <option value="auto">自动匹配当前屏幕</option>
-            <option value="">×1 适合预览</option>
+            <option value="auto" data-i18n="previewAuto">自动匹配当前屏幕</option>
+            <option value="" data-i18n="previewOne">×1 适合预览</option>
             <option value="2560x1440">2560×1440 (2K)</option>
             <option value="1920x1080">1920×1080 (FHD)</option>
             <option value="1280x720">1280×720 (HD)</option>
@@ -912,63 +951,63 @@
           </select>
         </div>
         <div class="field">
-          <label>面板缩放 <span style="font-weight:400;color:var(--muted)">（游戏内实际大小）</span></label>
+          <label><span data-i18n="panelScaleLabel">面板缩放</span> <span style="font-weight:400;color:var(--muted)" data-i18n="panelScaleHint">（游戏内实际大小）</span></label>
           <input id="panelScale" type="number" min="0.5" max="2" step="0.25" value="1">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <button class="btn ghost" id="btnColorMode" style="flex:1">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M2 12h20"/></svg>
-          调色
+          <span data-i18n="colorMode">调色</span>
         </button>
         <button class="btn ghost" id="btnPanelImage" style="flex:1">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          背景图
+          <span data-i18n="panelImage">背景图</span>
         </button>
       </div>
       <div class="panel-img-row">
         <div class="panel-img-ctrl">
-          <button class="icon-btn" id="btnClearPanelImage" title="清除面板背景图">
+          <button class="icon-btn" id="btnClearPanelImage" title="清除面板背景图" data-i18n-title="clearPanelImage">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
-          <img id="panelImageThumb" class="panel-img-thumb" alt="面板背景图预览">
+          <img id="panelImageThumb" class="panel-img-thumb" alt="面板背景图预览" data-i18n-alt="panelImagePreviewAlt">
         </div>
       </div>
     </section>
 
     <section>
-      <h2>3. 行为</h2>
+      <h2 data-i18n="sectionBehavior">3. 行为</h2>
       <div class="field" style="margin-bottom:10px">
-        <label>缺失 type 时按此行为处理</label>
+        <label data-i18n="behaviorLabel">缺失 type 时按此行为处理</label>
         <select id="behavior">
-          <option value="cycle">cycle：按赋值表循环</option>
-          <option value="toggle">toggle：2 档点击切换</option>
-          <option value="hold">hold：2 档点击切换</option>
-          <option value="activate">activate：GUI pulse 短脉冲</option>
+          <option value="cycle" data-i18n="behaviorCycle">cycle：按赋值表循环</option>
+          <option value="toggle" data-i18n="behaviorToggle">toggle：2 档点击切换</option>
+          <option value="hold" data-i18n="behaviorHold">hold：2 档点击切换</option>
+          <option value="activate" data-i18n="behaviorActivate">activate：GUI pulse 短脉冲</option>
         </select>
       </div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px">原始 Key section 已写 type 时不会被这里覆盖；GUI 显示条件会从原始 `[Key*] condition` 自动扫描，点击按原始 key 和各自 condition 执行。</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px" data-i18n="behaviorDesc">原始 Key section 已写 type 时不会被这里覆盖；GUI 显示条件会从原始 `[Key*] condition` 自动扫描，点击按原始 key 和各自 condition 执行。</div>
       <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:2px">
-        <label class="check" title="勾选后删除原 [Key*] 节；activate 键盘原生行为会删除，GUI 使用非严格 pulse 模拟"><input id="removeKeys" type="checkbox" checked> 删 Key 节</label>
-        <label class="check" title="在每个按钮右下角显示绑定的按键提示"><input id="showKeyHint" type="checkbox" checked> 按键提示</label>
-        <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字"><input id="hideUploadLabel" type="checkbox" checked> 隐藏变量名</label>
-        <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件"><input id="useOriginalIniName" type="checkbox" checked> 使用原 ini 名</label>
-        <label class="check" title="用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启"><input id="resetActiveOnPresent" type="checkbox"> 修复跨角色面板</label>
+        <label class="check" title="勾选后删除原 [Key*] 节；activate 键盘原生行为会删除，GUI 使用非严格 pulse 模拟" data-i18n-title="removeKeysTip"><input id="removeKeys" type="checkbox" checked> <span data-i18n="removeKeys">删 Key 节</span></label>
+        <label class="check" title="在每个按钮右下角显示绑定的按键提示" data-i18n-title="showKeyHintTip"><input id="showKeyHint" type="checkbox" checked> <span data-i18n="showKeyHint">按键提示</span></label>
+        <label class="check" title="上传自定义图片后，隐藏按钮底部的变量名文字" data-i18n-title="hideUploadLabelTip"><input id="hideUploadLabel" type="checkbox" checked> <span data-i18n="hideUploadLabel">隐藏变量名</span></label>
+        <label class="check" title="处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件" data-i18n-title="useOriginalIniNameTip"><input id="useOriginalIniName" type="checkbox" checked> <span data-i18n="useOriginalIniName">使用原 ini 名</span></label>
+        <label class="check" title="用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启" data-i18n-title="resetActiveOnPresentTip"><input id="resetActiveOnPresent" type="checkbox"> <span data-i18n="resetActiveOnPresent">修复跨角色面板</span></label>
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--muted)">修改会自动暂存，下次拖入同一文件恢复 <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">历史暂存</button></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--muted)"><span data-i18n="draftAutoSave">修改会自动暂存，下次拖入同一文件恢复</span> <button id="btnClearDrafts" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline" data-i18n="clearDrafts">清除全部暂存</button> · <button id="btnDraftHistory" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline" data-i18n="draftHistory">历史暂存</button></div>
     </section>
 
     <section>
-      <h2>4. 按钮</h2>
+      <h2 data-i18n="sectionButtons">4. 按钮</h2>
       <div class="swap-list" id="swapList">
-        <div class="status">等待 ini</div>
+        <div class="status" data-i18n="statusWaiting">等待 ini</div>
       </div>
     </section>
 
     <section class="palette-section" id="paletteSection" hidden>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <h2 style="margin:0">调色</h2>
-        <button class="icon-btn" id="btnColorExit" title="退出调色">
+        <h2 style="margin:0" data-i18n="paletteTitle">调色</h2>
+        <button class="icon-btn" id="btnColorExit" title="退出调色" data-i18n-title="exitColorMode">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -977,43 +1016,43 @@
 
       <div class="palette-row" data-highlight="#guiPanel">
         <div class="palette-swatch" id="paletteBgSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>面板背景</label><span class="palette-desc">面板底色填充</span><input id="bgColor" type="color" value="#23120e"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteBg">面板背景</label><span class="palette-desc" data-i18n="paletteBgDesc">面板底色填充</span><input id="bgColor" type="color" value="#23120e"></div>
       </div>
-      <div class="field" style="margin-bottom:8px"><label>透明度</label><span class="palette-desc">面板不透明度 (0-255)</span><input id="bgAlpha" type="number" min="0" max="255" value="210"></div>
+      <div class="field" style="margin-bottom:8px"><label data-i18n="paletteAlpha">透明度</label><span class="palette-desc" data-i18n="paletteAlphaDesc">面板不透明度 (0-255)</span><input id="bgAlpha" type="number" min="0" max="255" value="210"></div>
 
       <div class="palette-row" data-highlight="#guiPanel">
         <div class="palette-swatch" id="paletteAccentSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>顶部边框</label><span class="palette-desc">面板顶部边框色</span><input id="accentColor" type="color" value="#ff4fb3"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteAccent">顶部边框</label><span class="palette-desc" data-i18n="paletteAccentDesc">面板顶部边框色</span><input id="accentColor" type="color" value="#ff4fb3"></div>
       </div>
       <div class="palette-row" data-highlight="#guiPanel h3">
         <div class="palette-swatch" id="paletteTitleShadowSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>标题投影</label><span class="palette-desc">标题文字投影色</span><input id="titleShadowColor" type="color" value="#ff4fb3"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteTitleShadow">标题投影</label><span class="palette-desc" data-i18n="paletteTitleShadowDesc">标题文字投影色</span><input id="titleShadowColor" type="color" value="#ff4fb3"></div>
       </div>
-      <label class="check" style="margin:0 0 8px 40px;font-size:12px;color:var(--muted)"><input id="disableTitleShadow" type="checkbox"> 禁用标题文字投影</label>
+      <label class="check" style="margin:0 0 8px 40px;font-size:12px;color:var(--muted)"><input id="disableTitleShadow" type="checkbox"> <span data-i18n="disableTitleShadow">禁用标题文字投影</span></label>
       <div class="palette-row" data-highlight=".gui-slot">
         <div class="palette-swatch" id="paletteHoverSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>悬停底色</label><span class="palette-desc">按钮悬停时填充色</span><input id="hoverColor" type="color" value="#ff4fb3"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteHover">悬停底色</label><span class="palette-desc" data-i18n="paletteHoverDesc">按钮悬停时填充色</span><input id="hoverColor" type="color" value="#ff4fb3"></div>
       </div>
 
       <div class="palette-row" data-highlight=".gui-slot">
         <div class="palette-swatch" id="paletteSlotSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>按钮底色</label><span class="palette-desc">按钮默认填充色</span><input id="slotColor" type="color" value="#3c3c46"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteSlot">按钮底色</label><span class="palette-desc" data-i18n="paletteSlotDesc">按钮默认填充色</span><input id="slotColor" type="color" value="#3c3c46"></div>
       </div>
 
       <div class="palette-row" data-highlight="#guiPanel">
         <div class="palette-swatch" id="palettePanelBorderSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>面板边框</label><span class="palette-desc">面板外边框色</span><input id="panelBorderColor" type="color" value="#f2f2f2"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="palettePanelBorder">面板边框</label><span class="palette-desc" data-i18n="palettePanelBorderDesc">面板外边框色</span><input id="panelBorderColor" type="color" value="#f2f2f2"></div>
       </div>
       <div class="palette-row" data-highlight=".gui-slot">
         <div class="palette-swatch" id="paletteSlotBorderSwatch"></div>
-        <div class="field" style="margin-bottom:0"><label>按钮边框</label><span class="palette-desc">按钮外边框色</span><input id="slotBorderColor" type="color" value="#f2f2f2"></div>
+        <div class="field" style="margin-bottom:0"><label data-i18n="paletteSlotBorder">按钮边框</label><span class="palette-desc" data-i18n="paletteSlotBorderDesc">按钮外边框色</span><input id="slotBorderColor" type="color" value="#f2f2f2"></div>
       </div>
 
       <div style="border-top:1px solid var(--line);margin:8px 0;padding-top:6px">
-        <div class="field" style="margin-bottom:4px;font-size:11px;color:var(--muted)">以下仅供预览观察，不影响导出：</div>
+        <div class="field" style="margin-bottom:4px;font-size:11px;color:var(--muted)" data-i18n="previewOnly">以下仅供预览观察，不影响导出：</div>
         <div class="palette-row" data-highlight="#viewPanel">
           <div class="palette-swatch" id="palettePreviewSwatch"></div>
-          <div class="field" style="margin-bottom:0"><label>预览背景</label><span class="palette-desc">预览区纯色背景</span><input id="previewBg" type="color" value="#0e0d12"></div>
+          <div class="field" style="margin-bottom:0"><label data-i18n="palettePreviewBg">预览背景</label><span class="palette-desc" data-i18n="palettePreviewBgDesc">预览区纯色背景</span><input id="previewBg" type="color" value="#0e0d12"></div>
         </div>
       </div>
     </section>
@@ -1023,14 +1062,14 @@
       <div class="actions">
         <button class="btn" id="btnZip" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          下载完整 ZIP
+          <span data-i18n="downloadZip">下载完整 ZIP</span>
         </button>
-        <button class="btn" id="btnWriteFolder" disabled>写入文件夹</button>
-        <button class="btn ghost" id="btnIni" disabled>只下载 ini</button>
+        <button class="btn" id="btnWriteFolder" disabled data-i18n="writeFolder">写入文件夹</button>
+        <button class="btn ghost" id="btnIni" disabled data-i18n="downloadIni">只下载 ini</button>
       </div>
-      <div id="status" class="status" style="margin-top:10px">等待 ini</div>
+      <div id="status" class="status" style="margin-top:10px" data-i18n="statusWaiting">等待 ini</div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
-        作者 <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · 创作工具 <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · 致谢 <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
+        <span data-i18n="author">作者</span> <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · <span data-i18n="createdWith">创作工具</span> <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · <span data-i18n="thanks">致谢</span> <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
       </div>
     </div>
   </div>
@@ -1038,7 +1077,7 @@
   <!-- ============ RIGHT ============ -->
   <div class="card panel-right">
     <div class="preview-head">
-      <h2>预览</h2>
+      <h2 data-i18n="previewTitle">预览</h2>
     </div>
     <div class="preview-body">
       <div id="viewPanel" class="preview-stage">
@@ -1050,34 +1089,34 @@
         </div>
         <div class="preview-empty" id="panelEmpty">
           <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          <span>拖入 ini 文件开始</span>
+          <span data-i18n="previewEmpty">拖入 ini 文件开始</span>
         </div>
-        <div class="trash-drop" id="trashDrop" title="拖入按钮以快速跳过">
+        <div class="trash-drop" id="trashDrop" title="拖入按钮以快速跳过" data-i18n-title="trashDropTitle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
         </div>
-        <button class="merge-fab" id="mergeFab" title="批量操作">
+        <button class="merge-fab" id="mergeFab" title="批量操作" data-i18n-title="batchActions">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <div class="fab-actions" id="fabActions">
-          <button class="fab-mini" data-fab="merge" title="合并">
+          <button class="fab-mini" data-fab="merge" title="合并" data-i18n-title="merge">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><line x1="8.5" y1="6.5" x2="15.5" y2="6.5"/></svg>
           </button>
-          <button class="fab-mini" data-fab="skip" title="跳过">
+          <button class="fab-mini" data-fab="skip" title="跳过" data-i18n-title="skip">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           </button>
-          <button class="fab-mini" data-fab="reset" title="重置图标">
+          <button class="fab-mini" data-fab="reset" title="重置图标" data-i18n-title="resetIcon">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           </button>
-          <button class="fab-mini" data-fab="autoIcon" title="批量自动匹配图标">
+          <button class="fab-mini" data-fab="autoIcon" title="批量自动匹配图标" data-i18n-title="autoMatchAllIcons">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
           </button>
-          <button class="fab-mini" data-fab="autoIconSelected" title="选择按钮后自动匹配图标">
+          <button class="fab-mini" data-fab="autoIconSelected" title="选择按钮后自动匹配图标" data-i18n-title="autoMatchSelectedIcons">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/><path d="M7 12h1"/><path d="M7 16h6"/></svg>
           </button>
         </div>
         <div class="merge-bar" id="mergeBar" hidden>
-          <button class="btn" id="mergeConfirm">确认</button>
-          <button class="btn ghost" id="mergeCancel">取消</button>
+          <button class="btn" id="mergeConfirm" data-i18n="confirm">确认</button>
+          <button class="btn ghost" id="mergeCancel" data-i18n="cancel">取消</button>
         </div>
       </div>
       <pre id="viewIni" class="ini-view"></pre>
@@ -1089,12 +1128,12 @@
 <div class="modal" id="draftHistory">
   <div class="modal-card">
     <div class="modal-head">
-      <strong>历史暂存 <small style="color:var(--muted);font-weight:400">最近 30 次</small></strong>
+      <strong><span data-i18n="draftHistory">历史暂存</span> <small style="color:var(--muted);font-weight:400" data-i18n="draftRecent">最近 30 次</small></strong>
       <button class="icon-btn" id="draftHistoryClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)">拖入对应 INI 文件时自动恢复</div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)" data-i18n="draftRestoreHint">拖入对应 INI 文件时自动恢复</div>
     <div style="overflow:auto;max-height:60vh" id="draftHistoryList"></div>
   </div>
 </div>
@@ -1103,7 +1142,7 @@
 <div class="modal" id="iconPicker">
   <div class="modal-card">
     <div class="modal-head">
-      <strong>选择图标 <small id="pickerFor" style="color:var(--muted);font-weight:400"></small></strong>
+      <strong><span data-i18n="iconPickerTitle">选择图标</span> <small id="pickerFor" style="color:var(--muted);font-weight:400"></small></strong>
       <button class="icon-btn" id="pickerClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1114,7 +1153,7 @@
           <button class="picker-tab active" data-source-tab="lucide">Lucide</button>
           <button class="picker-tab" data-source-tab="iconify">Iconify</button>
         </div>
-        <input id="pickerSearch" placeholder="搜索图标，比如 shirt / hat / crown / glasses">
+        <input id="pickerSearch" placeholder="搜索图标，比如 shirt / hat / crown / glasses" data-i18n-placeholder="pickerSearchPlaceholder">
       </div>
       <div class="picker-word-row" id="pickerWordRow" hidden></div>
     </div>
@@ -1126,7 +1165,7 @@
 <div class="modal" id="imgCropper">
   <div class="modal-card" style="max-width:560px">
     <div class="modal-head">
-      <strong id="cropTitle">裁剪图片</strong>
+      <strong id="cropTitle" data-i18n="cropImage">裁剪图片</strong>
       <button class="icon-btn" id="cropClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1139,8 +1178,8 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn ghost" id="cropCancel">取消</button>
-        <button class="btn" id="cropConfirm">确认裁剪</button>
+        <button class="btn ghost" id="cropCancel" data-i18n="cancel">取消</button>
+        <button class="btn" id="cropConfirm" data-i18n="confirmCrop">确认裁剪</button>
       </div>
     </div>
   </div>
@@ -1150,14 +1189,14 @@
 
 <!-- 右键菜单 -->
 <div class="ctx-menu" id="ctxMenu" hidden>
-  <button data-ctx="rename">改名</button>
-  <button data-ctx="key">绑定按键</button>
-  <button data-ctx="split">拆分</button>
-  <button data-ctx="skip">跳过 / 取消跳过</button>
-  <button data-ctx="autoIcon">自动匹配图标</button>
-  <button data-ctx="picker">从图标库选择…</button>
-  <button data-ctx="upload">上传图标…</button>
-  <button data-ctx="reset">重置图标</button>
+  <button data-ctx="rename" data-i18n="rename">改名</button>
+  <button data-ctx="key" data-i18n="bindKey">绑定按键</button>
+  <button data-ctx="split" data-i18n="split">拆分</button>
+  <button data-ctx="skip" data-i18n="skipToggle">跳过 / 取消跳过</button>
+  <button data-ctx="autoIcon" data-i18n="autoMatchIcon">自动匹配图标</button>
+  <button data-ctx="picker" data-i18n="chooseFromLibrary">从图标库选择…</button>
+  <button data-ctx="upload" data-i18n="uploadIcon">上传图标…</button>
+  <button data-ctx="reset" data-i18n="resetIcon">重置图标</button>
 </div>
 
 <!-- hover 信息浮层 -->
@@ -1172,6 +1211,527 @@
 
 const $ = (id) => document.getElementById(id);
 const enc = new TextEncoder();
+const LANG_KEY = "keyswap-gui-lang";
+
+const I18N = {
+  "zh-CN": {
+    language: "语言",
+    tagline: "本地工具，不上传文件",
+    sectionFile: "1. 选择 ini",
+    dropChoose: "点击选择，或拖入 ini / txt",
+    fileNone: "还没选文件",
+    chooseModFolder: "选择 MOD 文件夹",
+    includeTxt: "包含 txt 文件",
+    folderHelpAria: "文件夹模式说明",
+    folderHelpTitle: "文件夹模式说明：",
+    folderHelp1: "选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。",
+    folderHelp2: "在线网页无法在文件夹中保存/写入 ini 文件，也可能无法扫描 ini。需要文件夹写入时，请先把网页保存到本地再打开。",
+    folderHelp2b: "在线版更适合只下载 ZIP 或只处理 txt。",
+    folderHelp3: "本地打开页面时，选中目标文件后可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。",
+    folderHelp4: "不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。",
+    folderIniLabel: "文件夹内 ini / txt（含子文件夹）",
+    sectionPanel: "2. 面板",
+    titleLabel: "标题",
+    titlePlaceholder: "显示在面板顶部",
+    menuKeyLabel: "呼出键",
+    clickModLabel: "点击修饰",
+    clickAlt: "ALT + 左键",
+    clickCtrl: "CTRL + 左键",
+    clickShift: "SHIFT + 左键",
+    clickNone: "仅左键",
+    colsLabel: "列数",
+    gapLabel: "按钮间距 px",
+    previewResLabel: "参考分辨率",
+    previewResHint: "（预览缩放）",
+    previewAuto: "自动匹配当前屏幕",
+    previewAutoWithRes: "自动匹配当前屏幕（{width}×{height}）",
+    previewOne: "×1 适合预览",
+    panelScaleLabel: "面板缩放",
+    panelScaleHint: "（游戏内实际大小）",
+    colorMode: "调色",
+    panelImage: "背景图",
+    clearPanelImage: "清除面板背景图",
+    panelImagePreviewAlt: "面板背景图预览",
+    sectionBehavior: "3. 行为",
+    behaviorLabel: "缺失 type 时按此行为处理",
+    behaviorCycle: "cycle：按赋值表循环",
+    behaviorToggle: "toggle：2 档点击切换",
+    behaviorHold: "hold：2 档点击切换",
+    behaviorActivate: "activate：GUI pulse 短脉冲",
+    behaviorDesc: "原始 Key section 已写 type 时不会被这里覆盖；GUI 显示条件会从原始 `[Key*] condition` 自动扫描，点击按原始 key 和各自 condition 执行。",
+    removeKeys: "删 Key 节",
+    removeKeysTip: "勾选后删除原 [Key*] 节；activate 键盘原生行为会删除，GUI 使用非严格 pulse 模拟",
+    showKeyHint: "按键提示",
+    showKeyHintTip: "在每个按钮右下角显示绑定的按键提示",
+    hideUploadLabel: "隐藏变量名",
+    hideUploadLabelTip: "上传自定义图片后，隐藏按钮底部的变量名文字",
+    useOriginalIniName: "使用原 ini 名",
+    useOriginalIniNameTip: "处理 ini 时，生成的新 ini 直接使用原文件名，并把原内容备份成 txt；处理 txt 时，生成同名 ini 且不改原文件",
+    resetActiveOnPresent: "修复跨角色面板",
+    resetActiveOnPresentTip: "用于修复原始 MOD 激活条件错误导致的跨角色呼出面板；如果没有出现跨角色呼出面板，就不用开启",
+    draftAutoSave: "修改会自动暂存，下次拖入同一文件恢复",
+    clearDrafts: "清除全部暂存",
+    draftHistory: "历史暂存",
+    sectionButtons: "4. 按钮",
+    statusWaiting: "等待 ini",
+    paletteTitle: "调色",
+    exitColorMode: "退出调色",
+    paletteBg: "面板背景",
+    paletteBgDesc: "面板底色填充",
+    paletteAlpha: "透明度",
+    paletteAlphaDesc: "面板不透明度 (0-255)",
+    paletteAccent: "顶部边框",
+    paletteAccentDesc: "面板顶部边框色",
+    paletteTitleShadow: "标题投影",
+    paletteTitleShadowDesc: "标题文字投影色",
+    disableTitleShadow: "禁用标题文字投影",
+    paletteHover: "悬停底色",
+    paletteHoverDesc: "按钮悬停时填充色",
+    paletteSlot: "按钮底色",
+    paletteSlotDesc: "按钮默认填充色",
+    palettePanelBorder: "面板边框",
+    palettePanelBorderDesc: "面板外边框色",
+    paletteSlotBorder: "按钮边框",
+    paletteSlotBorderDesc: "按钮外边框色",
+    previewOnly: "以下仅供预览观察，不影响导出：",
+    palettePreviewBg: "预览背景",
+    palettePreviewBgDesc: "预览区纯色背景",
+    restoreDefault: "恢复默认",
+    palettePresetDefault: "默认霓虹",
+    palettePresetMoon: "月影紫",
+    palettePresetCherry: "樱桃黑",
+    palettePresetCyan: "青蓝夜",
+    palettePresetAmber: "琥珀金",
+    palettePresetMint: "薄荷绿",
+    palettePresetSilver: "银白灰",
+    downloadZip: "下载完整 ZIP",
+    writeFolder: "写入文件夹",
+    downloadIni: "只下载 ini",
+    author: "作者",
+    createdWith: "创作工具",
+    thanks: "致谢",
+    previewTitle: "预览",
+    previewEmpty: "拖入 ini 文件开始",
+    trashDropTitle: "拖入按钮以快速跳过",
+    batchActions: "批量操作",
+    merge: "合并",
+    skip: "跳过",
+    resetIcon: "重置图标",
+    autoMatchAllIcons: "批量自动匹配图标",
+    autoMatchSelectedIcons: "选择按钮后自动匹配图标",
+    confirm: "确认",
+    cancel: "取消",
+    draftRecent: "最近 30 次",
+    draftRestoreHint: "拖入对应 INI 文件时自动恢复",
+    iconPickerTitle: "选择图标",
+    pickerSearchPlaceholder: "搜索图标，比如 shirt / hat / crown / glasses",
+    cropImage: "裁剪图片",
+    confirmCrop: "确认裁剪",
+    rename: "改名",
+    bindKey: "绑定按键",
+    split: "拆分",
+    skipToggle: "跳过 / 取消跳过",
+    autoMatchIcon: "自动匹配图标",
+    chooseFromLibrary: "从图标库选择…",
+    uploadIcon: "上传图标…",
+    swapListEmpty: "还没读到 [Key*]",
+    noResultIni: "选择 ini 后这里会显示生成结果",
+    statusAllSkipped: "共 {total} 个 key slot，但全部已跳过",
+    statusActive: "共 {total} 个 key slot，{active} 个活跃",
+    fileLoaded: "{name} · 找到 {count} 个 key slot",
+    fileLoadedFolder: "{path} · 找到 {count} 个 key slot",
+    fileLoadedDraft: "{name} · 找到 {count} 个 key slot",
+    pickerFor: "→ {name}",
+    pickerAutoFor: "→ 自动匹配 {name}",
+    pickerWordsLabel: "按单词查找：",
+    pickerLoading: "图标库加载中…",
+    pickerAutoLoading: "正在从 Lucide 和 Iconify 匹配候选…",
+    pickerNoAuto: "没有匹配到合适图标",
+    pickerIconifyEmpty: "输入关键词搜索 Iconify 图标",
+    pickerIconifyLoading: "正在搜索 Iconify…",
+    pickerLibraryLoading: "图标库加载中…需要联网",
+    pickerNoMatch: "无匹配",
+    confirmMerge: "确认合并",
+    confirmSkip: "确认跳过",
+    confirmMatch: "确认匹配",
+    confirmReset: "确认重置",
+    actionPicker: "从图标库选",
+    actionUpload: "上传图片",
+    actionReset: "重置图标",
+    actionSkipped: "已跳过",
+    actionSkip: "跳过此项",
+    metaNoKey: "无",
+    groupCount: "{count}组",
+    toastDraftRestored: "已恢复上次暂存",
+    toastMultiKeyWarn: "多 Key 绑定请在原 INI 里修改，避免丢失其它绑定",
+    toastOfflineIcons: "离线模式：仅显示常用图标",
+    toastIconifyFail: "Iconify 图标库加载失败，请检查网络",
+    toastIconUploaded: "图标已上传",
+    toastImageFail: "处理图片失败",
+    toastAutoIconBusyLoad: "正在匹配图标，稍后再加载文件",
+    toastReadFileFail: "读取文件失败",
+    toastPaletteReset: "已恢复默认配色",
+    toastPaletteApplied: "已应用 {name}",
+    toastFolderUnsupported: "当前浏览器不支持直接写入文件夹，请继续用 ZIP",
+    toastFolderReadIniTxt: "已读取文件夹，请选择 ini / txt",
+    toastFolderReadIni: "已读取文件夹，请选择 ini",
+    toastFolderChooseFail: "选择文件夹失败",
+    toastNoFolderFilesIniTxt: "这个文件夹及子文件夹里没有 ini / txt",
+    toastNoFolderFilesIni: "这个文件夹及子文件夹里没有 ini",
+    toastSelectFolderIni: "请先选择文件夹里的 ini",
+    toastFolderWritten: "已写入文件夹",
+    toastWriteFail: "写入失败：{message}",
+    toastDraftsCleared: "全部暂存已清除",
+    toastDeleted: "已删除",
+    toastDraftMissing: "草稿不存在",
+    toastDraftIncomplete: "草稿数据不完整",
+    toastDraftRestoredShort: "已恢复暂存",
+    toastDraftRestoreFail: "恢复失败",
+    toastPanelImageUpdated: "面板背景图已更新",
+    toastPanelImageCleared: "面板背景图已清除",
+    toastSelectOne: "至少选 1 个",
+    toastSelectTwoMerge: "至少选 2 个才能合并",
+    toastStrictMergeKey: "严格模式只能合并同一个 key",
+    toastMerged: "已合并 {count} 个按钮",
+    toastToggled: "已切换 {count} 个按钮状态",
+    toastResetIcons: "已重置 {count} 个图标",
+    toastMatchingSelected: "正在匹配选中按钮图标…",
+    toastMatchStopped: "文件已变化，已停止匹配",
+    toastMatchedIcons: "已匹配 {count} 个图标{skipped}",
+    toastSkippedUploads: "，跳过 {count} 个上传图标",
+    toastSelectedAllUploads: "选中项都是上传图标，已跳过",
+    toastNoIconMatch: "没有匹配到合适图标",
+    toastNoMatchableButtons: "没有可匹配的按钮",
+    toastMatchingAll: "正在批量自动匹配图标…",
+    toastAllUploads: "全部都是上传图标，已跳过",
+    toastSlotSkipped: "已跳过按钮",
+    toastZipCreated: "ZIP 已生成",
+    toastBuildFail: "生成失败：{message}",
+    toastStrictSplit: "严格模式下同 key handler 不能拆分",
+    lastFolder: "上次选择：{name}",
+    folderInfoEmptyIniTxt: "已读取文件夹 · 没有找到 ini / txt",
+    folderInfoEmptyIni: "已读取文件夹 · 没有找到 ini",
+    folderSelectPlaceholder: "请选择要处理的 {type}",
+    folderInfoChoose: "已读取文件夹 · 找到 {count} 个 {type}，请选择要处理的文件",
+    folderScanStats: "扫描统计：{bits}",
+    folderStatDirs: "目录 {count}",
+    folderStatFiles: "文件 {count}",
+    folderStatListed: "显示 {count}",
+    folderStatDisabled: "忽略 DISABLED {count}",
+    folderStatErrors: "读取失败 {count}",
+    writing: "写入中…",
+    generating: "生成中…",
+    folderConvertedTxt: "{path} · 找到 {count} 个 key slot · 已将原 ini 改为 txt",
+    folderBackedUpTxt: "{path} · 找到 {count} 个 key slot · 已备份原 ini 为 txt",
+    draftNone: "暂无暂存记录",
+    draftReadFail: "读取失败",
+    draftFile: "文件",
+    draftTime: "时间",
+    restore: "恢复",
+    delete: "删除",
+    unknown: "未知",
+    cropPanelBg: "裁剪面板背景 (1:1)",
+    cropIcon: "裁剪图标 (1:1)",
+    skippedTag: "已跳过",
+    hoverType: "类型",
+    hoverRunCommand: "⟳ 执行命令",
+    ctxUnskip: "取消跳过",
+    ctxSkipThis: "跳过此项",
+    promptButtonName: "按钮名称",
+    promptBindKey: "绑定按键",
+  },
+  "en-US": {
+    language: "Language",
+    tagline: "Local tool, files never uploaded",
+    sectionFile: "1. Select ini",
+    dropChoose: "Click to choose, or drop ini / txt",
+    fileNone: "No file selected",
+    chooseModFolder: "Choose MOD Folder",
+    includeTxt: "Include txt files",
+    folderHelpAria: "Folder mode help",
+    folderHelpTitle: "Folder mode:",
+    folderHelp1: "After choosing a MOD root folder, processable ini files are listed recursively. Enable “Include txt files” to list txt too.",
+    folderHelp2: "The online page cannot save/write ini files inside a folder, and may also be unable to scan ini files. Save this page locally first if you need folder writing.",
+    folderHelp2b: "The online version is better for downloading ZIPs or processing txt only.",
+    folderHelp3: "When opened locally, selecting a target file lets you write the generated ini and `res_gui` directly. By default the original ini name is reused and the original content is backed up as txt.",
+    folderHelp4: "Avoid huge folders with many ini/txt files, or scanning and the list may lag. This feature writes files and backs up the original ini, so make sure you know which MOD you are editing.",
+    folderIniLabel: "Folder ini / txt files (including subfolders)",
+    sectionPanel: "2. Panel",
+    titleLabel: "Title",
+    titlePlaceholder: "Shown at the top of the panel",
+    menuKeyLabel: "Open key",
+    clickModLabel: "Click modifier",
+    clickAlt: "ALT + Left Click",
+    clickCtrl: "CTRL + Left Click",
+    clickShift: "SHIFT + Left Click",
+    clickNone: "Left Click only",
+    colsLabel: "Columns",
+    gapLabel: "Button gap px",
+    previewResLabel: "Reference resolution",
+    previewResHint: "(preview scale)",
+    previewAuto: "Match current screen",
+    previewAutoWithRes: "Match current screen ({width}×{height})",
+    previewOne: "×1 for preview",
+    panelScaleLabel: "Panel scale",
+    panelScaleHint: "(actual in-game size)",
+    colorMode: "Colors",
+    panelImage: "Background",
+    clearPanelImage: "Clear panel background",
+    panelImagePreviewAlt: "Panel background preview",
+    sectionBehavior: "3. Behavior",
+    behaviorLabel: "Use this behavior when type is missing",
+    behaviorCycle: "cycle: cycle assignment values",
+    behaviorToggle: "toggle: 2-state click toggle",
+    behaviorHold: "hold: 2-state click toggle",
+    behaviorActivate: "activate: GUI pulse",
+    behaviorDesc: "Existing type values in original Key sections are not overwritten. GUI visibility conditions are scanned from original `[Key*] condition`; clicks execute with each original key and condition.",
+    removeKeys: "Remove Key sections",
+    removeKeysTip: "Remove original [Key*] sections. Native activate behavior is removed; GUI uses a non-strict pulse simulation.",
+    showKeyHint: "Key hints",
+    showKeyHintTip: "Show the bound key in the bottom-right of each button",
+    hideUploadLabel: "Hide labels",
+    hideUploadLabelTip: "Hide button labels when a custom image is uploaded",
+    useOriginalIniName: "Use original ini name",
+    useOriginalIniNameTip: "When processing ini, write the new ini with the original filename and back up the original as txt. When processing txt, generate a same-name ini without changing the txt.",
+    resetActiveOnPresent: "Fix cross-character panel",
+    resetActiveOnPresentTip: "Use this only if original MOD activation conditions cause the panel to appear on another character.",
+    draftAutoSave: "Changes are auto-saved and restored when the same file is dropped again",
+    clearDrafts: "Clear all drafts",
+    draftHistory: "Draft History",
+    sectionButtons: "4. Buttons",
+    statusWaiting: "Waiting for ini",
+    paletteTitle: "Colors",
+    exitColorMode: "Exit color mode",
+    paletteBg: "Panel background",
+    paletteBgDesc: "Panel fill color",
+    paletteAlpha: "Opacity",
+    paletteAlphaDesc: "Panel opacity (0-255)",
+    paletteAccent: "Top border",
+    paletteAccentDesc: "Panel top border color",
+    paletteTitleShadow: "Title shadow",
+    paletteTitleShadowDesc: "Title text shadow color",
+    disableTitleShadow: "Disable title text shadow",
+    paletteHover: "Hover fill",
+    paletteHoverDesc: "Button fill color on hover",
+    paletteSlot: "Button fill",
+    paletteSlotDesc: "Default button fill color",
+    palettePanelBorder: "Panel border",
+    palettePanelBorderDesc: "Outer panel border color",
+    paletteSlotBorder: "Button border",
+    paletteSlotBorderDesc: "Outer button border color",
+    previewOnly: "Preview only, does not affect export:",
+    palettePreviewBg: "Preview background",
+    palettePreviewBgDesc: "Solid preview area background",
+    restoreDefault: "Restore defaults",
+    palettePresetDefault: "Default Neon",
+    palettePresetMoon: "Moonlit Purple",
+    palettePresetCherry: "Cherry Black",
+    palettePresetCyan: "Cyan Night",
+    palettePresetAmber: "Amber Gold",
+    palettePresetMint: "Mint Green",
+    palettePresetSilver: "Silver Gray",
+    downloadZip: "Download full ZIP",
+    writeFolder: "Write to folder",
+    downloadIni: "Download ini only",
+    author: "Author",
+    createdWith: "Created with",
+    thanks: "Thanks",
+    previewTitle: "Preview",
+    previewEmpty: "Drop an ini file to start",
+    trashDropTitle: "Drop a button here to skip it",
+    batchActions: "Batch actions",
+    merge: "Merge",
+    skip: "Skip",
+    resetIcon: "Reset icon",
+    autoMatchAllIcons: "Auto match all icons",
+    autoMatchSelectedIcons: "Select buttons, then auto match icons",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    draftRecent: "Last 30",
+    draftRestoreHint: "Automatically restores when the matching INI file is dropped",
+    iconPickerTitle: "Choose Icon",
+    pickerSearchPlaceholder: "Search icons, e.g. shirt / hat / crown / glasses",
+    cropImage: "Crop Image",
+    confirmCrop: "Confirm crop",
+    rename: "Rename",
+    bindKey: "Bind key",
+    split: "Split",
+    skipToggle: "Skip / Unskip",
+    autoMatchIcon: "Auto match icon",
+    chooseFromLibrary: "Choose from icon library…",
+    uploadIcon: "Upload icon…",
+    swapListEmpty: "No [Key*] found yet",
+    noResultIni: "Generated result appears here after selecting an ini",
+    statusAllSkipped: "{total} key slots found, but all are skipped",
+    statusActive: "{total} key slots found, {active} active",
+    fileLoaded: "{name} · {count} key slots found",
+    fileLoadedFolder: "{path} · {count} key slots found",
+    fileLoadedDraft: "{name} · {count} key slots found",
+    pickerFor: "→ {name}",
+    pickerAutoFor: "→ Auto match {name}",
+    pickerWordsLabel: "Search by word:",
+    pickerLoading: "Loading icon library…",
+    pickerAutoLoading: "Matching candidates from Lucide and Iconify…",
+    pickerNoAuto: "No suitable icon found",
+    pickerIconifyEmpty: "Enter a keyword to search Iconify icons",
+    pickerIconifyLoading: "Searching Iconify…",
+    pickerLibraryLoading: "Loading icon library… network may be required",
+    pickerNoMatch: "No matches",
+    confirmMerge: "Confirm merge",
+    confirmSkip: "Confirm skip",
+    confirmMatch: "Confirm match",
+    confirmReset: "Confirm reset",
+    actionPicker: "Choose from icon library",
+    actionUpload: "Upload image",
+    actionReset: "Reset icon",
+    actionSkipped: "Skipped",
+    actionSkip: "Skip this item",
+    metaNoKey: "None",
+    groupCount: "{count} groups",
+    toastDraftRestored: "Previous draft restored",
+    toastMultiKeyWarn: "Edit multi-key bindings in the original INI to avoid losing other bindings",
+    toastOfflineIcons: "Offline mode: showing common icons only",
+    toastIconifyFail: "Failed to load Iconify icons. Check your network",
+    toastIconUploaded: "Icon uploaded",
+    toastImageFail: "Failed to process image",
+    toastAutoIconBusyLoad: "Icon matching is running. Load files after it finishes",
+    toastReadFileFail: "Failed to read file",
+    toastPaletteReset: "Default colors restored",
+    toastPaletteApplied: "Applied {name}",
+    toastFolderUnsupported: "This browser cannot write directly to folders. Use ZIP instead",
+    toastFolderReadIniTxt: "Folder loaded. Select an ini / txt file",
+    toastFolderReadIni: "Folder loaded. Select an ini file",
+    toastFolderChooseFail: "Failed to choose folder",
+    toastNoFolderFilesIniTxt: "No ini / txt files found in this folder or its subfolders",
+    toastNoFolderFilesIni: "No ini files found in this folder or its subfolders",
+    toastSelectFolderIni: "Select an ini file from the folder first",
+    toastFolderWritten: "Folder written",
+    toastWriteFail: "Write failed: {message}",
+    toastDraftsCleared: "All drafts cleared",
+    toastDeleted: "Deleted",
+    toastDraftMissing: "Draft not found",
+    toastDraftIncomplete: "Draft data is incomplete",
+    toastDraftRestoredShort: "Draft restored",
+    toastDraftRestoreFail: "Restore failed",
+    toastPanelImageUpdated: "Panel background updated",
+    toastPanelImageCleared: "Panel background cleared",
+    toastSelectOne: "Select at least 1 item",
+    toastSelectTwoMerge: "Select at least 2 items to merge",
+    toastStrictMergeKey: "Strict mode can only merge the same key",
+    toastMerged: "Merged {count} buttons",
+    toastToggled: "Toggled {count} buttons",
+    toastResetIcons: "Reset {count} icons",
+    toastMatchingSelected: "Matching selected button icons…",
+    toastMatchStopped: "File changed. Matching stopped",
+    toastMatchedIcons: "Matched {count} icons{skipped}",
+    toastSkippedUploads: ", skipped {count} uploaded icons",
+    toastSelectedAllUploads: "Selected items are all uploaded icons, skipped",
+    toastNoIconMatch: "No suitable icon found",
+    toastNoMatchableButtons: "No buttons to match",
+    toastMatchingAll: "Auto matching icons…",
+    toastAllUploads: "All icons are uploaded icons, skipped",
+    toastSlotSkipped: "Button skipped",
+    toastZipCreated: "ZIP generated",
+    toastBuildFail: "Build failed: {message}",
+    toastStrictSplit: "Strict mode cannot split handlers with the same key",
+    lastFolder: "Last selected: {name}",
+    folderInfoEmptyIniTxt: "Folder loaded · no ini / txt found",
+    folderInfoEmptyIni: "Folder loaded · no ini found",
+    folderSelectPlaceholder: "Select {type} to process",
+    folderInfoChoose: "Folder loaded · found {count} {type} files, select a file to process",
+    folderScanStats: "Scan stats: {bits}",
+    folderStatDirs: "dirs {count}",
+    folderStatFiles: "files {count}",
+    folderStatListed: "shown {count}",
+    folderStatDisabled: "ignored DISABLED {count}",
+    folderStatErrors: "read failed {count}",
+    writing: "Writing…",
+    generating: "Generating…",
+    folderConvertedTxt: "{path} · {count} key slots found · original ini renamed to txt",
+    folderBackedUpTxt: "{path} · {count} key slots found · original ini backed up as txt",
+    draftNone: "No draft records",
+    draftReadFail: "Failed to read",
+    draftFile: "File",
+    draftTime: "Time",
+    restore: "Restore",
+    delete: "Delete",
+    unknown: "Unknown",
+    cropPanelBg: "Crop panel background (1:1)",
+    cropIcon: "Crop icon (1:1)",
+    skippedTag: "Skipped",
+    hoverType: "Type",
+    hoverRunCommand: "⟳ Run command",
+    ctxUnskip: "Unskip",
+    ctxSkipThis: "Skip this item",
+    promptButtonName: "Button name",
+    promptBindKey: "Bind key",
+  },
+};
+
+let currentLang = localStorage.getItem(LANG_KEY) || (navigator.language && navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US");
+if (!I18N[currentLang]) currentLang = "zh-CN";
+let fileInfoState = null;
+
+function t(key, vars = {}) {
+  const template = I18N[currentLang]?.[key] ?? I18N["zh-CN"]?.[key] ?? key;
+  return String(template).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
+}
+
+function applyI18n() {
+  document.documentElement.lang = currentLang;
+  const langSelect = $("langSelect");
+  if (langSelect) langSelect.value = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    if (el.dataset.i18nDynamic === "true") return;
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel)); });
+  document.querySelectorAll("[data-i18n-alt]").forEach(el => { el.alt = t(el.dataset.i18nAlt); });
+  renderFileInfo();
+  updateAutoPreviewResLabel();
+  updateStatus();
+}
+
+function setI18nDynamic(id, dynamic) {
+  const el = $(id);
+  if (el) el.dataset.i18nDynamic = dynamic ? "true" : "false";
+}
+
+function renderFileInfo() {
+  setI18nDynamic("fileInfo", Boolean(fileInfoState));
+  $("fileInfo").textContent = fileInfoState ? t(fileInfoState.key, fileInfoState.vars) : t("fileNone");
+}
+
+function setFileInfo(key = null, vars = {}) {
+  fileInfoState = key ? { key, vars } : null;
+  renderFileInfo();
+}
+
+function updateMergeConfirmText() {
+  const action = state.fabAction;
+  $("mergeConfirm").textContent = action === "merge" ? t("confirmMerge") : action === "skip" ? t("confirmSkip") : action === "autoIconSelected" ? t("confirmMatch") : action === "reset" ? t("confirmReset") : t("confirm");
+}
+
+function refreshOpenI18nSurfaces() {
+  if ($("iconPicker")?.classList.contains("show") && pickerTarget >= 0 && state.slotMeta[pickerTarget]) {
+    const meta = state.slotMeta[pickerTarget];
+    $("pickerFor").textContent = pickerMode === "auto" ? t("pickerAutoFor", { name: meta.name }) : t("pickerFor", { name: meta.name });
+    renderPickerWordRow(collectIconBaseWords(meta, state.swaps[pickerTarget]), pickerMode === "auto" ? autoIconWordTarget : $("pickerSearch").value.trim());
+    if (pickerMode === "library") renderPickerGrid($("pickerSearch").value);
+  }
+  if (!$('ctxMenu')?.hidden && ctxTargetIdx >= 0 && state.slotMeta[ctxTargetIdx]) {
+    const skipBtn = $("ctxMenu").querySelector("[data-ctx='skip']");
+    if (skipBtn) skipBtn.textContent = state.slotMeta[ctxTargetIdx].skip ? t("ctxUnskip") : t("ctxSkipThis");
+  }
+  if (hoverSlotIdx >= 0) $("hoverContent").innerHTML = hoverText(hoverSlotIdx);
+  const folderSelect = $("folderIniSelect");
+  if (folderSelect?.options[0]?.value === "") {
+    const fileType = $("scanTxtFiles").checked ? "ini / txt" : "ini";
+    folderSelect.options[0].textContent = t("folderSelectPlaceholder", { type: fileType });
+  }
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
@@ -1221,7 +1781,7 @@ function updateAutoPreviewResLabel() {
   const autoOption = $("previewRes")?.querySelector('option[value="auto"]');
   if (!autoOption) return;
   const autoRes = PREVIEW_RES_OPTIONS.find(opt => opt.value === getAutoPreviewRes());
-  autoOption.textContent = autoRes ? `自动匹配当前屏幕（${autoRes.w}×${autoRes.h}）` : "自动匹配当前屏幕";
+  autoOption.textContent = autoRes ? t("previewAutoWithRes", { width: autoRes.w, height: autoRes.h }) : t("previewAuto");
 }
 
 /* ---------- toast ---------- */
@@ -1258,7 +1818,7 @@ function loadSettings() {
     if (typeof s.resetActiveOnPresent === "boolean") $("resetActiveOnPresent").checked = s.resetActiveOnPresent;
     if (typeof s.disableTitleShadow === "boolean") $("disableTitleShadow").checked = s.disableTitleShadow;
     if (typeof s.scanTxtFiles === "boolean") $("scanTxtFiles").checked = s.scanTxtFiles;
-    if (s.lastFolderName) $("btnOpenFolder").title = `上次选择：${s.lastFolderName}`;
+    if (s.lastFolderName) $("btnOpenFolder").title = t("lastFolder", { name: s.lastFolderName });
   } catch (e) {}
 }
 function saveSettings() {
@@ -1476,7 +2036,7 @@ async function loadDraft() {
       }
     }
 
-    toast("已恢复上次暂存", "ok");
+    toast(t("toastDraftRestored"), "ok");
     return true;
   } catch (e) { /* ignore */ }
   return false;
@@ -1648,7 +2208,7 @@ function buildKeySlots(handlers) {
 
 function setKeySlotKey(slot, key) {
   if ((slot.handlers || []).some(handler => (handler.keys || []).length > 1)) {
-    toast("多 Key 绑定请在原 INI 里修改，避免丢失其它绑定", "err");
+    toast(t("toastMultiKeyWarn"), "err");
     return false;
   }
   slot.key = key;
@@ -1900,7 +2460,7 @@ async function loadLucideIndex() {
     return LUCIDE_INDEX;
   } catch (e) {
     LUCIDE_INDEX = BUILTIN_ICON_NAMES.slice();
-    toast("离线模式：仅显示常用图标", "ok");
+    toast(t("toastOfflineIcons"), "ok");
     return LUCIDE_INDEX;
   }
 }
@@ -1934,7 +2494,7 @@ async function searchIconifyIcons(query) {
   } catch (e) {
     if (!iconifySearchWarned) {
       iconifySearchWarned = true;
-      toast("Iconify 图标库加载失败，请检查网络", "err");
+      toast(t("toastIconifyFail"), "err");
     }
     return [];
   }
@@ -3545,7 +4105,7 @@ async function uploadIconForSlot(idx) {
       const file = input.files[0];
       if (!file) { resolve(false); return; }
       try {
-        const rgba = await openCropper(file, { size: 64, title: "裁剪图标 (1:1)" });
+        const rgba = await openCropper(file, { size: 64, title: t("cropIcon") });
         if (!rgba) { resolve(false); return; }
         const m = state.slotMeta[idx];
         m.iconRgba = rgba;
@@ -3556,10 +4116,10 @@ async function uploadIconForSlot(idx) {
         m.iconPreview = c.toDataURL();
         renderSlotThumb(idx);
         rerender();
-        toast("图标已上传", "ok");
+        toast(t("toastIconUploaded"), "ok");
         resolve(true);
       } catch (e) {
-        toast("处理图片失败", "err");
+        toast(t("toastImageFail"), "err");
         resolve(false);
       }
     };
@@ -3593,7 +4153,7 @@ async function renderSlotThumb(idx) {
 function renderSwapList() {
   const list = $("swapList");
   if (!state.swaps.length) {
-    list.innerHTML = '<div class="status">还没读到 [Key*]</div>';
+    list.innerHTML = `<div class="status">${t("swapListEmpty")}</div>`;
     return;
   }
   list.innerHTML = state.swaps.map((sw, i) => {
@@ -3607,13 +4167,13 @@ function renderSwapList() {
         <div class="swap-thumb" data-thumb="${i}"></div>
         <div class="swap-info">
           <input class="name" value="${escapeHtml(m.name)}" data-name="${i}">
-          <div class="meta">key: ${escapeHtml(sw.key || "无")} · ${escapeHtml(meta)}${nGroups > 1 ? ` · ${nGroups}组` : ""}</div>
+          <div class="meta">key: ${escapeHtml(sw.key || t("metaNoKey"))} · ${escapeHtml(meta)}${nGroups > 1 ? ` · ${escapeHtml(t("groupCount", { count: nGroups }))}` : ""}</div>
         </div>
         <div class="swap-actions">
-          <button class="icon-btn" data-act="picker" data-idx="${i}" title="从图标库选">${I_SVG.picker}</button>
-          <button class="icon-btn" data-act="upload" data-idx="${i}" title="上传图片">${I_SVG.upload}</button>
-          <button class="icon-btn" data-act="reset" data-idx="${i}" title="重置图标">${I_SVG.reset}</button>
-          <button class="icon-btn ${m.skip ? "active" : ""}" data-act="skip" data-idx="${i}" title="${m.skip ? "已跳过" : "跳过此项"}">${I_SVG.skip}</button>
+          <button class="icon-btn" data-act="picker" data-idx="${i}" title="${escapeHtml(t("actionPicker"))}">${I_SVG.picker}</button>
+          <button class="icon-btn" data-act="upload" data-idx="${i}" title="${escapeHtml(t("actionUpload"))}">${I_SVG.upload}</button>
+          <button class="icon-btn" data-act="reset" data-idx="${i}" title="${escapeHtml(t("actionReset"))}">${I_SVG.reset}</button>
+          <button class="icon-btn ${m.skip ? "active" : ""}" data-act="skip" data-idx="${i}" title="${escapeHtml(m.skip ? t("actionSkipped") : t("actionSkip"))}">${I_SVG.skip}</button>
         </div>
       </div>`;
   }).join("");
@@ -3737,7 +4297,7 @@ async function renderPreview() {
 function renderIniView() {
   if (!state.swaps.length) {
     $("viewIni").className = "ini-view ini-empty";
-    $("viewIni").innerHTML = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>选择 ini 后这里会显示生成结果</span>';
+    $("viewIni").innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>${t("noResultIni")}</span>`;
     return;
   }
   $("viewIni").className = "ini-view";
@@ -3763,13 +4323,13 @@ function updateStatus() {
   $("btnWriteFolder").disabled = !hasActive || !state.dirHandle || !state.targetDirHandle || !state.fileHandle;
   if (!total) {
     $("status").className = "status";
-    $("status").textContent = "等待 ini";
+    $("status").textContent = t("statusWaiting");
   } else if (!hasActive) {
     $("status").className = "status err";
-    $("status").textContent = `共 ${total} 个 key slot，但全部已跳过`;
+    $("status").textContent = t("statusAllSkipped", { total });
   } else {
     $("status").className = "status ok";
-    $("status").textContent = `共 ${total} 个 key slot，${active} 个活跃`;
+    $("status").textContent = t("statusActive", { total, active });
   }
 }
 
@@ -3794,13 +4354,13 @@ let hoverSlotIdx = -1;
 function hoverText(idx) {
   const m = state.slotMeta[idx];
   const sw = state.swaps[idx];
-  const aIcon = m.skip ? ' <span class="sv">(已跳过)</span>' : '';
+  const aIcon = m.skip ? ` <span class="sv">(${t("skippedTag")})</span>` : '';
   let html = `<div class="hover-name">${escapeHtml(m.name)}${aIcon}</div>`;
   html += '<table class="hover-table">';
   html += `<tr><td>Section</td><td><code>${escapeHtml(sw.sections.join(" + "))}</code></td></tr>`;
-  html += `<tr><td>Key</td><td>${escapeHtml(sw.key || "无")}</td></tr>`;
+  html += `<tr><td>Key</td><td>${escapeHtml(sw.key || t("metaNoKey"))}</td></tr>`;
   if (!sw.assignments.length && sw.commandLists.length) {
-    html += `<tr><td>类型</td><td>⟳ 执行命令</td></tr>`;
+    html += `<tr><td>${t("hoverType")}</td><td>${t("hoverRunCommand")}</td></tr>`;
     html += '</table>';
     html += '<div class="hover-vars">';
     for (const cmd of sw.commandLists) {
@@ -3873,7 +4433,7 @@ function restoreSwapOrder() {
 
 async function loadFile(file, opts = {}) {
   if (autoIconBusy) {
-    toast("正在匹配图标，稍后再加载文件", "err");
+    toast(t("toastAutoIconBusyLoad"), "err");
     return;
   }
   if ($("iconPicker").classList.contains("show")) closePicker();
@@ -3886,13 +4446,14 @@ async function loadFile(file, opts = {}) {
     $("folderIniRow").style.display = "none";
     $("folderIniSelect").innerHTML = "";
     $("folderScanStats").textContent = "";
+    setI18nDynamic("fileInfo", false);
   }
   if (opts.fileHandle) state.fileHandle = opts.fileHandle;
   state.fileName = file.name;
   try {
     state.text = await file.text();
   } catch (e) {
-    toast("读取文件失败", "err");
+    toast(t("toastReadFileFail"), "err");
     return;
   }
   state.sections = parseSections(state.text);
@@ -3913,7 +4474,7 @@ async function loadFile(file, opts = {}) {
     colsManual = true;
   }
 
-  $("fileInfo").textContent = `${file.name} · 找到 ${state.swaps.length} 个 key slot`;
+  setFileInfo("fileLoaded", { name: file.name, count: state.swaps.length });
   updateStatus();
 
   if (state.swaps.length) {
@@ -3980,7 +4541,7 @@ function renderPickerWordRow(words, activeWord = "") {
     return;
   }
   row.hidden = false;
-  row.innerHTML = '<span style="font-size:12px;color:var(--muted);align-self:center">按单词查找：</span>' + words.map(word =>
+  row.innerHTML = `<span style="font-size:12px;color:var(--muted);align-self:center">${t("pickerWordsLabel")}</span>` + words.map(word =>
     `<button class="picker-word ${word === activeWord ? "active" : ""}" data-word="${escapeHtml(word)}">${escapeHtml(word)}</button>`
   ).join("");
 }
@@ -3999,12 +4560,12 @@ async function openPicker(idx) {
   autoIconRequestSeq++;
   pickerRenderSeq++;
   renderPickerWordRow(collectIconBaseWords(state.slotMeta[idx], state.swaps[idx]));
-  $("pickerFor").textContent = "→ " + state.slotMeta[idx].name;
+  $("pickerFor").textContent = t("pickerFor", { name: state.slotMeta[idx].name });
   $("pickerTabs").hidden = false;
   $("pickerSearch").disabled = false;
   setPickerSource(state.slotMeta[idx].iconKind === "iconify" ? "iconify" : "lucide");
   $("pickerSearch").value = "";
-  $("pickerGrid").innerHTML = '<div class="modal-empty">图标库加载中…</div>';
+  $("pickerGrid").innerHTML = `<div class="modal-empty">${t("pickerLoading")}</div>`;
   $("iconPicker").classList.add("show");
   if (pickerSource === "lucide") await loadLucideIndex();
   if (pickerTarget !== idx || pickerMode !== "library") return;
@@ -4034,13 +4595,13 @@ async function openAutoIconCandidates(idx, targetWord = "") {
   pickerMode = "auto";
   pickerTarget = idx;
   autoIconWordTarget = targetWord;
-  $("pickerFor").textContent = "→ 自动匹配 " + state.slotMeta[idx].name;
+  $("pickerFor").textContent = t("pickerAutoFor", { name: state.slotMeta[idx].name });
   $("pickerTabs").hidden = true;
   $("pickerSearch").disabled = false;
   $("pickerSearch").value = targetWord;
   $("iconPicker").classList.add("show");
   const grid = $("pickerGrid");
-  grid.innerHTML = '<div class="modal-empty">正在从 Lucide 和 Iconify 匹配候选…</div>';
+  grid.innerHTML = `<div class="modal-empty">${t("pickerAutoLoading")}</div>`;
   const words = collectIconBaseWords(state.slotMeta[idx], state.swaps[idx]);
   renderPickerWordRow(words, targetWord);
   try {
@@ -4049,7 +4610,7 @@ async function openAutoIconCandidates(idx, targetWord = "") {
     const candidates = await findAutoIconCandidates(meta, swap);
     if (req !== autoIconRequestSeq || pickerTarget !== idx || pickerMode !== "auto" || autoIconWordTarget !== targetWord || currentSlotToken(idx) !== slotToken) return;
     if (!candidates.length) {
-      grid.innerHTML = '<div class="modal-empty">没有匹配到合适图标</div>';
+      grid.innerHTML = `<div class="modal-empty">${t("pickerNoAuto")}</div>`;
       return;
     }
     grid.innerHTML = candidates.map(icon =>
@@ -4074,15 +4635,15 @@ async function renderPickerGrid(query) {
 
   if (source === "iconify") {
     if (!query.trim()) {
-      grid.innerHTML = '<div class="modal-empty">输入关键词搜索 Iconify 图标</div>';
+      grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyEmpty")}</div>`;
       return;
     }
-    grid.innerHTML = '<div class="modal-empty">正在搜索 Iconify…</div>';
+    grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyLoading")}</div>`;
     names = await searchIconifyIcons(query);
     if (seq !== pickerRenderSeq) return;
   } else {
     if (!LUCIDE_INDEX || !LUCIDE_INDEX.length) {
-      grid.innerHTML = '<div class="modal-empty">图标库加载中…需要联网</div>';
+      grid.innerHTML = `<div class="modal-empty">${t("pickerLibraryLoading")}</div>`;
       return;
     }
     names = LUCIDE_INDEX;
@@ -4094,7 +4655,7 @@ async function renderPickerGrid(query) {
   }
 
   if (!names.length) {
-    grid.innerHTML = '<div class="modal-empty">无匹配</div>';
+    grid.innerHTML = `<div class="modal-empty">${t("pickerNoMatch")}</div>`;
     return;
   }
 
@@ -4156,6 +4717,27 @@ drop.addEventListener("drop", e => {
 });
 
 $("previewRes").addEventListener("change", () => { saveSettings(); rerender(); });
+let langRefreshSeq = 0;
+function scheduleLanguageRefresh() {
+  const seq = ++langRefreshSeq;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (seq !== langRefreshSeq) return;
+    applyI18n();
+    renderSwapList();
+    if (!state.swaps.length) renderIniView();
+    if (state.mergeMode) updateMergeConfirmText();
+    if (!$("paletteSection").hidden) renderPalettePresets();
+    if ($("draftHistory").classList.contains("show")) renderDraftHistory();
+    if (state.folderScanStats) renderFolderScanStats();
+    refreshOpenI18nSurfaces();
+  }));
+}
+$("langSelect").addEventListener("change", e => {
+  currentLang = e.target.value;
+  document.documentElement.lang = currentLang;
+  localStorage.setItem(LANG_KEY, currentLang);
+  scheduleLanguageRefresh();
+});
 window.addEventListener("resize", () => {
   if ($("previewRes").value !== "auto") return;
   updateAutoPreviewResLabel();
@@ -4182,13 +4764,13 @@ const PALETTE_DEFAULT = {
   disableTitleShadow: false,
 };
 const PALETTE_PRESETS = [
-  { name: "默认霓虹", values: PALETTE_DEFAULT },
-  { name: "月影紫", values: { bgColor: "#171126", bgAlpha: "222", accentColor: "#9f7aea", titleShadowColor: "#c084fc", hoverColor: "#7c3aed", slotColor: "#27213b", panelBorderColor: "#ded7ff", slotBorderColor: "#b7a8ff", previewBg: "#0b0712" } },
-  { name: "樱桃黑", values: { bgColor: "#260f19", bgAlpha: "224", accentColor: "#ff5f8f", titleShadowColor: "#ff9fbd", hoverColor: "#d81b60", slotColor: "#3b1d2b", panelBorderColor: "#ffd6e5", slotBorderColor: "#ff9fbd", previewBg: "#12070d" } },
-  { name: "青蓝夜", values: { bgColor: "#0b1d26", bgAlpha: "220", accentColor: "#38bdf8", titleShadowColor: "#67e8f9", hoverColor: "#0891b2", slotColor: "#17313d", panelBorderColor: "#b6f3ff", slotBorderColor: "#7dd3fc", previewBg: "#061018" } },
-  { name: "琥珀金", values: { bgColor: "#21170a", bgAlpha: "218", accentColor: "#f59e0b", titleShadowColor: "#facc15", hoverColor: "#b45309", slotColor: "#382a12", panelBorderColor: "#ffe8a3", slotBorderColor: "#fbbf24", previewBg: "#100a03" } },
-  { name: "薄荷绿", values: { bgColor: "#0c1f1a", bgAlpha: "216", accentColor: "#34d399", titleShadowColor: "#86efac", hoverColor: "#059669", slotColor: "#17362e", panelBorderColor: "#c7ffe4", slotBorderColor: "#6ee7b7", previewBg: "#06110e" } },
-  { name: "银白灰", values: { bgColor: "#1f2329", bgAlpha: "226", accentColor: "#cbd5e1", titleShadowColor: "#94a3b8", hoverColor: "#64748b", slotColor: "#2f3540", panelBorderColor: "#f8fafc", slotBorderColor: "#cbd5e1", previewBg: "#111317" } },
+  { nameKey: "palettePresetDefault", values: PALETTE_DEFAULT },
+  { nameKey: "palettePresetMoon", values: { bgColor: "#171126", bgAlpha: "222", accentColor: "#9f7aea", titleShadowColor: "#c084fc", hoverColor: "#7c3aed", slotColor: "#27213b", panelBorderColor: "#ded7ff", slotBorderColor: "#b7a8ff", previewBg: "#0b0712" } },
+  { nameKey: "palettePresetCherry", values: { bgColor: "#260f19", bgAlpha: "224", accentColor: "#ff5f8f", titleShadowColor: "#ff9fbd", hoverColor: "#d81b60", slotColor: "#3b1d2b", panelBorderColor: "#ffd6e5", slotBorderColor: "#ff9fbd", previewBg: "#12070d" } },
+  { nameKey: "palettePresetCyan", values: { bgColor: "#0b1d26", bgAlpha: "220", accentColor: "#38bdf8", titleShadowColor: "#67e8f9", hoverColor: "#0891b2", slotColor: "#17313d", panelBorderColor: "#b6f3ff", slotBorderColor: "#7dd3fc", previewBg: "#061018" } },
+  { nameKey: "palettePresetAmber", values: { bgColor: "#21170a", bgAlpha: "218", accentColor: "#f59e0b", titleShadowColor: "#facc15", hoverColor: "#b45309", slotColor: "#382a12", panelBorderColor: "#ffe8a3", slotBorderColor: "#fbbf24", previewBg: "#100a03" } },
+  { nameKey: "palettePresetMint", values: { bgColor: "#0c1f1a", bgAlpha: "216", accentColor: "#34d399", titleShadowColor: "#86efac", hoverColor: "#059669", slotColor: "#17362e", panelBorderColor: "#c7ffe4", slotBorderColor: "#6ee7b7", previewBg: "#06110e" } },
+  { nameKey: "palettePresetSilver", values: { bgColor: "#1f2329", bgAlpha: "226", accentColor: "#cbd5e1", titleShadowColor: "#94a3b8", hoverColor: "#64748b", slotColor: "#2f3540", panelBorderColor: "#f8fafc", slotBorderColor: "#cbd5e1", previewBg: "#111317" } },
 ];
 
 function applyPalette(values) {
@@ -4206,10 +4788,10 @@ function renderPalettePresets() {
   const el = $("palettePresets");
   el.innerHTML = PALETTE_PRESETS.map((preset, idx) => `
     <button class="palette-preset" data-preset="${idx}" style="--preset-a:${preset.values.accentColor};--preset-b:${preset.values.slotColor}">
-      <i></i>${escapeHtml(preset.name)}
+      <i></i>${escapeHtml(t(preset.nameKey))}
     </button>
   `).join("");
-  el.insertAdjacentHTML("beforeend", '<button class="palette-preset" id="btnPaletteReset" style="--preset-a:#ff4fb3;--preset-b:#3c3c46"><i></i>恢复默认</button>');
+  el.insertAdjacentHTML("beforeend", `<button class="palette-preset" id="btnPaletteReset" style="--preset-a:#ff4fb3;--preset-b:#3c3c46"><i></i>${t("restoreDefault")}</button>`);
 }
 
 $("btnColorMode").addEventListener("click", () => enterColorMode());
@@ -4218,7 +4800,7 @@ $("palettePresets").addEventListener("click", e => {
   const reset = e.target.closest("#btnPaletteReset");
   if (reset) {
     applyPalette(PALETTE_DEFAULT);
-    toast("已恢复默认配色", "ok");
+    toast(t("toastPaletteReset"), "ok");
     return;
   }
   const btn = e.target.closest("[data-preset]");
@@ -4226,7 +4808,7 @@ $("palettePresets").addEventListener("click", e => {
   const preset = PALETTE_PRESETS[Number(btn.dataset.preset)];
   if (!preset) return;
   applyPalette(preset.values);
-  toast(`已应用 ${preset.name}`, "ok");
+  toast(t("toastPaletteApplied", { name: t(preset.nameKey) }), "ok");
 });
 
 function enterColorMode() {
@@ -4261,22 +4843,22 @@ function applyPreviewBg() {
 
 async function pickModFolder() {
   if (!window.showDirectoryPicker) {
-    toast("当前浏览器不支持直接写入文件夹，请继续用 ZIP", "err");
+    toast(t("toastFolderUnsupported"), "err");
     return;
   }
   try {
     const dir = await openRememberedDirectoryPicker();
     state.dirHandle = dir;
     $("btnOpenFolder").dataset.folderName = dir.name || "MOD 文件夹";
-    $("btnOpenFolder").title = `上次选择：${$("btnOpenFolder").dataset.folderName}`;
+    $("btnOpenFolder").title = t("lastFolder", { name: $("btnOpenFolder").dataset.folderName });
     await dbPut(LAST_FOLDER_HANDLE_KEY, { handle: dir, name: dir.name || "MOD 文件夹" });
     saveSettings();
     state.targetDirHandle = null;
     state.fileHandle = null;
     await refreshFolderFileList();
-    if (state.folderFiles.length) toast($("scanTxtFiles").checked ? "已读取文件夹，请选择 ini / txt" : "已读取文件夹，请选择 ini", "ok");
+    if (state.folderFiles.length) toast($("scanTxtFiles").checked ? t("toastFolderReadIniTxt") : t("toastFolderReadIni"), "ok");
   } catch (e) {
-    if (e.name !== "AbortError") toast("选择文件夹失败", "err");
+    if (e.name !== "AbortError") toast(t("toastFolderChooseFail"), "err");
   }
 }
 
@@ -4308,16 +4890,15 @@ async function refreshFolderFileList() {
     state.targetDirHandle = null;
     $("folderIniRow").style.display = "grid";
     sel.innerHTML = "";
-    $("fileInfo").textContent = $("scanTxtFiles").checked
-      ? "已读取文件夹 · 没有找到 ini / txt"
-      : "已读取文件夹 · 没有找到 ini";
+    setFileInfo($("scanTxtFiles").checked ? "folderInfoEmptyIniTxt" : "folderInfoEmptyIni");
     renderFolderScanStats();
     updateStatus();
-    toast($("scanTxtFiles").checked ? "这个文件夹及子文件夹里没有 ini / txt" : "这个文件夹及子文件夹里没有 ini", "err");
+    toast($("scanTxtFiles").checked ? t("toastNoFolderFilesIniTxt") : t("toastNoFolderFilesIni"), "err");
     return;
   }
 
-  sel.innerHTML = `<option value="">请选择要处理的 ${$("scanTxtFiles").checked ? "ini / txt" : "ini"}</option>` + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
+  const fileType = $("scanTxtFiles").checked ? "ini / txt" : "ini";
+  sel.innerHTML = `<option value="">${escapeHtml(t("folderSelectPlaceholder", { type: fileType }))}</option>` + state.folderFiles.map((f, i) => `<option value="${i}">${escapeHtml(f.path)}</option>`).join("");
   $("folderIniRow").style.display = "grid";
   renderFolderScanStats();
 
@@ -4329,7 +4910,7 @@ async function refreshFolderFileList() {
     state.fileHandle = null;
     state.targetDirHandle = null;
     updateStatus();
-    $("fileInfo").textContent = `已读取文件夹 · 找到 ${state.folderFiles.length} 个 ${$("scanTxtFiles").checked ? "ini / txt" : "ini"}，请选择要处理的文件`;
+    setFileInfo("folderInfoChoose", { count: state.folderFiles.length, type: fileType });
   }
 }
 
@@ -4361,10 +4942,10 @@ async function scanFolderFiles(dirHandle, prefix, targetDirHandle) {
 function renderFolderScanStats() {
   const s = state.folderScanStats;
   if (!s) return;
-  const bits = [`目录 ${s.dirs}`, `文件 ${s.files}`, `ini ${s.ini}`, `txt ${s.txt}`, `显示 ${s.listed}`];
-  if (s.disabled) bits.push(`忽略 DISABLED ${s.disabled}`);
-  if (s.errors) bits.push(`读取失败 ${s.errors}`);
-  $("folderScanStats").textContent = "扫描统计：" + bits.join(" · ");
+  const bits = [t("folderStatDirs", { count: s.dirs }), t("folderStatFiles", { count: s.files }), `ini ${s.ini}`, `txt ${s.txt}`, t("folderStatListed", { count: s.listed })];
+  if (s.disabled) bits.push(t("folderStatDisabled", { count: s.disabled }));
+  if (s.errors) bits.push(t("folderStatErrors", { count: s.errors }));
+  $("folderScanStats").textContent = t("folderScanStats", { bits: bits.join(" · ") });
 }
 
 async function loadFolderFile(index) {
@@ -4373,7 +4954,7 @@ async function loadFolderFile(index) {
   const file = await item.handle.getFile();
   state.targetDirHandle = item.dirHandle;
   await loadFile(file, { keepFolder: true, fileHandle: item.handle });
-  $("fileInfo").textContent = `${item.path} · 找到 ${state.swaps.length} 个 key slot`;
+  setFileInfo("fileLoadedFolder", { path: item.path, count: state.swaps.length });
   updateStatus();
 }
 
@@ -4426,13 +5007,13 @@ function getOutputIniName() {
 async function writeGeneratedToFolder() {
   const targetDir = state.targetDirHandle || state.dirHandle;
   if (!state.dirHandle || !targetDir || !state.fileHandle) {
-    toast("请先选择文件夹里的 ini", "err");
+    toast(t("toastSelectFolderIni"), "err");
     return;
   }
   const btn = $("btnWriteFolder");
   const orig = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 写入中…';
+  btn.innerHTML = `<span class="spinner"></span> ${t("writing")}`;
   try {
     const perm = await state.dirHandle.requestPermission({ mode: "readwrite" });
     if (perm !== "granted") throw new Error("没有文件夹写入权限");
@@ -4451,7 +5032,7 @@ async function writeGeneratedToFolder() {
         outputName = getOutputIniName();
         const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
         const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
-        $("fileInfo").textContent = `${displayPath} · 找到 ${state.swaps.length} 个 key slot · 已将原 ini 改为 txt`;
+        setFileInfo("folderConvertedTxt", { path: displayPath, count: state.swaps.length });
         const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
         if (current) {
           current.name = txtName;
@@ -4462,7 +5043,7 @@ async function writeGeneratedToFolder() {
         const selected = sel.value;
         sel.options[selected].textContent = current?.path || txtName;
       } else {
-        $("fileInfo").textContent = `${sourceName} · 找到 ${state.swaps.length} 个 key slot · 已备份原 ini 为 txt`;
+        setFileInfo("folderBackedUpTxt", { path: sourceName, count: state.swaps.length });
       }
     }
 
@@ -4486,9 +5067,9 @@ async function writeGeneratedToFolder() {
 
     await Promise.all(writeTasks);
 
-    toast("已写入文件夹", "ok");
+    toast(t("toastFolderWritten"), "ok");
   } catch (e) {
-    toast("写入失败：" + (e.message || e.name || "未知错误"), "err");
+    toast(t("toastWriteFail", { message: e.message || e.name || t("unknown") }), "err");
   } finally {
     btn.innerHTML = orig;
     updateStatus();
@@ -4536,7 +5117,7 @@ $("paletteSection").addEventListener("mouseout", e => {
 $("btnClearDrafts").addEventListener("click", () => {
   localStorage.removeItem(DRAFT_KEY);
   dbClear();
-  toast("全部暂存已清除", "ok");
+  toast(t("toastDraftsCleared"), "ok");
 });
 
 // 历史暂存
@@ -4551,24 +5132,24 @@ function renderDraftHistory() {
     const raw = localStorage.getItem(DRAFT_KEY) || "[]";
     const drafts = JSON.parse(raw);
     if (!drafts.length) {
-      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">暂无暂存记录</div>';
+      el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted)">${t("draftNone")}</div>`;
       return;
     }
     // 倒序，最新的在前
     const items = [...drafts].reverse();
     let html = '<table style="width:100%;border-collapse:collapse;font-size:13px">';
-    html += '<thead><tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--muted);font-size:11px"><th style="padding:8px 16px">文件</th><th style="padding:8px 16px;width:140px">时间</th><th style="padding:8px 16px;width:90px"></th></tr></thead><tbody>';
+    html += `<thead><tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--muted);font-size:11px"><th style="padding:8px 16px">${t("draftFile")}</th><th style="padding:8px 16px;width:140px">${t("draftTime")}</th><th style="padding:8px 16px;width:90px"></th></tr></thead><tbody>`;
     for (const d of items) {
       html += `<tr style="border-bottom:1px solid var(--line-2)">
-        <td style="padding:10px 16px">${escapeHtml(d.n || "(未知)")}</td>
+        <td style="padding:10px 16px">${escapeHtml(d.n || `(${t("unknown")})`)}</td>
         <td style="padding:10px 16px;color:var(--muted);white-space:nowrap">${fmtTime(d.t)}</td>
-        <td style="padding:10px 16px;white-space:nowrap"><button data-restore="${escapeHtml(d.h)}" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-right:8px">恢复</button><button data-del="${escapeHtml(d.h)}" style="font-size:11px;color:var(--hot);background:none;border:none;cursor:pointer">删除</button></td>
+        <td style="padding:10px 16px;white-space:nowrap"><button data-restore="${escapeHtml(d.h)}" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-right:8px">${t("restore")}</button><button data-del="${escapeHtml(d.h)}" style="font-size:11px;color:var(--hot);background:none;border:none;cursor:pointer">${t("delete")}</button></td>
       </tr>`;
     }
     html += '</tbody></table>';
     el.innerHTML = html;
   } catch (e) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--hot)">读取失败</div>';
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--hot)">${t("draftReadFail")}</div>`;
   }
 }
 
@@ -4596,7 +5177,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
       dbDel(h);
       renderDraftHistory();
-      toast("已删除", "ok");
+      toast(t("toastDeleted"), "ok");
     } catch (e) { /* ignore */ }
     return;
   }
@@ -4607,12 +5188,12 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       const raw = localStorage.getItem(DRAFT_KEY) || "[]";
       const drafts = JSON.parse(raw);
       const d = drafts.find(d => d.h === h);
-      if (!d) { toast("草稿不存在", "err"); return; }
+      if (!d) { toast(t("toastDraftMissing"), "err"); return; }
       // 如果当前有打开文件，先保存
       if (state.swaps.length) await saveDraft();
       // 从 IndexedDB 读取 INI 原文和大图
       const blob = await dbGet(h);
-      if (!blob?.text) { toast("草稿数据不完整", "err"); return; }
+      if (!blob?.text) { toast(t("toastDraftIncomplete"), "err"); return; }
       // 用存储的 INI 文本重建全部状态
       state.text = blob.text;
       state.fileName = d.n || "";
@@ -4668,14 +5249,14 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       $("draftHistory").classList.remove("show");
       $("title").dataset.touched = "1";
       colsManual = true;
-      $("fileInfo").textContent = `${d.n || "草稿"} · 找到 ${state.swaps.length} 个 key slot`;
+      setFileInfo("fileLoadedDraft", { name: d.n || t("draftHistory"), count: state.swaps.length });
       updateStatus();
       renderSwapList();
       applyPreviewBg();
       rerender();
       await saveDraft();
-      toast("已恢复暂存", "ok");
-    } catch (e) { toast("恢复失败", "err"); }
+      toast(t("toastDraftRestoredShort"), "ok");
+    } catch (e) { toast(t("toastDraftRestoreFail"), "err"); }
   }
 });
 
@@ -4688,7 +5269,7 @@ $("btnPanelImage").addEventListener("click", () => {
     const file = input.files[0];
     if (!file) return;
     try {
-      const rgba = await openCropper(file, { size: 256, title: "裁剪面板背景 (1:1)" });
+      const rgba = await openCropper(file, { size: 256, title: t("cropPanelBg") });
       if (!rgba) return;
       state.panelImageRgba = rgba;
       const c = document.createElement("canvas");
@@ -4699,9 +5280,9 @@ $("btnPanelImage").addEventListener("click", () => {
       $("panelImageThumb").classList.add("show");
       $("btnClearPanelImage").style.display = "";
       rerender();
-      toast("面板背景图已更新", "ok");
+      toast(t("toastPanelImageUpdated"), "ok");
     } catch (e) {
-      toast("处理图片失败", "err");
+      toast(t("toastImageFail"), "err");
     }
   };
   input.click();
@@ -4714,7 +5295,7 @@ $("btnClearPanelImage").addEventListener("click", () => {
   $("panelImageThumb").removeAttribute("src");
   $("btnClearPanelImage").style.display = "none";
   rerender();
-  toast("面板背景图已清除", "ok");
+  toast(t("toastPanelImageCleared"), "ok");
 });
 // 初始状态：清除按钮隐藏
 $("btnClearPanelImage").style.display = "none";
@@ -4857,7 +5438,7 @@ function panelReorder(fromIdx, tgtIdx) {
       if (active) $("cols").value = autoCols(active);
     }
     rerender();
-    toast("已跳过按钮", "ok");
+    toast(t("toastSlotSkipped"), "ok");
   });
 
   g.addEventListener("dragend", () => {
@@ -4877,7 +5458,8 @@ function enterSelectMode(action) {
   $("mergeFab").classList.add("active");
   $("fabActions").classList.remove("show");
   $("mergeBar").hidden = false;
-  $("mergeConfirm").textContent = action === "merge" ? "确认合并" : action === "skip" ? "确认跳过" : action === "autoIconSelected" ? "确认匹配" : "确认重置";
+  setI18nDynamic("mergeConfirm", true);
+  updateMergeConfirmText();
   $("guiGrid").classList.add("merge-mode-on");
   rerender();
 }
@@ -4888,6 +5470,8 @@ function exitSelectMode() {
   $("mergeFab").classList.remove("active");
   $("fabActions").classList.remove("show");
   $("mergeBar").hidden = true;
+  setI18nDynamic("mergeConfirm", false);
+  $("mergeConfirm").textContent = t("confirm");
   $("guiGrid").classList.remove("merge-mode-on");
   rerender();
 }
@@ -4899,13 +5483,13 @@ async function doSelectConfirm() {
     const cb = document.querySelector(`[data-mcheck="${i}"]`);
     if (cb && cb.checked) selected.push(i);
   });
-  if (!selected.length) { toast("至少选 1 个", "ok"); return; }
+  if (!selected.length) { toast(t("toastSelectOne"), "ok"); return; }
 
   switch (state.fabAction) {
     case "merge": {
-      if (selected.length < 2) { toast("至少选 2 个才能合并", "ok"); return; }
+      if (selected.length < 2) { toast(t("toastSelectTwoMerge"), "ok"); return; }
       const first = state.swaps[selected[0]];
-      if (!selected.every(i => state.swaps[i].key === first.key)) { toast("严格模式只能合并同一个 key", "err"); return; }
+      if (!selected.every(i => state.swaps[i].key === first.key)) { toast(t("toastStrictMergeKey"), "err"); return; }
       const allAssignments = selected.flatMap(i => state.swaps[i].assignments);
       const allEntries = selected.flatMap(i => state.swaps[i].entries || []);
       const allRawEntries = selected.flatMap(i => state.swaps[i].rawEntries || []);
@@ -4933,7 +5517,7 @@ async function doSelectConfirm() {
       meta.name = selected.length + " 合1";
       state.slotMeta.splice(insertAt, 0, meta);
       state.swapOrder = state.swaps.map(swapSign);
-      toast(`已合并 ${selected.length} 个按钮`, "ok");
+      toast(t("toastMerged", { count: selected.length }), "ok");
       if (!colsManual) {
         const active = state.swaps.filter((_, i) => !state.slotMeta[i].skip).length;
         if (active) $("cols").value = autoCols(active);
@@ -4946,7 +5530,7 @@ async function doSelectConfirm() {
         const active = state.swaps.filter((_, i) => !state.slotMeta[i].skip).length;
         if (active) $("cols").value = autoCols(active);
       }
-      toast(`已切换 ${selected.length} 个按钮状态`, "ok");
+      toast(t("toastToggled", { count: selected.length }), "ok");
       break;
     case "reset":
       for (const i of selected) {
@@ -4957,7 +5541,7 @@ async function doSelectConfirm() {
         state.slotMeta[i].iconRgba = null;
         state.slotMeta[i].iconPreview = null;
       }
-      toast(`已重置 ${selected.length} 个图标`, "ok");
+      toast(t("toastResetIcons", { count: selected.length }), "ok");
       break;
     case "autoIconSelected": {
       if (autoIconBusy) return;
@@ -4968,7 +5552,7 @@ async function doSelectConfirm() {
       let skippedUpload = 0;
       let cancelled = false;
       try {
-        toast("正在匹配选中按钮图标…", "ok");
+        toast(t("toastMatchingSelected"), "ok");
         for (const i of selected) {
           if (currentStateToken() !== stateToken) { cancelled = true; break; }
           const m = state.slotMeta[i];
@@ -4990,10 +5574,10 @@ async function doSelectConfirm() {
         setAutoIconBusy(false);
       }
       if (cancelled) {
-        toast("文件已变化，已停止匹配", "err");
+        toast(t("toastMatchStopped"), "err");
         break;
       }
-      toast(matched ? `已匹配 ${matched} 个图标${skippedUpload ? `，跳过 ${skippedUpload} 个上传图标` : ""}` : (skippedUpload ? "选中项都是上传图标，已跳过" : "没有匹配到合适图标"), matched ? "ok" : "err");
+      toast(matched ? t("toastMatchedIcons", { count: matched, skipped: skippedUpload ? t("toastSkippedUploads", { count: skippedUpload }) : "" }) : (skippedUpload ? t("toastSelectedAllUploads") : t("toastNoIconMatch")), matched ? "ok" : "err");
       break;
     }
   }
@@ -5005,7 +5589,7 @@ async function autoMatchAllIcons() {
   if (autoIconBusy) return;
   const active = state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
   if (!active.length) {
-    toast("没有可匹配的按钮", "err");
+    toast(t("toastNoMatchableButtons"), "err");
     return;
   }
   const stateToken = currentStateToken();
@@ -5015,7 +5599,7 @@ async function autoMatchAllIcons() {
   let skippedUpload = 0;
   let cancelled = false;
   try {
-    toast("正在批量自动匹配图标…", "ok");
+    toast(t("toastMatchingAll"), "ok");
     for (const i of active) {
       if (currentStateToken() !== stateToken) { cancelled = true; break; }
       const m = state.slotMeta[i];
@@ -5037,12 +5621,12 @@ async function autoMatchAllIcons() {
     setAutoIconBusy(false);
   }
   if (cancelled) {
-    toast("文件已变化，已停止匹配", "err");
+    toast(t("toastMatchStopped"), "err");
     return;
   }
   renderSwapList();
   rerender();
-  toast(matched ? `已匹配 ${matched} 个图标${skippedUpload ? `，跳过 ${skippedUpload} 个上传图标` : ""}` : (skippedUpload ? "全部都是上传图标，已跳过" : "没有匹配到合适图标"), matched ? "ok" : "err");
+  toast(matched ? t("toastMatchedIcons", { count: matched, skipped: skippedUpload ? t("toastSkippedUploads", { count: skippedUpload }) : "" }) : (skippedUpload ? t("toastAllUploads") : t("toastNoIconMatch")), matched ? "ok" : "err");
 }
 
 // FAB 点击 → 展开/收起子按钮
@@ -5114,7 +5698,7 @@ $("guiGrid").addEventListener("contextmenu", e => {
   menu.querySelector("[data-ctx='split']").style.display = "none";
   // 更新跳过按钮文字
   const skipBtn = menu.querySelector("[data-ctx='skip']");
-  skipBtn.textContent = m.skip ? "取消跳过" : "跳过此项";
+  skipBtn.textContent = m.skip ? t("ctxUnskip") : t("ctxSkipThis");
   // 定位
   let x = e.clientX, y = e.clientY;
   const rect = menu.getBoundingClientRect();
@@ -5133,7 +5717,7 @@ $("ctxMenu").addEventListener("click", async e => {
   const m = state.slotMeta[idx];
   switch (btn.dataset.ctx) {
     case "rename": {
-      const name = prompt("按钮名称", m.name);
+      const name = prompt(t("promptButtonName"), m.name);
       if (name !== null && name.trim()) {
         m.name = name.trim();
         renderSwapList();
@@ -5143,7 +5727,7 @@ $("ctxMenu").addEventListener("click", async e => {
     }
     case "key": {
       const sw = state.swaps[idx];
-      const k = prompt("绑定按键", sw.key);
+      const k = prompt(t("promptBindKey"), sw.key);
       if (k !== null) {
         if (setKeySlotKey(sw, k.trim())) {
           state.swapOrder = state.swaps.map(swapSign);
@@ -5154,7 +5738,7 @@ $("ctxMenu").addEventListener("click", async e => {
       break;
     }
     case "split": {
-      toast("严格模式下同 key handler 不能拆分", "err");
+      toast(t("toastStrictSplit"), "err");
       break;
     }
     case "skip":
@@ -5249,7 +5833,7 @@ $("btnZip").addEventListener("click", async () => {
   const btn = $("btnZip");
   const orig = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 生成中…';
+  btn.innerHTML = `<span class="spinner"></span> ${t("generating")}`;
   try {
     const ini = buildIni();
     const base = fileNameOnly(state.fileName).replace(/\.[^.]+$/, "") || "mod";
@@ -5257,10 +5841,10 @@ $("btnZip").addEventListener("click", async () => {
     files.push(...await buildResources());
     const blob = makeZip(files);
     downloadBlob(blob, base + ".gui.zip");
-    toast("ZIP 已生成", "ok");
+    toast(t("toastZipCreated"), "ok");
   } catch (e) {
     console.error(e);
-    toast("生成失败：" + e.message, "err");
+    toast(t("toastBuildFail", { message: e.message }), "err");
   } finally {
     btn.innerHTML = orig;
     btn.disabled = false;
@@ -5269,7 +5853,7 @@ $("btnZip").addEventListener("click", async () => {
 
 // 启动
 loadSettings();
-updateAutoPreviewResLabel();
+applyI18n();
 applyPreviewBg();
 renderPreview();
 renderIniView();
