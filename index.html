@@ -640,30 +640,52 @@
     overflow: auto;
     padding: 12px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
     gap: 8px;
     align-content: start;
   }
   .modal-icon {
-    aspect-ratio: 1;
+    min-height: 92px;
     border: 1px solid var(--line-2);
     border-radius: 8px;
     display: grid;
+    grid-template-rows: 1fr auto;
     place-items: center;
+    gap: 5px;
     cursor: pointer;
     background: var(--bg-2);
     color: var(--text);
     transition: 80ms;
-    padding: 0;
+    padding: 8px 5px 6px;
+    min-width: 0;
   }
   .modal-icon:hover { border-color: var(--hot); color: var(--hot); transform: scale(1.05); }
   .modal-icon svg { width: 26px; height: 26px; }
+  .modal-icon-visual { display: grid; place-items: center; min-height: 34px; }
+  .modal-icon-label { width: 100%; min-width: 0; display: grid; gap: 1px; line-height: 1.15; color: var(--muted); text-align: center; }
+  .modal-icon-pack { font-size: 10px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-icon-name { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-icon:hover .modal-icon-label,
+  .modal-icon:hover .modal-icon-pack { color: var(--hot); }
   .modal-empty {
     grid-column: 1 / -1;
     padding: 30px;
     color: var(--muted);
     text-align: center;
   }
+  .force-merge-card {
+    width: min(520px, 92vw);
+    background: var(--card);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .force-merge-body { padding: 16px; display: grid; gap: 12px; }
+  .force-merge-desc { color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .force-merge-keys { font-size: 12px; color: var(--text); padding: 8px 10px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; word-break: break-all; }
+  .force-merge-actions { display: grid; gap: 8px; }
+  .force-merge-actions .btn { justify-content: center; }
 
   /* ---------- panel image ---------- */
   .panel-img-row { margin-top: 10px; display: grid; gap: 6px; }
@@ -1129,7 +1151,7 @@
       </div>
       <div id="status" class="status" style="margin-top:10px" data-i18n="statusWaiting">等待 ini</div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
-        <span data-i18n="author">作者</span> <a href="https://github.com/XingNian-www" target="_blank" style="color:var(--muted)">星念</a> · <span data-i18n="createdWith">创作工具</span> <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" style="color:var(--muted)">OpenCodeUI</a> · <span data-i18n="thanks">致谢</span> <a href="https://github.com/lehhair" target="_blank" style="color:var(--muted)">lehhair</a>
+        <span data-i18n="author">作者</span> <a href="https://github.com/XingNian-www" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">星念</a> · <span data-i18n="createdWith">创作工具</span> <a href="https://github.com/lehhair/OpenCodeUI" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">OpenCodeUI</a> · <span data-i18n="thanks">致谢</span> <a href="https://github.com/lehhair" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">lehhair</a>
       </div>
     </div>
   </div>
@@ -1278,6 +1300,27 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 不同 Key 强制合并确认 -->
+<div class="modal" id="forceMergeModal">
+  <div class="force-merge-card">
+    <div class="modal-head">
+      <strong data-i18n="forceMergeTitle">强制合并不同 Key？</strong>
+      <button class="icon-btn" id="forceMergeCancelTop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="force-merge-body">
+      <div class="force-merge-desc" data-i18n="forceMergeDesc">选中的按钮绑定了不同 Key。请选择合并后原按键如何处理：</div>
+      <div class="force-merge-keys" id="forceMergeKeys"></div>
+      <div class="force-merge-actions">
+        <button class="btn" id="forceMergeAllKeys" data-i18n="forceMergeAllKeys">所有 Key 等效于按一次 GUI 按钮</button>
+        <button class="btn ghost" id="forceMergeGuiOnly" data-i18n="forceMergeGuiOnly">Key 保持原逻辑，仅 GUI 点一下执行全部</button>
+        <button class="btn ghost" id="forceMergeCancel" data-i18n="cancel">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 右键菜单 -->
 <div class="ctx-menu" id="ctxMenu" hidden>
@@ -1531,6 +1574,10 @@ const I18N = {
     ctxSkipThis: "跳过此项",
     promptButtonName: "按钮名称",
     promptBindKey: "绑定按键",
+    forceMergeTitle: "强制合并不同 Key？",
+    forceMergeDesc: "选中的按钮绑定了不同 Key。请选择合并后原按键如何处理：",
+    forceMergeAllKeys: "所有 Key 等效于按一次 GUI 按钮",
+    forceMergeGuiOnly: "Key 保持原逻辑，仅 GUI 点一下执行全部",
     preDownloadHint: "搜索需要联网",
     preDownloadLink: "预下载图标库到本地",
     iconDownloadTitle: "预下载图标库",
@@ -1786,6 +1833,10 @@ const I18N = {
     ctxSkipThis: "Skip this item",
     promptButtonName: "Button name",
     promptBindKey: "Bind key",
+    forceMergeTitle: "Force merge different keys?",
+    forceMergeDesc: "Selected buttons use different keys. Choose how original keys should behave after merging:",
+    forceMergeAllKeys: "All keys act like one GUI click",
+    forceMergeGuiOnly: "Keep key logic; GUI click runs all",
     preDownloadHint: "Search requires network",
     preDownloadLink: "Pre-download icon library",
     iconDownloadTitle: "Pre-download Icons",
@@ -2365,6 +2416,16 @@ function parseKeyValue(raw) {
   return value.replace(/\s+;.*/, "").trim();
 }
 
+function normalizeKeyForMatch(key) {
+  return String(key || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\bno_modifiers\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function parseSections(text) {
   const out = [];
   let name = null, lines = [];
@@ -2460,7 +2521,8 @@ function buildKeySlots(handlers) {
   const groups = new Map();
   for (const handler of handlers) {
     for (const key of handler.keys || [handler.key]) {
-      const groupKey = key ? `key\x00${key}` : `section\x00${handler.section}`;
+      const matchKey = normalizeKeyForMatch(key);
+      const groupKey = matchKey ? `key\x00${matchKey}` : `section\x00${handler.section}`;
       if (!groups.has(groupKey)) groups.set(groupKey, { key, handlers: [] });
       groups.get(groupKey).handlers.push(handler);
     }
@@ -2660,6 +2722,7 @@ function splitIconWords(text) {
     .toLowerCase()
     .split(/\s+/)
     .map(w => w.trim())
+    .map(w => w.replace(/\d+$/g, ""))
     .filter(w => w.length >= 2 && !/^\d+$/.test(w) && !ICON_STOP_WORDS.has(w));
 }
 
@@ -4682,8 +4745,8 @@ async function renderPreview() {
   const [hr, hg, hb] = hexToRgb($("hoverColor").value);
   panel.style.setProperty("--slot-rgba", `rgba(${sr}, ${sg2}, ${sb2}, .78)`);
   panel.style.setProperty("--slot-hover-rgba", `rgba(${hr}, ${hg}, ${hb}, .9)`);
-  panel.style.setProperty("--panel-border", $("panelBorderColor").value);
-  panel.style.setProperty("--slot-border", $("slotBorderColor").value);
+  panel.style.setProperty("--panel-border-c", $("panelBorderColor").value);
+  panel.style.setProperty("--slot-border-c", $("slotBorderColor").value);
   if (state.panelImagePreview) {
     panel.style.background = `url(${state.panelImagePreview}) center/cover`;
   } else {
@@ -5026,6 +5089,20 @@ function setPickerViewMode(mode) {
   });
 }
 
+function pickerIconLabel(name, source) {
+  if (source === "lucide") return { pack: "Lucide", icon: name };
+  const parts = String(name || "").split(":");
+  return { pack: parts[0] || "Iconify", icon: parts.slice(1).join(":") || name };
+}
+
+function pickerIconButtonHtml(name, source) {
+  const label = pickerIconLabel(name, source);
+  return `<button class="modal-icon" data-pick="${escapeHtml(name)}" data-source="${escapeHtml(source)}" title="${escapeHtml(label.pack + ': ' + label.icon)}">
+    <span class="modal-icon-visual"></span>
+    <span class="modal-icon-label"><span class="modal-icon-pack">${escapeHtml(label.pack)}</span><span class="modal-icon-name">${escapeHtml(label.icon)}</span></span>
+  </button>`;
+}
+
 async function openPicker(idx) {
   pickerMode = "library";
   pickerTarget = idx;
@@ -5084,12 +5161,13 @@ async function openAutoIconCandidates(idx, targetWord = null) {
       grid.innerHTML = `<div class="modal-empty">${t("pickerNoAuto")}</div>`;
       return;
     }
-    grid.innerHTML = candidates.map(icon =>
-      `<button class="modal-icon" data-pick="${escapeHtml(icon.name)}" data-source="${icon.source}" title="${escapeHtml(icon.source + ': ' + icon.name)}"></button>`
-    ).join("");
+    grid.innerHTML = candidates.map(icon => pickerIconButtonHtml(icon.name, icon.source)).join("");
     for (const btn of grid.querySelectorAll("[data-pick]")) {
       const name = btn.dataset.pick;
-      loadIconifySvg(name).then(svg => { if (svg && req === autoIconRequestSeq && pickerMode === "auto" && btn.isConnected) btn.innerHTML = svg; });
+      loadIconifySvg(name).then(svg => {
+        const visual = btn.querySelector(".modal-icon-visual");
+        if (svg && visual && req === autoIconRequestSeq && pickerMode === "auto" && btn.isConnected) visual.innerHTML = svg;
+      });
     }
   } finally {
     if (req === autoIconRequestSeq) setAutoIconBusy(false);
@@ -5119,13 +5197,11 @@ async function renderPickerGrid(query) {
           grouped.push(`<div class="icon-group">${escapeHtml(prefix)}</div>`);
           lastPrefix = prefix;
         }
-        grouped.push(`<button class="modal-icon" data-pick="${escapeHtml(item.name)}" data-source="${item.source}" title="${escapeHtml(item.source + ': ' + item.name)}"></button>`);
+        grouped.push(pickerIconButtonHtml(item.name, item.source));
       }
       grid.innerHTML = grouped.join("");
     } else {
-      grid.innerHTML = items.map(item =>
-        `<button class="modal-icon" data-pick="${escapeHtml(item.name)}" data-source="${item.source}" title="${escapeHtml(item.source + ': ' + item.name)}"></button>`
-      ).join("");
+      grid.innerHTML = items.map(item => pickerIconButtonHtml(item.name, item.source)).join("");
     }
 
     const buttons = grid.querySelectorAll("[data-pick]");
@@ -5134,7 +5210,8 @@ async function renderPickerGrid(query) {
       const source = btn.dataset.source;
       const load = source === "iconify" ? loadIconifySvg(name) : loadLucideSvg(name);
       load.then(svg => {
-        if (svg && seq === pickerRenderSeq && btn.isConnected) btn.innerHTML = svg;
+        const visual = btn.querySelector(".modal-icon-visual");
+        if (svg && visual && seq === pickerRenderSeq && btn.isConnected) visual.innerHTML = svg;
       });
     }
   };
@@ -5549,7 +5626,6 @@ drop.addEventListener("drop", e => {
 ["removeKeys", "showKeyHint", "hideUploadLabel", "useOriginalIniName", "resetActiveOnPresent", "disableTitleShadow"].forEach(id => {
   $(id).addEventListener("change", () => { rerender(); });
 });
-
 $("previewRes").addEventListener("change", () => { saveSettings(); rerender(); });
 let langRefreshSeq = 0;
 function scheduleLanguageRefresh() {
@@ -5854,28 +5930,18 @@ async function writeGeneratedToFolder() {
 
     const sourceName = fileNameOnly(state.fileName);
     let outputName = getOutputIniName();
+    let convertedTxt = null;
     if (/\.ini$/i.test(sourceName)) {
       const txtName = sourceName.replace(/\.ini$/i, ".txt");
       const txtHandle = await getBackupFileHandle(targetDir, txtName);
       await writeFileHandle(txtHandle, new Blob([state.text], { type: "text/plain;charset=utf-8" }));
 
       if (!$("useOriginalIniName").checked) {
-        await targetDir.removeEntry(sourceName);
-        state.fileName = txtName;
-        state.fileHandle = txtHandle;
-        outputName = getOutputIniName();
         const selectedItem = state.folderFiles[Number($("folderIniSelect").value)];
         const displayPath = selectedItem ? selectedItem.path.replace(/\.ini$/i, ".txt") : txtName;
-        setFileInfo("folderConvertedTxt", { path: displayPath, count: state.swaps.length });
         const current = selectedItem || state.folderFiles.find(f => f.name.replace(/\.ini$/i, ".txt") === txtName);
-        if (current) {
-          current.name = txtName;
-          current.path = current.path.replace(/\.ini$/i, ".txt");
-          current.handle = txtHandle;
-        }
-        const sel = $("folderIniSelect");
-        const selected = sel.value;
-        sel.options[selected].textContent = current?.path || txtName;
+        outputName = `${(txtName.replace(/\.[^.]+$/, "") || "mod")}_gui.ini`;
+        convertedTxt = { txtName, txtHandle, displayPath, current };
       } else {
         setFileInfo("folderBackedUpTxt", { path: sourceName, count: state.swaps.length });
       }
@@ -5900,6 +5966,21 @@ async function writeGeneratedToFolder() {
     })());
 
     await Promise.all(writeTasks);
+
+    if (convertedTxt) {
+      await targetDir.removeEntry(sourceName);
+      state.fileName = convertedTxt.txtName;
+      state.fileHandle = convertedTxt.txtHandle;
+      setFileInfo("folderConvertedTxt", { path: convertedTxt.displayPath, count: state.swaps.length });
+      if (convertedTxt.current) {
+        convertedTxt.current.name = convertedTxt.txtName;
+        convertedTxt.current.path = convertedTxt.current.path.replace(/\.ini$/i, ".txt");
+        convertedTxt.current.handle = convertedTxt.txtHandle;
+      }
+      const sel = $("folderIniSelect");
+      const selected = sel.value;
+      if (sel.options[selected]) sel.options[selected].textContent = convertedTxt.current?.path || convertedTxt.txtName;
+    }
 
     toast(t("toastFolderWritten"), "ok");
   } catch (e) {
@@ -6310,6 +6391,40 @@ function exitSelectMode() {
   rerender();
 }
 
+let forceMergeResolve = null;
+
+function uniqueDisplayKeys(swaps) {
+  const seen = new Set();
+  const keys = [];
+  for (const sw of swaps) {
+    const key = String(sw?.key || "").trim();
+    if (!key) continue;
+    const lower = key.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    keys.push(key);
+  }
+  return keys;
+}
+
+function askForceMergeMode(keys) {
+  return new Promise(resolve => {
+    forceMergeResolve = resolve;
+    $("forceMergeKeys").textContent = keys.join(" / ");
+    $("forceMergeModal").classList.add("show");
+  });
+}
+
+function closeForceMergeModal(mode = "") {
+  $("forceMergeModal").classList.remove("show");
+  if (forceMergeResolve) forceMergeResolve(mode);
+  forceMergeResolve = null;
+}
+
+function cloneHandlerWithKeys(handler, keys) {
+  return { ...handler, key: keys[0] || handler.key || "", keys: keys.length ? keys.slice() : (handler.keys || [handler.key]) };
+}
+
 async function doSelectConfirm() {
   const selected = [];
   state.swaps.forEach((_, i) => {
@@ -6323,18 +6438,26 @@ async function doSelectConfirm() {
     case "merge": {
       if (selected.length < 2) { toast(t("toastSelectTwoMerge"), "ok"); return; }
       const first = state.swaps[selected[0]];
-      if (!selected.every(i => state.swaps[i].key === first.key)) { toast(t("toastStrictMergeKey"), "err"); return; }
+      const firstKey = normalizeKeyForMatch(first.key);
+      const sameKey = selected.every(i => normalizeKeyForMatch(state.swaps[i].key) === firstKey);
+      const mergedKeys = uniqueDisplayKeys(selected.map(i => state.swaps[i]));
+      let forceMode = "";
+      if (!sameKey) {
+        forceMode = await askForceMergeMode(mergedKeys);
+        if (!forceMode) return;
+      }
       const allAssignments = selected.flatMap(i => state.swaps[i].assignments);
       const allEntries = selected.flatMap(i => state.swaps[i].entries || []);
       const allRawEntries = selected.flatMap(i => state.swaps[i].rawEntries || []);
       const allCommandLists = selected.flatMap(i => state.swaps[i].commandLists || []);
       const allHandlers = selected.flatMap(i => state.swaps[i].handlers || []);
+      const mergedHandlers = forceMode === "allKeys" ? allHandlers.map(handler => cloneHandlerWithKeys(handler, mergedKeys)) : allHandlers;
       const types = [...new Set(allHandlers.map(handler => handler.type || "").filter(Boolean))];
       const merged = {
         keySlot: true,
-        handlers: allHandlers,
+        handlers: mergedHandlers,
         sections: selected.flatMap(i => state.swaps[i].sections),
-        key: first.key, condition: first.condition,
+        key: sameKey ? first.key : mergedKeys.join(" / "), condition: sameKey ? first.condition : "",
         type: types.length === 1 ? types[0] : (types.length ? "mixed" : ""),
         assignments: allAssignments,
         steps: allAssignments.length ? Math.max(...allAssignments.map(a => a.values.length)) : 0,
@@ -6343,16 +6466,16 @@ async function doSelectConfirm() {
         rawEntries: allRawEntries,
         entries: allEntries,
       };
+      const inheritedIcon = selected
+        .map(i => state.slotMeta[i])
+        .filter(m => m && m.iconKind !== "upload" && m.iconName)
+        .sort((a, b) => iconPrefixRank(a.iconKind === "iconify" ? a.iconName : "lucide:" + a.iconName) - iconPrefixRank(b.iconKind === "iconify" ? b.iconName : "lucide:" + b.iconName))[0];
       selected.sort((a, b) => b - a);
       for (const i of selected) { state.swaps.splice(i, 1); state.slotMeta.splice(i, 1); }
       const insertAt = selected[selected.length - 1];
       state.swaps.splice(insertAt, 0, merged);
       const meta = newSlotMeta(merged);
       meta.name = selected.length + " 合1";
-      const inheritedIcon = selected
-        .map(i => state.slotMeta[i])
-        .filter(m => m && m.iconKind !== "upload" && m.iconName)
-        .sort((a, b) => iconPrefixRank(a.iconKind === "iconify" ? a.iconName : "lucide:" + a.iconName) - iconPrefixRank(b.iconKind === "iconify" ? b.iconName : "lucide:" + b.iconName))[0];
       if (inheritedIcon) {
         meta.iconKind = inheritedIcon.iconKind;
         meta.iconName = inheritedIcon.iconName;
@@ -6690,6 +6813,14 @@ $("dlCollections").addEventListener("click", async e => {
 });
 $("dlClearCache").addEventListener("click", async () => {
   if (confirm(t("confirmClearIconCache"))) await clearIconCache();
+});
+
+$("forceMergeAllKeys").addEventListener("click", () => closeForceMergeModal("allKeys"));
+$("forceMergeGuiOnly").addEventListener("click", () => closeForceMergeModal("guiOnly"));
+$("forceMergeCancel").addEventListener("click", () => closeForceMergeModal(""));
+$("forceMergeCancelTop").addEventListener("click", () => closeForceMergeModal(""));
+$("forceMergeModal").addEventListener("click", e => {
+  if (e.target === $("forceMergeModal")) closeForceMergeModal("");
 });
 
 // 下载按钮

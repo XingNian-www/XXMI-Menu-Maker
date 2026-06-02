@@ -6,3 +6,7 @@ Thumbs.db
 *.dds
 *.hlsl
 *.tmp
+
+# 测试文件
+test/
+TEST.md
