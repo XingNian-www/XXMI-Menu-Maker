@@ -237,6 +237,17 @@
     border: 1px solid var(--line-2);
     color: var(--text);
   }
+  .link-btn {
+    background: none;
+    border: 0;
+    color: var(--hot);
+    cursor: pointer;
+    padding: 0;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .link-btn:hover { color: var(--hot-2); }
   .btn svg { width: 16px; height: 16px; }
 
   /* ---------- toast ---------- */
@@ -863,6 +874,55 @@
     color: var(--muted);
     font-size: 12px;
   }
+
+  /* ---------- icon download modal ---------- */
+  .dl-collections {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 0 2px;
+  }
+  .dl-col-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .dl-col-item:hover { border-color: var(--line-2); }
+  .dl-col-item.selected { border-color: var(--hot); background: rgba(255,79,179,.06); }
+  .dl-col-item input[type="checkbox"] {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    accent-color: var(--hot);
+    width: 15px; height: 15px;
+    cursor: pointer;
+  }
+  .dl-col-info { flex: 1; min-width: 0; }
+  .dl-col-sample { flex: 0 0 auto; width: 28px; height: 28px; display: grid; place-items: center; color: var(--text); background: var(--bg-2); border-radius: 7px; border: 1px solid var(--line); overflow: hidden; }
+  .dl-col-sample svg { width: 20px; height: 20px; }
+  .dl-col-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .dl-col-name code { font-size: 11px; color: var(--muted); background: var(--bg-2); padding: 1px 5px; border-radius: 4px; }
+  .dl-col-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .dl-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .dl-progress { display: none; margin-top: 10px; }
+  .dl-progress.active { display: block; }
+  .dl-progress progress { width: 100%; height: 6px; border-radius: 3px; appearance: none; }
+  .dl-progress progress::-webkit-progress-bar { background: var(--line); border-radius: 3px; }
+  .dl-progress progress::-webkit-progress-value { background: var(--hot); border-radius: 3px; }
+  .dl-progress-text { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: center; }
+  .dl-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .dl-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+  .dl-desc a { color: var(--hot); cursor: pointer; text-decoration: none; }
+  .dl-col-actions { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+  .dl-col-status { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .dl-col-delete { display: none; color: var(--err); }
+  .dl-col-item.cached .dl-col-delete { display: inline; }
+  .dl-col-pin.active { color: var(--hot); font-weight: 700; }
+  .icon-group { grid-column: 1 / -1; font-size: 11px; color: var(--muted); font-weight: 700; padding: 8px 2px 2px; border-top: 1px solid var(--line); text-align: left; }
 </style>
 </head>
 <body>
@@ -1149,15 +1209,47 @@
     </div>
     <div class="modal-search">
       <div class="picker-search-row">
-        <div class="picker-tabs" id="pickerTabs">
-          <button class="picker-tab active" data-source-tab="lucide">Lucide</button>
-          <button class="picker-tab" data-source-tab="iconify">Iconify</button>
+        <div class="picker-tabs" id="pickerViewTabs">
+          <button class="picker-tab active" data-view-tab="mixed" data-i18n="pickerMixed">混合</button>
+          <button class="picker-tab" data-view-tab="grouped" data-i18n="pickerGrouped">分组</button>
         </div>
         <input id="pickerSearch" placeholder="搜索图标，比如 shirt / hat / crown / glasses" data-i18n-placeholder="pickerSearchPlaceholder">
       </div>
       <div class="picker-word-row" id="pickerWordRow" hidden></div>
     </div>
     <div class="modal-icons" id="pickerGrid"></div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;padding:0 16px 8px">
+      <span data-i18n="preDownloadHint">搜索需要联网</span> · <button class="link-btn" id="openIconDownload" style="font:inherit;font-size:11px" data-i18n="preDownloadLink">预下载图标库到本地</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ICON DOWNLOAD MODAL ============ -->
+<div class="modal" id="iconDownload">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-head">
+      <strong data-i18n="iconDownloadTitle">预下载图标库</strong>
+      <button class="icon-btn" id="dlClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:16px">
+      <div class="dl-meta" id="dlMeta">
+        <span data-i18n="iconCacheCount">已缓存图标</span>: <strong id="dlCount">--</strong>
+        <button class="link-btn" id="dlClearCache" style="font:inherit;font-size:11px;color:var(--err)" data-i18n="clearIconCache">清除缓存</button>
+      </div>
+      <p class="dl-desc" data-i18n="iconDownloadDesc">将图标集打包下载到本地缓存。下载后无需联网即可搜索和使用 Iconify 图标。每个图标集约消耗几百 KB 到几 MB 存储空间。</p>
+      <div class="dl-collections" id="dlCollections"></div>
+      <div class="dl-actions">
+        <button class="btn ghost" id="dlSelectAll" data-i18n="selectAll">全选</button>
+        <button class="btn ghost" id="dlDeselectAll" data-i18n="deselectAll">取消全选</button>
+        <button class="btn" id="dlStart" data-i18n="startDownload">开始下载</button>
+      </div>
+      <div class="dl-progress" id="dlProgress">
+        <progress id="dlBar" max="1" value="0"></progress>
+        <div class="dl-progress-text" id="dlProgressText"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1193,8 +1285,7 @@
   <button data-ctx="key" data-i18n="bindKey">绑定按键</button>
   <button data-ctx="split" data-i18n="split">拆分</button>
   <button data-ctx="skip" data-i18n="skipToggle">跳过 / 取消跳过</button>
-  <button data-ctx="autoIcon" data-i18n="autoMatchIcon">自动匹配图标</button>
-  <button data-ctx="picker" data-i18n="chooseFromLibrary">从图标库选择…</button>
+  <button data-ctx="picker" data-i18n="chooseFromLibrary">匹配图标</button>
   <button data-ctx="upload" data-i18n="uploadIcon">上传图标…</button>
   <button data-ctx="reset" data-i18n="resetIcon">重置图标</button>
 </div>
@@ -1323,7 +1414,7 @@ const I18N = {
     cancel: "取消",
     draftRecent: "最近 30 次",
     draftRestoreHint: "拖入对应 INI 文件时自动恢复",
-    iconPickerTitle: "选择图标",
+    iconPickerTitle: "匹配图标",
     pickerSearchPlaceholder: "搜索图标，比如 shirt / hat / crown / glasses",
     cropImage: "裁剪图片",
     confirmCrop: "确认裁剪",
@@ -1331,8 +1422,7 @@ const I18N = {
     bindKey: "绑定按键",
     split: "拆分",
     skipToggle: "跳过 / 取消跳过",
-    autoMatchIcon: "自动匹配图标",
-    chooseFromLibrary: "从图标库选择…",
+    chooseFromLibrary: "匹配图标",
     uploadIcon: "上传图标…",
     swapListEmpty: "还没读到 [Key*]",
     noResultIni: "选择 ini 后这里会显示生成结果",
@@ -1345,17 +1435,19 @@ const I18N = {
     pickerAutoFor: "→ 自动匹配 {name}",
     pickerWordsLabel: "按单词查找：",
     pickerLoading: "图标库加载中…",
-    pickerAutoLoading: "正在从 Lucide 和 Iconify 匹配候选…",
+    pickerAutoLoading: "正在合并匹配候选…",
     pickerNoAuto: "没有匹配到合适图标",
     pickerIconifyEmpty: "输入关键词搜索 Iconify 图标",
     pickerIconifyLoading: "正在搜索 Iconify…",
     pickerLibraryLoading: "图标库加载中…需要联网",
     pickerNoMatch: "无匹配",
+    pickerGrouped: "分组",
+    pickerMixed: "混合",
     confirmMerge: "确认合并",
     confirmSkip: "确认跳过",
     confirmMatch: "确认匹配",
     confirmReset: "确认重置",
-    actionPicker: "从图标库选",
+    actionPicker: "匹配图标",
     actionUpload: "上传图片",
     actionReset: "重置图标",
     actionSkipped: "已跳过",
@@ -1439,6 +1531,34 @@ const I18N = {
     ctxSkipThis: "跳过此项",
     promptButtonName: "按钮名称",
     promptBindKey: "绑定按键",
+    preDownloadHint: "搜索需要联网",
+    preDownloadLink: "预下载图标库到本地",
+    iconDownloadTitle: "预下载图标库",
+    iconCacheCount: "已缓存图标",
+    clearIconCache: "清除缓存",
+    iconDownloadDesc: "将图标集打包下载到本地缓存。下载后无需联网即可搜索和使用 Iconify 图标。每个图标集约消耗几百 KB 到几 MB 存储空间。",
+    selectAll: "全选",
+    deselectAll: "取消全选",
+    startDownload: "开始下载",
+    downloading: "下载中…",
+    iconDownloadDone: "下载完成，共缓存 {count} 个图标",
+    toastIconDownloaded: "已缓存 {count} 个 Iconify 图标",
+    toastIconCacheCleared: "图标缓存已清除",
+    confirmClearIconCache: "确定要清除所有图标缓存吗？",
+    selectAtLeastOneSet: "请至少选择一个图标集",
+    iconDownloadingSet: "{done}/{total} · 正在下载 {prefix} …",
+    iconDownloadFailedSkipped: "{done}/{total} · {prefix} 下载失败，已跳过",
+    cachedIconSet: "已缓存 {count}",
+    cacheIconSet: "缓存",
+    deleteIconSet: "删除",
+    pinIconSet: "顶置",
+    unpinIconSet: "取消顶置",
+    confirmDeleteIconSet: "确定删除 {prefix} 图标包缓存吗？",
+    toastIconSetDeleted: "已删除 {prefix} 图标包缓存（{count} 个）",
+    iconCollectionsLoadFail: "图标包列表加载失败，已显示常用图标包",
+    iconSetSize: "大小 {size}",
+    iconSetCachedSize: "缓存 {size}",
+    builtInIconSet: "内置",
   },
   "en-US": {
     language: "Language",
@@ -1549,7 +1669,7 @@ const I18N = {
     cancel: "Cancel",
     draftRecent: "Last 30",
     draftRestoreHint: "Automatically restores when the matching INI file is dropped",
-    iconPickerTitle: "Choose Icon",
+    iconPickerTitle: "Match Icon",
     pickerSearchPlaceholder: "Search icons, e.g. shirt / hat / crown / glasses",
     cropImage: "Crop Image",
     confirmCrop: "Confirm crop",
@@ -1557,8 +1677,7 @@ const I18N = {
     bindKey: "Bind key",
     split: "Split",
     skipToggle: "Skip / Unskip",
-    autoMatchIcon: "Auto match icon",
-    chooseFromLibrary: "Choose from icon library…",
+    chooseFromLibrary: "Match icon",
     uploadIcon: "Upload icon…",
     swapListEmpty: "No [Key*] found yet",
     noResultIni: "Generated result appears here after selecting an ini",
@@ -1571,17 +1690,19 @@ const I18N = {
     pickerAutoFor: "→ Auto match {name}",
     pickerWordsLabel: "Search by word:",
     pickerLoading: "Loading icon library…",
-    pickerAutoLoading: "Matching candidates from Lucide and Iconify…",
+    pickerAutoLoading: "Merging matched candidates…",
     pickerNoAuto: "No suitable icon found",
     pickerIconifyEmpty: "Enter a keyword to search Iconify icons",
     pickerIconifyLoading: "Searching Iconify…",
     pickerLibraryLoading: "Loading icon library… network may be required",
     pickerNoMatch: "No matches",
+    pickerGrouped: "Grouped",
+    pickerMixed: "Mixed",
     confirmMerge: "Confirm merge",
     confirmSkip: "Confirm skip",
     confirmMatch: "Confirm match",
     confirmReset: "Confirm reset",
-    actionPicker: "Choose from icon library",
+    actionPicker: "Match icon",
     actionUpload: "Upload image",
     actionReset: "Reset icon",
     actionSkipped: "Skipped",
@@ -1665,6 +1786,34 @@ const I18N = {
     ctxSkipThis: "Skip this item",
     promptButtonName: "Button name",
     promptBindKey: "Bind key",
+    preDownloadHint: "Search requires network",
+    preDownloadLink: "Pre-download icon library",
+    iconDownloadTitle: "Pre-download Icons",
+    iconCacheCount: "Cached icons",
+    clearIconCache: "Clear cache",
+    iconDownloadDesc: "Download icon sets to local cache for offline use. Each set uses a few hundred KB to a few MB of storage.",
+    selectAll: "Select all",
+    deselectAll: "Deselect all",
+    startDownload: "Start download",
+    downloading: "Downloading…",
+    iconDownloadDone: "Done, {count} icons cached",
+    toastIconDownloaded: "Cached {count} Iconify icons",
+    toastIconCacheCleared: "Icon cache cleared",
+    confirmClearIconCache: "Clear all icon cache?",
+    selectAtLeastOneSet: "Please select at least one icon set",
+    iconDownloadingSet: "{done}/{total} · Downloading {prefix} …",
+    iconDownloadFailedSkipped: "{done}/{total} · {prefix} download failed, skipped",
+    cachedIconSet: "Cached {count}",
+    cacheIconSet: "Cache",
+    deleteIconSet: "Delete",
+    pinIconSet: "Pin",
+    unpinIconSet: "Unpin",
+    confirmDeleteIconSet: "Delete cached {prefix} icon set?",
+    toastIconSetDeleted: "Deleted cached {prefix} icons ({count})",
+    iconCollectionsLoadFail: "Failed to load icon set list, showing common sets",
+    iconSetSize: "Size {size}",
+    iconSetCachedSize: "Cache {size}",
+    builtInIconSet: "Built-in",
   },
 };
 
@@ -1718,7 +1867,7 @@ function refreshOpenI18nSurfaces() {
   if ($("iconPicker")?.classList.contains("show") && pickerTarget >= 0 && state.slotMeta[pickerTarget]) {
     const meta = state.slotMeta[pickerTarget];
     $("pickerFor").textContent = pickerMode === "auto" ? t("pickerAutoFor", { name: meta.name }) : t("pickerFor", { name: meta.name });
-    renderPickerWordRow(collectIconBaseWords(meta, state.swaps[pickerTarget]), pickerMode === "auto" ? autoIconWordTarget : $("pickerSearch").value.trim());
+    renderPickerWordRow(collectAutoIconWords(meta, state.swaps[pickerTarget]), pickerMode === "auto" ? autoIconWordTarget : $("pickerSearch").value.trim());
     if (pickerMode === "library") renderPickerGrid($("pickerSearch").value);
   }
   if (!$('ctxMenu')?.hidden && ctxTargetIdx >= 0 && state.slotMeta[ctxTargetIdx]) {
@@ -1852,10 +2001,31 @@ function dbOpen() {
   if (_db) return Promise.resolve(_db);
   if (_dbOpenPromise) return _dbOpenPromise;
   _dbOpenPromise = new Promise((resolve, reject) => {
-    const r = indexedDB.open(DB_NAME, 1);
-    r.onupgradeneeded = () => { r.result.createObjectStore(DB_STORE, { keyPath: "h" }); };
-    r.onsuccess = () => { _db = r.result; _dbOpenPromise = null; resolve(_db); };
-    r.onerror = () => { _dbOpenPromise = null; reject(r.error); };
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      _dbOpenPromise = null;
+      fn(value);
+    };
+    const timer = setTimeout(() => finish(reject, new Error("IndexedDB open timeout")), 1500);
+    const r = indexedDB.open(DB_NAME, 2);
+    r.onupgradeneeded = (e) => {
+      if (e.oldVersion < 1) r.result.createObjectStore(DB_STORE, { keyPath: "h" });
+      if (e.oldVersion < 2) {
+        if (!r.result.objectStoreNames.contains("icons")) {
+          r.result.createObjectStore("icons", { keyPath: "name" });
+        }
+      }
+    };
+    r.onsuccess = () => {
+      _db = r.result;
+      _db.onversionchange = dbReset;
+      finish(resolve, _db);
+    };
+    r.onerror = () => finish(reject, r.error);
+    r.onblocked = () => finish(reject, new Error("IndexedDB upgrade blocked"));
   });
   return _dbOpenPromise;
 }
@@ -1905,6 +2075,134 @@ async function dbClear() {
     return new Promise((resolve) => {
       const tx = db.transaction(DB_STORE, "readwrite");
       tx.objectStore(DB_STORE).clear();
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  } catch (e) { return false; }
+}
+
+// ---------- Icon cache (IndexedDB icons store) ----------
+
+const ICON_STORE = "icons";
+
+async function iconDBGet(name) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const r = tx.objectStore(ICON_STORE).get(name);
+      r.onsuccess = () => resolve(r.result || null);
+      r.onerror = () => resolve(null);
+    });
+  } catch (e) { return null; }
+}
+
+async function iconDBCount() {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const r = tx.objectStore(ICON_STORE).count();
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => resolve(0);
+    });
+  } catch (e) { return 0; }
+}
+
+async function iconDBCountPrefix(prefix) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const store = tx.objectStore(ICON_STORE);
+      const req = store.openCursor();
+      let count = 0;
+      const needle = `${prefix}:`;
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (!cursor) { resolve(count); return; }
+        if (String(cursor.key).startsWith(needle)) count++;
+        cursor.continue();
+      };
+      req.onerror = () => resolve(count);
+    });
+  } catch (e) { return 0; }
+}
+
+async function iconDBCachedPrefixes() {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const store = tx.objectStore(ICON_STORE);
+      const req = store.openCursor();
+      const counts = new Map();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (!cursor) { resolve(counts); return; }
+        const [prefix] = String(cursor.key).split(":");
+        if (prefix) counts.set(prefix, (counts.get(prefix) || 0) + 1);
+        cursor.continue();
+      };
+      req.onerror = () => resolve(counts);
+    });
+  } catch (e) { return new Map(); }
+}
+
+async function iconDBPrefixBytes() {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const store = tx.objectStore(ICON_STORE);
+      const req = store.openCursor();
+      const bytes = new Map();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (!cursor) { resolve(bytes); return; }
+        const key = String(cursor.key);
+        const [prefix] = key.split(":");
+        if (prefix) {
+          const row = cursor.value || {};
+          bytes.set(prefix, (bytes.get(prefix) || 0) + key.length + String(row.body || "").length + 24);
+        }
+        cursor.continue();
+      };
+      req.onerror = () => resolve(bytes);
+    });
+  } catch (e) { return new Map(); }
+}
+
+async function iconDBDeletePrefix(prefix) {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readwrite");
+      const store = tx.objectStore(ICON_STORE);
+      const req = store.openCursor();
+      const needle = `${prefix}:`;
+      let count = 0;
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (!cursor) return;
+        if (String(cursor.key).startsWith(needle)) {
+          cursor.delete();
+          count++;
+        }
+        cursor.continue();
+      };
+      tx.oncomplete = () => resolve(count);
+      tx.onerror = () => resolve(0);
+    });
+  } catch (e) { return 0; }
+}
+
+async function iconDBClearAll() {
+  try {
+    const db = await dbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readwrite");
+      tx.objectStore(ICON_STORE).clear();
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
     });
@@ -2440,6 +2738,7 @@ const ICONIFY_SEARCH_API = "https://api.iconify.design/search";
 const ICONIFY_ICON_API = "https://api.iconify.design/";
 const ICONIFY_SEARCH_CACHE = new Map(); // query -> icon names
 const ICONIFY_CACHE = new Map();        // collection:name -> svg string
+const ICONIFY_PINNED_KEY = "keyswap-gui-iconify-pinned-v1";
 let iconifySearchWarned = false;
 const SVG_ALLOWED_TAGS = new Set(["svg", "g", "path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "defs", "clipPath", "mask", "linearGradient", "radialGradient", "stop", "title"]);
 const SVG_ALLOWED_ATTRS = new Set(["viewBox", "width", "height", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray", "stroke-dashoffset", "fill-rule", "clip-rule", "d", "cx", "cy", "r", "x", "y", "x1", "y1", "x2", "y2", "rx", "ry", "points", "transform", "opacity", "fill-opacity", "stroke-opacity", "clip-path", "mask", "id", "offset", "stop-color", "stop-opacity", "gradientUnits", "gradientTransform"]);
@@ -2480,17 +2779,33 @@ async function loadLucideSvg(name) {
   }
 }
 
-async function searchIconifyIcons(query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  if (ICONIFY_SEARCH_CACHE.has(q)) return ICONIFY_SEARCH_CACHE.get(q);
+async function searchLocalIconifyIcons(q) {
+  try {
+    const db = await dbOpen();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(ICON_STORE, "readonly");
+      const store = tx.objectStore(ICON_STORE);
+      const results = [];
+      const req = store.openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          if (cursor.key.toLowerCase().includes(q)) results.push(cursor.key);
+          if (results.length < 240) cursor.continue();
+          else resolve(results);
+        } else { resolve(results); }
+      };
+      req.onerror = () => resolve(results);
+    });
+  } catch (e) { return []; }
+}
+
+async function searchOnlineIconifyIcons(q) {
   try {
     const res = await fetch(`${ICONIFY_SEARCH_API}?query=${encodeURIComponent(q)}&limit=240`);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    const icons = Array.isArray(data.icons) ? data.icons.slice(0, 240) : [];
-    ICONIFY_SEARCH_CACHE.set(q, icons);
-    return icons;
+    return Array.isArray(data.icons) ? data.icons.slice(0, 240) : [];
   } catch (e) {
     if (!iconifySearchWarned) {
       iconifySearchWarned = true;
@@ -2498,6 +2813,117 @@ async function searchIconifyIcons(query) {
     }
     return [];
   }
+}
+
+function mergeIconResults(localIcons, onlineIcons) {
+  const seen = new Set(localIcons);
+  const merged = localIcons.slice();
+  for (const name of onlineIcons) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    merged.push(name);
+    if (merged.length >= 240) break;
+  }
+  return merged;
+}
+
+function getPinnedIconPrefixes() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(ICONIFY_PINNED_KEY) || "[]");
+    return Array.isArray(arr) ? arr.filter(Boolean) : [];
+  } catch (e) { return []; }
+}
+
+function setPinnedIconPrefixes(prefixes) {
+  localStorage.setItem(ICONIFY_PINNED_KEY, JSON.stringify([...new Set(prefixes.filter(Boolean))]));
+  ICONIFY_SEARCH_CACHE.clear();
+}
+
+function isIconPrefixPinned(prefix) {
+  return getPinnedIconPrefixes().includes(prefix);
+}
+
+function togglePinnedIconPrefix(prefix) {
+  const pinned = getPinnedIconPrefixes();
+  const next = pinned.includes(prefix) ? pinned.filter(p => p !== prefix) : [prefix, ...pinned];
+  setPinnedIconPrefixes(next);
+}
+
+function sortIconResultsByPinned(items) {
+  const pinned = getPinnedIconPrefixes();
+  if (!pinned.length) return items;
+  const rank = new Map(pinned.map((p, i) => [p, i]));
+  return items
+    .map((name, index) => ({ name, index, rank: rank.has(String(name).split(":")[0]) ? rank.get(String(name).split(":")[0]) : 9999 }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(item => item.name);
+}
+
+async function sortGroupedLibraryItems(items) {
+  const cachedPrefixes = await iconDBCachedPrefixes();
+  const pinned = getPinnedIconPrefixes();
+  const pinnedRank = new Map(pinned.map((p, i) => [p, i]));
+  return items
+    .map((item, index) => {
+      const prefix = item.source === "lucide" ? "lucide" : String(item.name).split(":")[0];
+      const cached = item.source === "iconify" && cachedPrefixes.has(prefix);
+      return {
+        item,
+        index,
+        cached,
+        pinRank: pinnedRank.has(prefix) ? pinnedRank.get(prefix) : 9999,
+        prefix,
+      };
+    })
+    .sort((a, b) => {
+      if (a.cached !== b.cached) return a.cached ? -1 : 1;
+      if (a.pinRank !== b.pinRank) return a.pinRank - b.pinRank;
+      if (a.prefix !== b.prefix) return a.prefix.localeCompare(b.prefix);
+      return a.index - b.index;
+    })
+    .map(row => row.item);
+}
+
+async function searchIconifyIcons(query, onOnlineResult = null) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const localIcons = await searchLocalIconifyIcons(q);
+  if (localIcons.length) {
+    const sortedLocal = sortIconResultsByPinned(localIcons);
+    ICONIFY_SEARCH_CACHE.set(q, sortedLocal);
+    searchOnlineIconifyIcons(q).then(onlineIcons => {
+      if (!onlineIcons.length) return;
+      const merged = sortIconResultsByPinned(mergeIconResults(localIcons, onlineIcons));
+      ICONIFY_SEARCH_CACHE.set(q, merged);
+      if (onOnlineResult) onOnlineResult(merged);
+    });
+    return sortedLocal;
+  }
+
+  if (ICONIFY_SEARCH_CACHE.has(q)) return ICONIFY_SEARCH_CACHE.get(q);
+  const onlineIcons = sortIconResultsByPinned(await searchOnlineIconifyIcons(q));
+  ICONIFY_SEARCH_CACHE.set(q, onlineIcons);
+  return onlineIcons;
+}
+
+async function searchLucideIcons(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const names = await loadLucideIndex();
+  return (names || []).filter(n => n.includes(q)).slice(0, 80);
+}
+
+function mergeLibraryIconResults(lucideIcons, iconifyIcons) {
+  const merged = lucideIcons.map(name => ({ name, source: "lucide" }));
+  const seen = new Set(merged.map(item => `${item.source}:${item.name}`));
+  for (const name of iconifyIcons) {
+    const key = `iconify:${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ name, source: "iconify" });
+    if (merged.length >= 240) break;
+  }
+  return merged;
 }
 
 function sanitizeSvg(svg) {
@@ -2531,9 +2957,20 @@ function sanitizeSvg(svg) {
 }
 
 async function loadIconifySvg(name) {
+  if (String(name || "").startsWith("lucide:")) return loadLucideSvg(String(name).slice(7));
   const url = iconifySvgUrl(name);
   if (!url) return null;
   if (ICONIFY_CACHE.has(name)) return ICONIFY_CACHE.get(name);
+
+  const cached = await iconDBGet(name);
+  if (cached && cached.body) {
+    const svg = sanitizeSvg(iconifyBodyToSvg(cached.body, cached.width || 24, cached.height || 24));
+    if (svg) {
+      ICONIFY_CACHE.set(name, svg);
+      return svg;
+    }
+  }
+
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -2544,6 +2981,21 @@ async function loadIconifySvg(name) {
   } catch (e) {
     return null;
   }
+}
+
+function iconifyBodyToSvg(body, width, height) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
+}
+
+function iconifyTransformBody(body, width, height, iconData = {}) {
+  const transforms = [];
+  if (iconData.hFlip) transforms.push(`translate(${width} 0) scale(-1 1)`);
+  if (iconData.vFlip) transforms.push(`translate(0 ${height}) scale(1 -1)`);
+  const rotate = ((iconData.rotate || 0) % 4 + 4) % 4;
+  if (rotate === 1) transforms.push(`rotate(90 ${width / 2} ${height / 2})`);
+  else if (rotate === 2) transforms.push(`rotate(180 ${width / 2} ${height / 2})`);
+  else if (rotate === 3) transforms.push(`rotate(270 ${width / 2} ${height / 2})`);
+  return transforms.length ? `<g transform="${transforms.join(" ")}">${body}</g>` : body;
 }
 
 async function loadIconSvg(meta) {
@@ -2569,6 +3021,26 @@ function iconCandidateScore(name, keywords, source) {
   return score;
 }
 
+function iconPrefixRank(name) {
+  const prefix = String(name || "").split(":")[0];
+  const order = ["lucide", "tabler", "heroicons", "ph", "fe", "mdi", "carbon", "ri", "fluent", "ant-design", "fa-solid", "fa-regular"];
+  const idx = order.indexOf(prefix);
+  return idx === -1 ? order.length : idx;
+}
+
+function autoIconCompare(a, b) {
+  if (b.score !== a.score) return b.score - a.score;
+  const pa = a.source === "lucide" ? 0 : iconPrefixRank(a.name) + 1;
+  const pb = b.source === "lucide" ? 0 : iconPrefixRank(b.name) + 1;
+  if (pa !== pb) return pa - pb;
+  return a.name.localeCompare(b.name);
+}
+
+function collectAutoIconWords(slotMeta, swap) {
+  const iconName = slotMeta?.iconName && slotMeta.iconKind !== "upload" && slotMeta.iconKind !== "auto" ? String(slotMeta.iconName).split(":").pop() : "";
+  return [...new Set([...splitIconWords(iconName), ...collectIconBaseWords(slotMeta, swap)])].slice(0, 12);
+}
+
 async function findAutoIconCandidates(slotMeta, swap) {
   const keywords = collectIconKeywords(slotMeta, swap);
   if (!keywords.length) return [];
@@ -2578,7 +3050,7 @@ async function findAutoIconCandidates(slotMeta, swap) {
       const score = iconCandidateScore(name, keywords, "lucide");
       if (score > 2) matched.push({ source: "lucide", name, score });
     }
-    return matched.sort((a, b) => b.score - a.score).slice(0, 40);
+    return matched.sort(autoIconCompare).slice(0, 40);
   }).catch(() => []);
   const iconifyPromise = Promise.all(keywords.slice(0, 4).map(searchIconifyIcons)).then(results => {
     const map = new Map();
@@ -2587,10 +3059,10 @@ async function findAutoIconCandidates(slotMeta, swap) {
       if (score <= 2 || (map.has(name) && map.get(name).score >= score)) continue;
       map.set(name, { source: "iconify", name, score });
     }
-    return [...map.values()].sort((a, b) => b.score - a.score).slice(0, 40);
+    return [...map.values()].sort(autoIconCompare).slice(0, 40);
   }).catch(() => []);
   const candidates = [...await lucidePromise, ...await iconifyPromise]
-    .sort((a, b) => b.score - a.score)
+    .sort(autoIconCompare)
     .slice(0, 60);
   const usable = [];
   for (const candidate of candidates) {
@@ -2606,7 +3078,7 @@ async function findAutoIcon(slotMeta, swap) {
 }
 
 async function findAutoIconByFirstWord(slotMeta, swap) {
-  const word = collectIconBaseWords(slotMeta, swap)[0];
+  const word = collectAutoIconWords(slotMeta, swap)[0];
   if (!word) return null;
   return findAutoIcon({ name: word }, { sections: [], assignments: [], commandLists: [] });
 }
@@ -4496,7 +4968,7 @@ async function loadFile(file, opts = {}) {
 let pickerTarget = -1;
 let pickerRenderSeq = 0;
 let pickerMode = "library";
-let pickerSource = "lucide";
+let pickerViewMode = localStorage.getItem("keyswap-gui-icon-view") === "grouped" ? "grouped" : "mixed";
 let autoIconBusy = false;
 let autoIconWordTarget = "";
 let autoIconRequestSeq = 0;
@@ -4505,7 +4977,7 @@ const thumbRenderTokens = new Map();
 
 function setAutoIconBusy(busy) {
   autoIconBusy = busy;
-  document.querySelectorAll('[data-fab="autoIcon"], [data-fab="autoIconSelected"], [data-ctx="autoIcon"], #mergeConfirm').forEach(btn => {
+  document.querySelectorAll('[data-fab="autoIcon"], [data-fab="autoIconSelected"], #mergeConfirm').forEach(btn => {
     btn.disabled = busy;
   });
 }
@@ -4546,10 +5018,11 @@ function renderPickerWordRow(words, activeWord = "") {
   ).join("");
 }
 
-function setPickerSource(source) {
-  pickerSource = source === "iconify" ? "iconify" : "lucide";
-  document.querySelectorAll("[data-source-tab]").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.sourceTab === pickerSource);
+function setPickerViewMode(mode) {
+  pickerViewMode = mode === "mixed" ? "mixed" : "grouped";
+  localStorage.setItem("keyswap-gui-icon-view", pickerViewMode);
+  document.querySelectorAll("[data-view-tab]").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.viewTab === pickerViewMode);
   });
 }
 
@@ -4559,15 +5032,13 @@ async function openPicker(idx) {
   autoIconWordTarget = "";
   autoIconRequestSeq++;
   pickerRenderSeq++;
-  renderPickerWordRow(collectIconBaseWords(state.slotMeta[idx], state.swaps[idx]));
+  renderPickerWordRow(collectAutoIconWords(state.slotMeta[idx], state.swaps[idx]));
   $("pickerFor").textContent = t("pickerFor", { name: state.slotMeta[idx].name });
-  $("pickerTabs").hidden = false;
   $("pickerSearch").disabled = false;
-  setPickerSource(state.slotMeta[idx].iconKind === "iconify" ? "iconify" : "lucide");
+  setPickerViewMode("mixed");
   $("pickerSearch").value = "";
   $("pickerGrid").innerHTML = `<div class="modal-empty">${t("pickerLoading")}</div>`;
   $("iconPicker").classList.add("show");
-  if (pickerSource === "lucide") await loadLucideIndex();
   if (pickerTarget !== idx || pickerMode !== "library") return;
   renderPickerGrid("");
   setTimeout(() => $("pickerSearch").focus(), 50);
@@ -4585,9 +5056,11 @@ function closePicker() {
   renderPickerWordRow([]);
 }
 
-async function openAutoIconCandidates(idx, targetWord = "") {
+async function openAutoIconCandidates(idx, targetWord = null) {
   if (autoIconBusy && pickerMode !== "auto") return;
   if (idx < 0 || !state.slotMeta[idx] || !state.swaps[idx]) return;
+  const words = collectAutoIconWords(state.slotMeta[idx], state.swaps[idx]);
+  if (targetWord == null) targetWord = words[0] || "";
   const slotToken = currentSlotToken(idx);
   const req = ++autoIconRequestSeq;
   pickerRenderSeq++;
@@ -4596,13 +5069,11 @@ async function openAutoIconCandidates(idx, targetWord = "") {
   pickerTarget = idx;
   autoIconWordTarget = targetWord;
   $("pickerFor").textContent = t("pickerAutoFor", { name: state.slotMeta[idx].name });
-  $("pickerTabs").hidden = true;
   $("pickerSearch").disabled = false;
   $("pickerSearch").value = targetWord;
   $("iconPicker").classList.add("show");
   const grid = $("pickerGrid");
   grid.innerHTML = `<div class="modal-empty">${t("pickerAutoLoading")}</div>`;
-  const words = collectIconBaseWords(state.slotMeta[idx], state.swaps[idx]);
   renderPickerWordRow(words, targetWord);
   try {
     const meta = targetWord ? { name: targetWord } : state.slotMeta[idx];
@@ -4617,10 +5088,8 @@ async function openAutoIconCandidates(idx, targetWord = "") {
       `<button class="modal-icon" data-pick="${escapeHtml(icon.name)}" data-source="${icon.source}" title="${escapeHtml(icon.source + ': ' + icon.name)}"></button>`
     ).join("");
     for (const btn of grid.querySelectorAll("[data-pick]")) {
-      const source = btn.dataset.source;
       const name = btn.dataset.pick;
-      const load = source === "iconify" ? loadIconifySvg(name) : loadLucideSvg(name);
-      load.then(svg => { if (svg && req === autoIconRequestSeq && pickerMode === "auto" && btn.isConnected) btn.innerHTML = svg; });
+      loadIconifySvg(name).then(svg => { if (svg && req === autoIconRequestSeq && pickerMode === "auto" && btn.isConnected) btn.innerHTML = svg; });
     }
   } finally {
     if (req === autoIconRequestSeq) setAutoIconBusy(false);
@@ -4630,49 +5099,414 @@ async function openAutoIconCandidates(idx, targetWord = "") {
 async function renderPickerGrid(query) {
   const seq = ++pickerRenderSeq;
   const grid = $("pickerGrid");
-  const source = pickerSource;
-  let names = [];
+  let items = [];
 
-  if (source === "iconify") {
-    if (!query.trim()) {
-      grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyEmpty")}</div>`;
-      return;
-    }
-    grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyLoading")}</div>`;
-    names = await searchIconifyIcons(query);
+  const renderNames = async (items) => {
     if (seq !== pickerRenderSeq) return;
-  } else {
-    if (!LUCIDE_INDEX || !LUCIDE_INDEX.length) {
-      grid.innerHTML = `<div class="modal-empty">${t("pickerLibraryLoading")}</div>`;
+    if (!items.length) {
+      grid.innerHTML = `<div class="modal-empty">${t("pickerNoMatch")}</div>`;
       return;
     }
-    names = LUCIDE_INDEX;
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      names = names.filter(n => n.includes(q));
-    }
-    names = names.slice(0, 240);
-  }
 
-  if (!names.length) {
-    grid.innerHTML = `<div class="modal-empty">${t("pickerNoMatch")}</div>`;
+    if (pickerViewMode === "grouped") {
+      items = await sortGroupedLibraryItems(items);
+      if (seq !== pickerRenderSeq) return;
+      const grouped = [];
+      let lastPrefix = "";
+      for (const item of items) {
+        const prefix = item.source === "lucide" ? "Lucide" : (String(item.name).split(":")[0] || "Iconify");
+        if (prefix !== lastPrefix) {
+          grouped.push(`<div class="icon-group">${escapeHtml(prefix)}</div>`);
+          lastPrefix = prefix;
+        }
+        grouped.push(`<button class="modal-icon" data-pick="${escapeHtml(item.name)}" data-source="${item.source}" title="${escapeHtml(item.source + ': ' + item.name)}"></button>`);
+      }
+      grid.innerHTML = grouped.join("");
+    } else {
+      grid.innerHTML = items.map(item =>
+        `<button class="modal-icon" data-pick="${escapeHtml(item.name)}" data-source="${item.source}" title="${escapeHtml(item.source + ': ' + item.name)}"></button>`
+      ).join("");
+    }
+
+    const buttons = grid.querySelectorAll("[data-pick]");
+    for (const btn of buttons) {
+      const name = btn.dataset.pick;
+      const source = btn.dataset.source;
+      const load = source === "iconify" ? loadIconifySvg(name) : loadLucideSvg(name);
+      load.then(svg => {
+        if (svg && seq === pickerRenderSeq && btn.isConnected) btn.innerHTML = svg;
+      });
+    }
+  };
+
+  if (!query.trim()) {
+    grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyEmpty")}</div>`;
     return;
   }
+  grid.innerHTML = `<div class="modal-empty">${t("pickerIconifyLoading")}</div>`;
+  const lucidePromise = searchLucideIcons(query).catch(() => []);
+  const iconifyNames = await searchIconifyIcons(query, async onlineNames => {
+    if ($("pickerSearch").value.trim().toLowerCase() === query.trim().toLowerCase()) {
+      await renderNames(mergeLibraryIconResults(await lucidePromise, onlineNames));
+    }
+  });
+  items = mergeLibraryIconResults(await lucidePromise, iconifyNames);
+  if (seq !== pickerRenderSeq) return;
+  await renderNames(items);
+}
 
-  grid.innerHTML = names.map(n =>
-    `<button class="modal-icon" data-pick="${escapeHtml(n)}" data-source="${source}" title="${escapeHtml(n)}"></button>`
-  ).join("");
+/* ============================================================
+ * 12.5. 图标库预下载到 IndexedDB
+ * ============================================================ */
 
-  // 异步填充 svg（限速避免一次太多请求）
-  const buttons = grid.querySelectorAll("[data-pick]");
-  for (const btn of buttons) {
-    const name = btn.dataset.pick;
-    const source = btn.dataset.source;
-    const load = source === "iconify" ? loadIconifySvg(name) : loadLucideSvg(name);
-    load.then(svg => {
-      if (svg && seq === pickerRenderSeq && btn.isConnected) btn.innerHTML = svg;
+const ICONIFY_COMMON_COLLECTIONS = [
+  { prefix: "mdi", name: "Material Design Icons", desc: "Google Design 规范，7000+ 图标，最全面的通用图标集", count: "7,000+" },
+  { prefix: "fa-solid", name: "Font Awesome Solid", desc: "经典免费图标集，UI 和网页设计广泛使用", count: "1,400+" },
+  { prefix: "fa-regular", name: "Font Awesome Regular", desc: "常规样式，线条更细的变体", count: "160+" },
+  { prefix: "carbon", name: "Carbon Icons", desc: "IBM Carbon 设计系统，商务风格，简洁统一", count: "2,000+" },
+  { prefix: "ph", name: "Phosphor", desc: "现代极简风格，线条流畅，辨识度高", count: "1,000+" },
+  { prefix: "tabler", name: "Tabler Icons", desc: "线条风格，5000+ 丰富选择，适合作为通用线框图标", count: "5,000+" },
+  { prefix: "fluent", name: "Fluent UI System", desc: "微软 Windows 11 风格，现代化矢量图标", count: "5,000+" },
+  { prefix: "ri", name: "Remix Icon", desc: "开源中性风格，通用场景覆盖广", count: "2,500+" },
+  { prefix: "heroicons", name: "Heroicons", desc: "Tailwind CSS 团队出品，精致小规模，简洁清爽", count: "300" },
+  { prefix: "ant-design", name: "Ant Design Icons", desc: "Ant Design 体系，适合后台管理系统", count: "800+" },
+  { prefix: "simple-icons", name: "Simple Icons", desc: "3000+ 品牌和平台 Logo 图标", count: "3,000+" },
+  { prefix: "fe", name: "Feather Icons", desc: "极简风格，线条纤细，适合小尺寸", count: "300" },
+  { prefix: "ep", name: "Element Plus", desc: "Element Plus 组件库配套，适合 Vue 项目", count: "300" },
+  { prefix: "icon-park-outline", name: "IconPark Outline", desc: "字节跳动出品，线框风格，2400+ 覆盖", count: "2,400+" },
+];
+
+let iconifyCollectionsCache = null;
+
+function formatBytes(bytes) {
+  const n = Number(bytes || 0);
+  if (!n) return "--";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function estimateIconSetBytes(total) {
+  return Number(total || 0) ? Number(total) * 420 : 0;
+}
+
+function collectionSampleIcon(prefix) {
+  const samples = {
+    mdi: "home",
+    tabler: "home",
+    carbon: "home",
+    ph: "house",
+    fluent: "home-24-regular",
+    ri: "home-line",
+    heroicons: "home",
+    "fa-solid": "house",
+    "fa-regular": "star",
+    "ant-design": "home-outlined",
+    "simple-icons": "github",
+    fe: "home",
+    ep: "home-filled",
+    "icon-park-outline": "home",
+  };
+  return `${prefix}:${samples[prefix] || "home"}`;
+}
+
+function collectionSampleFromMeta(prefix, meta = {}) {
+  const candidates = [meta.samples, meta.sample, meta.icons, meta.categories?.[0]?.samples].flatMap(v => Array.isArray(v) ? v : (v ? [v] : []));
+  const sample = candidates.find(v => typeof v === "string" && v.trim());
+  if (!sample) return collectionSampleIcon(prefix);
+  return sample.includes(":") ? sample : `${prefix}:${sample}`;
+}
+
+function renderSampleFallback(el, prefix) {
+  const text = String(prefix || "?").replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase() || "?";
+  el.textContent = text;
+  el.title = prefix || "";
+}
+
+function lucideCollectionInfo() {
+  const count = LUCIDE_INDEX?.length || BUILTIN_ICON_NAMES.length;
+  return {
+    prefix: "lucide",
+    name: "Lucide",
+    desc: t("builtInIconSet"),
+    count: count ? count.toLocaleString() : "",
+    sample: "lucide:home",
+    size: 0,
+    total: count,
+    builtIn: true,
+  };
+}
+
+async function loadIconifyCollections() {
+  if (iconifyCollectionsCache) return iconifyCollectionsCache;
+  try {
+    const res = await fetch("https://api.iconify.design/collections?pretty=0");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const common = new Map(ICONIFY_COMMON_COLLECTIONS.map(c => [c.prefix, c]));
+    const iconifyCollections = Object.entries(data).filter(([prefix]) => prefix !== "lucide").map(([prefix, meta]) => {
+      const known = common.get(prefix);
+      const total = Number(meta?.total || 0);
+      return {
+        prefix,
+        name: meta?.name || known?.name || prefix,
+        desc: meta?.author?.name ? `${meta.author.name}${meta.license?.title ? " · " + meta.license.title : ""}` : (known?.desc || "Iconify collection"),
+        count: total ? total.toLocaleString() : (known?.count || ""),
+        sample: collectionSampleFromMeta(prefix, meta),
+        size: estimateIconSetBytes(total),
+        total,
+      };
+    }).sort((a, b) => {
+      const ai = ICONIFY_COMMON_COLLECTIONS.findIndex(c => c.prefix === a.prefix);
+      const bi = ICONIFY_COMMON_COLLECTIONS.findIndex(c => c.prefix === b.prefix);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      return b.total - a.total || a.prefix.localeCompare(b.prefix);
     });
+    iconifyCollectionsCache = [lucideCollectionInfo(), ...iconifyCollections];
+    return iconifyCollectionsCache;
+  } catch (e) {
+    toast(t("iconCollectionsLoadFail"), "err");
+    iconifyCollectionsCache = [lucideCollectionInfo(), ...ICONIFY_COMMON_COLLECTIONS];
+    return iconifyCollectionsCache;
   }
+}
+
+let dlDownloading = false;
+
+async function openIconDownloadModal() {
+  $("iconDownload").classList.add("show");
+  $("dlProgress").classList.remove("active");
+  $("dlStart").disabled = false;
+  $("dlStart").textContent = t("startDownload");
+  $("dlStart").style.display = "";
+  document.querySelector(".dl-actions").style.display = "";
+
+  const count = await iconDBCount();
+  $("dlCount").textContent = count.toLocaleString();
+  const cachedPrefixes = await iconDBCachedPrefixes();
+  const cachedBytes = await iconDBPrefixBytes();
+  const pinnedPrefixes = getPinnedIconPrefixes();
+  const collections = await loadIconifyCollections();
+
+  const list = $("dlCollections");
+  list.innerHTML = collections.map(c => {
+    const cachedCount = cachedPrefixes.get(c.prefix) || 0;
+    const pinned = pinnedPrefixes.includes(c.prefix);
+    const sizeText = c.builtIn ? t("builtInIconSet") : (cachedBytes.get(c.prefix) ? t("iconSetCachedSize", { size: formatBytes(cachedBytes.get(c.prefix)) }) : t("iconSetSize", { size: formatBytes(c.size) }));
+    return `<div class="dl-col-item ${cachedCount ? "cached" : ""}" data-col="${c.prefix}">
+      <input type="checkbox" value="${c.prefix}" ${c.builtIn ? "disabled" : ""}>
+      <span class="dl-col-sample" data-sample-icon="${escapeHtml(c.sample || collectionSampleIcon(c.prefix))}"></span>
+      <div class="dl-col-info">
+        <div class="dl-col-name">${escapeHtml(c.name)} <code>${c.prefix}</code> <span style="font-weight:400;font-size:11px;color:var(--muted)">${c.count}</span> <span style="font-weight:400;font-size:11px;color:var(--muted)">${sizeText}</span></div>
+        <div class="dl-col-desc">${escapeHtml(c.desc)}</div>
+        <div class="dl-col-actions">
+          <button class="link-btn dl-col-pin ${pinned ? "active" : ""}" data-pin-prefix="${c.prefix}" style="font:inherit;font-size:11px">${t(pinned ? "unpinIconSet" : "pinIconSet")}</button>
+          ${c.builtIn ? "" : `<button class="link-btn" data-cache-prefix="${c.prefix}" style="font:inherit;font-size:11px">${t("cacheIconSet")}</button>
+          <button class="link-btn dl-col-delete" data-delete-prefix="${c.prefix}" style="font:inherit;font-size:11px">${t("deleteIconSet")}</button>`}
+          <span class="dl-col-status">${c.builtIn ? t("builtInIconSet") : (cachedCount ? t("cachedIconSet", { count: cachedCount.toLocaleString() }) : "")}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".dl-col-item").forEach(item => {
+    const cb = item.querySelector("input[type=checkbox]");
+    item.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      if (cb.disabled) return;
+      if (e.target === cb) return;
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event("change", { bubbles: false }));
+    });
+    cb.addEventListener("change", () => {
+      item.classList.toggle("selected", cb.checked);
+    });
+  });
+
+  list.querySelectorAll("[data-sample-icon]").forEach(el => {
+    const prefix = el.closest("[data-col]")?.dataset.col || "";
+    loadIconifySvg(el.dataset.sampleIcon).then(svg => {
+      if (!el.isConnected) return;
+      if (svg) el.innerHTML = svg;
+      else renderSampleFallback(el, prefix);
+    });
+  });
+
+}
+
+function closeIconDownloadModal() {
+  if (dlDownloading) return;
+  $("iconDownload").classList.remove("show");
+}
+
+function getSelectedCollections() {
+  const cbs = $("dlCollections").querySelectorAll("input:checked");
+  return [...cbs].map(cb => cb.value);
+}
+
+async function downloadIconCollections(selected, opts = {}) {
+  if (!selected.length) return 0;
+  const total = selected.length;
+  let done = 0;
+  let totalIcons = 0;
+  for (const prefix of selected) {
+    if (opts.onProgress) opts.onProgress({ done, total, prefix });
+    try {
+      const url = `https://cdn.jsdelivr.net/npm/@iconify-json/${encodeURIComponent(prefix)}/icons.json`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      if (!data || !data.icons) throw new Error("No icons");
+
+      const icons = data.icons;
+      const defaultW = data.width || 24;
+      const defaultH = data.height || 24;
+
+      const db = await dbOpen();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(ICON_STORE, "readwrite");
+        const store = tx.objectStore(ICON_STORE);
+        let added = 0;
+        for (const [rawName, iconData] of Object.entries(icons)) {
+          if (iconData.hidden) continue;
+          if (!iconData.body) continue;
+          store.put({
+            name: `${prefix}:${rawName}`,
+            body: typeof iconData.body === "string" ? iconData.body : "",
+            width: iconData.width || defaultW,
+            height: iconData.height || defaultH,
+          });
+          added++;
+        }
+
+        if (data.aliases) {
+          for (const [aliasName, aliasData] of Object.entries(data.aliases)) {
+            if (aliasData.hidden) continue;
+            const parentData = icons[aliasData.parent];
+            if (!parentData || !parentData.body) continue;
+            const width = aliasData.width || parentData.width || defaultW;
+            const height = aliasData.height || parentData.height || defaultH;
+            store.put({
+              name: `${prefix}:${aliasName}`,
+              body: typeof parentData.body === "string" ? iconifyTransformBody(parentData.body, width, height, aliasData) : "",
+              width,
+              height,
+            });
+            added++;
+          }
+        }
+
+        totalIcons += added;
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.warn(`下载 ${prefix} 失败:`, e);
+      if (opts.onError) opts.onError({ done, total, prefix });
+      await new Promise(r => setTimeout(r, 200));
+    }
+    done++;
+  }
+  ICONIFY_SEARCH_CACHE.clear();
+  return totalIcons;
+}
+
+async function startIconDownload() {
+  const selected = getSelectedCollections();
+  if (!selected.length) { toast(t("selectAtLeastOneSet"), "err"); return; }
+
+  dlDownloading = true;
+  const total = selected.length;
+  const bar = $("dlBar");
+  const text = $("dlProgressText");
+  const progress = $("dlProgress");
+  const startBtn = $("dlStart");
+  const actionsRow = document.querySelector(".dl-actions");
+
+  bar.max = total;
+  bar.value = 0;
+  progress.classList.add("active");
+  startBtn.disabled = true;
+  startBtn.textContent = t("downloading");
+  actionsRow.style.display = "none";
+
+  const totalIcons = await downloadIconCollections(selected, {
+    onProgress: ({ done, total, prefix }) => {
+      text.textContent = t("iconDownloadingSet", { done, total, prefix });
+    },
+    onError: ({ done, total, prefix }) => {
+      text.textContent = t("iconDownloadFailedSkipped", { done, total, prefix });
+    },
+  });
+  bar.value = total;
+
+  progress.classList.remove("active");
+  dlDownloading = false;
+  startBtn.style.display = "none";
+  const cnt = await iconDBCount();
+  $("dlCount").textContent = cnt.toLocaleString();
+  toast(t("toastIconDownloaded", { count: totalIcons }), "ok");
+  if ($("iconDownload").classList.contains("show")) {
+    const list = $("dlCollections");
+    if (list) list.innerHTML = `<div class="modal-empty" style="padding:20px">${t("iconDownloadDone", { count: totalIcons })}</div>`;
+  }
+}
+
+async function cacheIconCollection(prefix) {
+  if (dlDownloading) return;
+  dlDownloading = true;
+  $("dlProgress").classList.add("active");
+  $("dlBar").max = 1;
+  $("dlBar").value = 0;
+  const totalIcons = await downloadIconCollections([prefix], {
+    onProgress: ({ done, total, prefix }) => {
+      $("dlProgressText").textContent = t("iconDownloadingSet", { done, total, prefix });
+    },
+    onError: ({ done, total, prefix }) => {
+      $("dlProgressText").textContent = t("iconDownloadFailedSkipped", { done, total, prefix });
+    },
+  });
+  $("dlBar").value = 1;
+  $("dlProgress").classList.remove("active");
+  dlDownloading = false;
+  $("dlCount").textContent = (await iconDBCount()).toLocaleString();
+  toast(t("toastIconDownloaded", { count: totalIcons }), totalIcons ? "ok" : "err");
+  await openIconDownloadModal();
+}
+
+async function deleteIconCollection(prefix) {
+  if (dlDownloading) return;
+  const deleted = await iconDBDeletePrefix(prefix);
+  ICONIFY_CACHE.clear();
+  ICONIFY_SEARCH_CACHE.clear();
+  $("dlCount").textContent = (await iconDBCount()).toLocaleString();
+  toast(t("toastIconSetDeleted", { prefix, count: deleted }), "ok");
+  await openIconDownloadModal();
+}
+
+async function clearIconCache() {
+  await iconDBClearAll();
+  $("dlCount").textContent = "0";
+  ICONIFY_CACHE.clear();
+  ICONIFY_SEARCH_CACHE.clear();
+  toast(t("toastIconCacheCleared"), "ok");
+}
+
+function selectAllCollections() {
+  $("dlCollections").querySelectorAll(".dl-col-item").forEach(item => {
+    const cb = item.querySelector("input");
+    if (cb.disabled) return;
+    cb.checked = true;
+    item.classList.add("selected");
+  });
+}
+
+function deselectAllCollections() {
+  $("dlCollections").querySelectorAll(".dl-col-item").forEach(item => {
+    const cb = item.querySelector("input");
+    cb.checked = false;
+    item.classList.remove("selected");
+  });
 }
 
 /* ============================================================
@@ -5515,6 +6349,17 @@ async function doSelectConfirm() {
       state.swaps.splice(insertAt, 0, merged);
       const meta = newSlotMeta(merged);
       meta.name = selected.length + " 合1";
+      const inheritedIcon = selected
+        .map(i => state.slotMeta[i])
+        .filter(m => m && m.iconKind !== "upload" && m.iconName)
+        .sort((a, b) => iconPrefixRank(a.iconKind === "iconify" ? a.iconName : "lucide:" + a.iconName) - iconPrefixRank(b.iconKind === "iconify" ? b.iconName : "lucide:" + b.iconName))[0];
+      if (inheritedIcon) {
+        meta.iconKind = inheritedIcon.iconKind;
+        meta.iconName = inheritedIcon.iconName;
+        meta.iconColor = inheritedIcon.iconColor;
+        meta.iconRgba = null;
+        meta.iconPreview = null;
+      }
       state.slotMeta.splice(insertAt, 0, meta);
       state.swapOrder = state.swaps.map(swapSign);
       toast(t("toastMerged", { count: selected.length }), "ok");
@@ -5753,10 +6598,6 @@ $("ctxMenu").addEventListener("click", async e => {
     case "picker":
       openPicker(idx);
       break;
-    case "autoIcon": {
-      openAutoIconCandidates(idx);
-      break;
-    }
     case "upload":
       uploadIconForSlot(idx);
       break;
@@ -5795,13 +6636,10 @@ $("pickerSearch").addEventListener("input", e => {
     searchTimer = setTimeout(() => openAutoIconCandidates(pickerTarget, e.target.value.trim()), 180);
   }
 });
-$("pickerTabs").addEventListener("click", async e => {
-  const btn = e.target.closest("[data-source-tab]");
+$("pickerViewTabs").addEventListener("click", e => {
+  const btn = e.target.closest("[data-view-tab]");
   if (!btn || pickerMode !== "library") return;
-  const idx = pickerTarget;
-  setPickerSource(btn.dataset.sourceTab);
-  if (pickerSource === "lucide") await loadLucideIndex();
-  if (pickerTarget !== idx || pickerMode !== "library") return;
+  setPickerViewMode(btn.dataset.viewTab);
   renderPickerGrid($("pickerSearch").value);
 });
 $("pickerWordRow").addEventListener("click", e => {
@@ -5816,9 +6654,42 @@ $("pickerGrid").addEventListener("click", async e => {
   const btn = e.target.closest("[data-pick]");
   if (!btn || pickerTarget < 0) return;
   const name = btn.dataset.pick;
-  const source = btn.dataset.source || "lucide";
+  const source = btn.dataset.source || "iconify";
   applyIconChoice(pickerTarget, name, source);
   closePicker();
+});
+
+// 预下载图标库入口
+$("openIconDownload").addEventListener("click", () => openIconDownloadModal());
+
+// 预下载 modal 事件
+$("dlClose").addEventListener("click", closeIconDownloadModal);
+$("iconDownload").addEventListener("click", e => {
+  if (e.target === $("iconDownload")) closeIconDownloadModal();
+});
+$("dlSelectAll").addEventListener("click", selectAllCollections);
+$("dlDeselectAll").addEventListener("click", deselectAllCollections);
+$("dlStart").addEventListener("click", startIconDownload);
+$("dlCollections").addEventListener("click", async e => {
+  const pinBtn = e.target.closest("[data-pin-prefix]");
+  if (pinBtn) {
+    togglePinnedIconPrefix(pinBtn.dataset.pinPrefix);
+    await openIconDownloadModal();
+    return;
+  }
+  const cacheBtn = e.target.closest("[data-cache-prefix]");
+  if (cacheBtn) {
+    await cacheIconCollection(cacheBtn.dataset.cachePrefix);
+    return;
+  }
+  const deleteBtn = e.target.closest("[data-delete-prefix]");
+  if (deleteBtn) {
+    const prefix = deleteBtn.dataset.deletePrefix;
+    if (confirm(t("confirmDeleteIconSet", { prefix }))) await deleteIconCollection(prefix);
+  }
+});
+$("dlClearCache").addEventListener("click", async () => {
+  if (confirm(t("confirmClearIconCache"))) await clearIconCache();
 });
 
 // 下载按钮
@@ -5857,7 +6728,7 @@ applyI18n();
 applyPreviewBg();
 renderPreview();
 renderIniView();
-loadLucideIndex(); // 后台预热
+loadLucideIndex(); // 后台预热，用于合并搜索和自动匹配
 </script>
 </body>
 </html>
