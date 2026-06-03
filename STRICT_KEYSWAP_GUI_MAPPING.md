@@ -471,9 +471,25 @@ condition = $active > 0
 
 自动把多个 Key section 的赋值表合成一个新 cycle 表，不属于严格映射。
 
+当前工具的手动合并遵循两层规则：
+
+1. 同 Key slot 直接合并。比较时使用 `normalizeKeyForMatch()`，会忽略正确拼写的 `no_modifiers` 前缀并忽略大小写，因此 `key = 8` 和 `key = no_modifiers 8` 视为同一 Key；拼写错误如 `no_modifers` 不会被工具纠正
+2. 不同 Key slot 合并时必须二次确认，并选择强制合并模式
+
+不同 Key 强制合并有两种模式：
+
+| 模式 | 行为 |
+|---|---|
+| `allKeys` | 所有原 Key 都等效于按一次合并后的 GUI 按钮；实现上会把每个 handler 的 `keys` 扩展为合并后的全部 Key |
+| `guiOnly` | 原 Key 仍保持各自原逻辑；只有 GUI 点击合并按钮时才依次执行全部 handler |
+
+合并后的 GUI key 提示显示为 `A / B / C` 这种合集文本，但生成原 Key section 时仍以 handler 自己的 `keys` 为准。
+
+多 Key 辅助监听器当前仍按每个 Key 参与分组；如果其中部分 Key 没有对应业务按钮，会形成独立 slot。后续如需隐藏这类辅助监听器，应按结构识别，不能按变量名或 section 名硬编码。
+
 ## 6. 对测试 INI 的严格映射
 
-Skirk 这个测试 INI 应生成 10 个 GUI slot，按原始 key 分组：
+Skirk 这个示例 INI 应生成 10 个 GUI slot，按原始 key 分组。这个数字只对应本节的 Skirk 示例，不代表当前仓库里的 `test/test.ini` 数量；本地测试文件数量以 `test/ini-test.js` 输出为准。
 
 | slot | key | 执行逻辑 |
 |---|---|---|
@@ -508,6 +524,8 @@ Skirk 这个测试 INI 应生成 10 个 GUI slot，按原始 key 分组：
 10. 保留 `entries` 原顺序，支持 `run`、变量赋值、raw 行混用
 11. 生成时原样输出 `condition`，禁止 `$x != 0` 到 `$x > 0` 这类改写
 12. 为有 `Back` 键的 cycle slot 绑定右键后退
+13. Key 分组比较使用 `normalizeKeyForMatch()`，只忽略正确 `no_modifiers`，不做拼写纠错
+14. 不同 Key 强制合并必须保留 handler 级别的 `keys` 信息，以区分 `allKeys` 和 `guiOnly`
 
 ## 8. 不能做的事
 
@@ -527,6 +545,8 @@ Skirk 这个测试 INI 应生成 10 个 GUI slot，按原始 key 分组：
 | 12 | 忽略 type | 把 `hold` 按 mousedown/mouseup 方式处理而不是转为 2 档 cycle | GUI 无法真正保持按住, 点击切换才是可行的替代方案 |
 | 13 | 忽略过渡 | 试图在 CommandList 中模拟 `transition` 逐帧插值 | CommandList 没有逐帧回调能力, 过渡只能放弃 |
 | 14 | 多 Key 遗漏 | section 有多个 `Key` 行时只归入第一个 key 的 slot | 必须重复归属到所有匹配 key 的 slot |
+| 15 | 拼写纠错 | 把 `no_modifers` 当成 `no_modifiers` | 工具不应替作者修正错误配置 |
+| 16 | 强制合并 | 不经确认直接把不同 Key 合成一个按钮 | 会改变原键盘语义，必须让用户选择模式 |
 
 ## 9. 验收标准
 

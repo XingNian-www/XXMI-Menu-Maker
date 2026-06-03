@@ -45,7 +45,7 @@
   .app {
     display: grid;
     grid-template-columns: minmax(420px, 480px) 1fr;
-    gap: 16px;
+    gap: 4px;
     padding: 16px;
     min-height: 100vh;
   }
@@ -286,6 +286,7 @@
     gap: 10px;
   }
   .preview-head h2 { margin: 0; font-size: 14px; }
+  .preview-tools { display: flex; gap: 8px; align-items: center; }
   .preview-head .tabs { display: flex; gap: 2px; }
   .tab {
     padding: 6px 12px;
@@ -301,16 +302,30 @@
 
   .preview-body {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(240px, 1fr) 6px minmax(180px, var(--ini-preview-width, 50%));
     overflow: hidden;
     min-height: 0;
   }
-  .preview-body > * { overflow: auto; min-height: 0; }
+  .preview-body.ini-hidden { grid-template-columns: 1fr; }
+  .preview-body > * { min-height: 0; }
+  .preview-body > .ini-view { overflow: auto; }
+  .preview-body.ini-hidden > .ini-view,
+  .preview-body.ini-hidden > .preview-resizer { display: none; }
+  .preview-resizer {
+    cursor: col-resize;
+    background: var(--line);
+    border-left: 1px solid rgba(255,255,255,.04);
+    border-right: 1px solid rgba(0,0,0,.28);
+    min-height: 0;
+  }
+  .preview-resizer:hover,
+  .preview-resizer.dragging { background: var(--hot); }
   .preview-stage {
     position: relative;
     display: grid;
     place-items: center;
     padding: 24px;
+    overflow: hidden;
     background:
       radial-gradient(circle at 30% 20%, #4a2438, transparent 60%),
       radial-gradient(circle at 70% 80%, #1f3850, transparent 60%),
@@ -336,7 +351,7 @@
   /* gui panel preview, sized in JS */
   .gui-panel {
     position: relative;
-    border: calc(var(--panel-border-w, 3) * 1px) solid var(--panel-border-c, #f2f2f2);
+    border: calc(var(--panel-border-w, 3) * 1px) solid var(--panel-border-rgba, var(--panel-border-c, #f2f2f2));
     border-top-color: var(--top-border, var(--hot));
     border-radius: calc(var(--panel-radius, 22) * 1px);
     padding: 14px 22px 26px;
@@ -359,7 +374,7 @@
     position: relative;
     width: var(--slot-size, 64px);
     height: var(--slot-size, 64px);
-    border: calc(var(--slot-border-w, 3) * 1px) solid var(--slot-border-c, #f2f2f2);
+    border: calc(var(--slot-border-w, 3) * 1px) solid var(--slot-border-rgba, var(--slot-border-c, #f2f2f2));
     border-radius: calc(var(--slot-radius, 9) * 1px);
     background: var(--slot-rgba, rgba(60, 60, 70, .78));
     display: flex;
@@ -545,6 +560,75 @@
   .ini-view .k { color: #ff8fc7; }
   .ini-view .v { color: #b6f0d4; }
   .ini-view .c { color: #6c6779; }
+
+  .logic-compare-card {
+    width: min(1180px, 94vw);
+    height: min(760px, 88vh);
+    max-height: 88vh;
+    grid-template-rows: auto auto 1fr;
+  }
+  .logic-slot-list {
+    display: flex;
+    gap: 6px;
+    overflow: auto;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .logic-slot-btn {
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: var(--bg-2);
+    color: var(--muted);
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .logic-slot-btn.active {
+    border-color: var(--hot);
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(255,79,179,.24), rgba(192,115,255,.2));
+  }
+  .logic-slot-btn.skipped {
+    opacity: .55;
+  }
+  .logic-compare-grid {
+    min-height: 0;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .logic-pane {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .logic-pane-title {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .logic-text {
+    margin: 0;
+    padding: 12px;
+    overflow: auto;
+    white-space: pre;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  @media (max-width: 820px) {
+    .logic-compare-grid { grid-template-columns: 1fr; }
+  }
 
   /* ---------- icon picker modal ---------- */
   .modal {
@@ -853,7 +937,35 @@
     background: linear-gradient(135deg, var(--preset-a), var(--preset-b));
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
   }
-  .preview-stage.solid-bg { background: var(--preview-bg, #0e0d12); }
+  .preview-stage.solid-bg {
+    background-color: var(--preview-bg, #0e0d12);
+    background-image: var(--preview-bg-image, none);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: auto 100%;
+  }
+  .preview-stage.has-bg-image {
+    background-color: var(--preview-bg, #0e0d12);
+  }
+  .preview-bg-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: 100%;
+    width: auto;
+    max-width: none;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+  }
+  .preview-bg-img[hidden] { display: none; }
+  .preview-panel-wrap,
+  .preview-empty,
+  .trash-drop,
+  .merge-fab,
+  .fab-actions,
+  .merge-bar { z-index: 1; }
 
   /* palette highlight */
   .palette-highlight {
@@ -1115,6 +1227,10 @@
         <div class="palette-swatch" id="paletteHoverSwatch"></div>
         <div class="field" style="margin-bottom:0"><label data-i18n="paletteHover">悬停底色</label><span class="palette-desc" data-i18n="paletteHoverDesc">按钮悬停时填充色</span><input id="hoverColor" type="color" value="#ff4fb3"></div>
       </div>
+      <div class="grid-2" style="margin:0 0 8px 40px">
+        <div class="field"><label data-i18n="paletteHoverAlpha">悬停透明度</label><input id="hoverAlpha" type="number" min="0" max="255" value="230"></div>
+        <div class="field"><label data-i18n="paletteSlotAlpha">按钮透明度</label><input id="slotAlpha" type="number" min="0" max="255" value="200"></div>
+      </div>
 
       <div class="palette-row" data-highlight=".gui-slot">
         <div class="palette-swatch" id="paletteSlotSwatch"></div>
@@ -1124,6 +1240,10 @@
       <div class="palette-row" data-highlight="#guiPanel">
         <div class="palette-swatch" id="palettePanelBorderSwatch"></div>
         <div class="field" style="margin-bottom:0"><label data-i18n="palettePanelBorder">面板边框</label><span class="palette-desc" data-i18n="palettePanelBorderDesc">面板外边框色</span><input id="panelBorderColor" type="color" value="#f2f2f2"></div>
+      </div>
+      <div class="grid-2" style="margin:0 0 8px 40px">
+        <div class="field"><label data-i18n="palettePanelBorderAlpha">面板边框透明度</label><input id="panelBorderAlpha" type="number" min="0" max="255" value="255"></div>
+        <div class="field"><label data-i18n="paletteSlotBorderAlpha">按钮边框透明度</label><input id="slotBorderAlpha" type="number" min="0" max="255" value="255"></div>
       </div>
       <div class="palette-row" data-highlight=".gui-slot">
         <div class="palette-swatch" id="paletteSlotBorderSwatch"></div>
@@ -1135,6 +1255,10 @@
         <div class="palette-row" data-highlight="#viewPanel">
           <div class="palette-swatch" id="palettePreviewSwatch"></div>
           <div class="field" style="margin-bottom:0"><label data-i18n="palettePreviewBg">预览背景</label><span class="palette-desc" data-i18n="palettePreviewBgDesc">预览区纯色背景</span><input id="previewBg" type="color" value="#0e0d12"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin:6px 0 0 40px">
+          <button class="btn ghost" id="btnPreviewBgImage" style="flex:1" data-i18n="previewBgImage">上传预览背景图</button>
+          <button class="btn ghost" id="btnClearPreviewBgImage" style="flex:0 0 auto;display:none" data-i18n="clearPreviewBgImage">清除</button>
         </div>
       </div>
     </section>
@@ -1160,9 +1284,13 @@
   <div class="card panel-right">
     <div class="preview-head">
       <h2 data-i18n="previewTitle">预览</h2>
+      <div class="preview-tools">
+        <button class="btn ghost" id="btnToggleIniPreview" data-i18n="hideIniPreview">隐藏 INI 预览</button>
+      </div>
     </div>
     <div class="preview-body">
       <div id="viewPanel" class="preview-stage">
+        <img id="previewBgImageEl" class="preview-bg-img" alt="" hidden>
         <div class="preview-panel-wrap">
           <div class="gui-panel" id="guiPanel">
             <h3 id="guiTitle">GUI Menu</h3>
@@ -1201,7 +1329,31 @@
           <button class="btn ghost" id="mergeCancel" data-i18n="cancel">取消</button>
         </div>
       </div>
+      <div class="preview-resizer" id="previewResizer" title="拖动调整 INI 预览宽度" data-i18n-title="resizeIniPreview"></div>
       <pre id="viewIni" class="ini-view"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOGIC COMPARE ============ -->
+<div class="modal" id="logicCompareModal">
+  <div class="modal-card logic-compare-card">
+    <div class="modal-head">
+      <strong data-i18n="logicCompareTitle">逻辑对比</strong>
+      <button class="icon-btn" id="logicCompareClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="logic-slot-list" id="logicCompareSlots"></div>
+    <div class="logic-compare-grid">
+      <div class="logic-pane">
+        <div class="logic-pane-title" id="logicOriginalTitle" data-i18n="logicOriginal">原始逻辑</div>
+        <pre class="logic-text" id="logicOriginalText"></pre>
+      </div>
+      <div class="logic-pane">
+        <div class="logic-pane-title" id="logicGeneratedTitle" data-i18n="logicGenerated">生成后逻辑</div>
+        <pre class="logic-text" id="logicGeneratedText"></pre>
+      </div>
     </div>
   </div>
 </div>
@@ -1328,6 +1480,7 @@
   <button data-ctx="key" data-i18n="bindKey">绑定按键</button>
   <button data-ctx="split" data-i18n="split">拆分</button>
   <button data-ctx="skip" data-i18n="skipToggle">跳过 / 取消跳过</button>
+  <button data-ctx="logicCompare" data-i18n="logicCompare">逻辑对比</button>
   <button data-ctx="picker" data-i18n="chooseFromLibrary">匹配图标</button>
   <button data-ctx="upload" data-i18n="uploadIcon">上传图标…</button>
   <button data-ctx="reset" data-i18n="resetIcon">重置图标</button>
@@ -1421,15 +1574,21 @@ const I18N = {
     disableTitleShadow: "禁用标题文字投影",
     paletteHover: "悬停底色",
     paletteHoverDesc: "按钮悬停时填充色",
+    paletteHoverAlpha: "悬停透明度",
     paletteSlot: "按钮底色",
     paletteSlotDesc: "按钮默认填充色",
+    paletteSlotAlpha: "按钮透明度",
     palettePanelBorder: "面板边框",
     palettePanelBorderDesc: "面板外边框色",
+    palettePanelBorderAlpha: "面板边框透明度",
     paletteSlotBorder: "按钮边框",
     paletteSlotBorderDesc: "按钮外边框色",
+    paletteSlotBorderAlpha: "按钮边框透明度",
     previewOnly: "以下仅供预览观察，不影响导出：",
     palettePreviewBg: "预览背景",
     palettePreviewBgDesc: "预览区纯色背景",
+    previewBgImage: "上传预览背景图",
+    clearPreviewBgImage: "清除",
     restoreDefault: "恢复默认",
     palettePresetDefault: "默认霓虹",
     palettePresetMoon: "月影紫",
@@ -1440,11 +1599,15 @@ const I18N = {
     palettePresetSilver: "银白灰",
     downloadZip: "下载完整 ZIP",
     writeFolder: "写入文件夹",
+    logicCompare: "逻辑对比",
     downloadIni: "只下载 ini",
     author: "作者",
     createdWith: "创作工具",
     thanks: "致谢",
     previewTitle: "预览",
+    hideIniPreview: "隐藏 INI 预览",
+    showIniPreview: "显示 INI 预览",
+    resizeIniPreview: "拖动调整 INI 预览宽度",
     previewEmpty: "拖入 ini 文件开始",
     trashDropTitle: "拖入按钮以快速跳过",
     batchActions: "批量操作",
@@ -1457,6 +1620,9 @@ const I18N = {
     cancel: "取消",
     draftRecent: "最近 30 次",
     draftRestoreHint: "拖入对应 INI 文件时自动恢复",
+    logicCompareTitle: "逻辑对比",
+    logicOriginal: "原始逻辑",
+    logicGenerated: "生成后逻辑",
     iconPickerTitle: "匹配图标",
     pickerSearchPlaceholder: "搜索图标，比如 shirt / hat / crown / glasses",
     cropImage: "裁剪图片",
@@ -1680,15 +1846,21 @@ const I18N = {
     disableTitleShadow: "Disable title text shadow",
     paletteHover: "Hover fill",
     paletteHoverDesc: "Button fill color on hover",
+    paletteHoverAlpha: "Hover opacity",
     paletteSlot: "Button fill",
     paletteSlotDesc: "Default button fill color",
+    paletteSlotAlpha: "Button opacity",
     palettePanelBorder: "Panel border",
     palettePanelBorderDesc: "Outer panel border color",
+    palettePanelBorderAlpha: "Panel border opacity",
     paletteSlotBorder: "Button border",
     paletteSlotBorderDesc: "Outer button border color",
+    paletteSlotBorderAlpha: "Button border opacity",
     previewOnly: "Preview only, does not affect export:",
     palettePreviewBg: "Preview background",
     palettePreviewBgDesc: "Solid preview area background",
+    previewBgImage: "Upload preview background",
+    clearPreviewBgImage: "Clear",
     restoreDefault: "Restore defaults",
     palettePresetDefault: "Default Neon",
     palettePresetMoon: "Moonlit Purple",
@@ -1699,11 +1871,15 @@ const I18N = {
     palettePresetSilver: "Silver Gray",
     downloadZip: "Download full ZIP",
     writeFolder: "Write to folder",
+    logicCompare: "Compare logic",
     downloadIni: "Download ini only",
     author: "Author",
     createdWith: "Created with",
     thanks: "Thanks",
     previewTitle: "Preview",
+    hideIniPreview: "Hide INI preview",
+    showIniPreview: "Show INI preview",
+    resizeIniPreview: "Drag to resize INI preview",
     previewEmpty: "Drop an ini file to start",
     trashDropTitle: "Drop a button here to skip it",
     batchActions: "Batch actions",
@@ -1716,6 +1892,9 @@ const I18N = {
     cancel: "Cancel",
     draftRecent: "Last 30",
     draftRestoreHint: "Automatically restores when the matching INI file is dropped",
+    logicCompareTitle: "Logic compare",
+    logicOriginal: "Original logic",
+    logicGenerated: "Generated logic",
     iconPickerTitle: "Match Icon",
     pickerSearchPlaceholder: "Search icons, e.g. shirt / hat / crown / glasses",
     cropImage: "Crop Image",
@@ -1892,6 +2071,10 @@ function applyI18n() {
   renderFileInfo();
   updateAutoPreviewResLabel();
   updateStatus();
+  if ($("btnToggleIniPreview")) {
+    const hidden = document.querySelector(".preview-body")?.classList.contains("ini-hidden");
+    $("btnToggleIniPreview").textContent = t(hidden ? "showIniPreview" : "hideIniPreview");
+  }
 }
 
 function setI18nDynamic(id, dynamic) {
@@ -1998,6 +2181,9 @@ function toast(msg, kind = "") {
 const SETTINGS_KEY = "keyswap-gui-settings-v1";
 const FOLDER_PICKER_ID = "keyswap-gui-mod-folder";
 const LAST_FOLDER_HANDLE_KEY = "__last_mod_folder_handle";
+const SETTINGS_INPUT_IDS = ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "slotAlpha", "hoverColor", "hoverAlpha", "titleShadowColor", "panelBorderColor", "panelBorderAlpha", "slotBorderColor", "slotBorderAlpha", "previewBg", "behavior", "previewRes", "panelScale"];
+const INI_PREVIEW_HIDDEN_KEY = "keyswap-gui-ini-preview-hidden";
+const INI_PREVIEW_WIDTH_KEY = "keyswap-gui-ini-preview-width";
 
 function swapSign(sw) {
   return { s: sw.sections.join("\x01"), k: sw.key, c: sw.condition, t: sw.type || "" };
@@ -2008,7 +2194,7 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
+    for (const id of SETTINGS_INPUT_IDS) {
       if (s[id] !== undefined && $(id)) $(id).value = s[id];
     }
     if (typeof s.removeKeys === "boolean") $("removeKeys").checked = s.removeKeys;
@@ -2023,7 +2209,7 @@ function loadSettings() {
 }
 function saveSettings() {
   const s = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
+  for (const id of SETTINGS_INPUT_IDS) {
     s[id] = $(id).value;
   }
   s.removeKeys = $("removeKeys").checked;
@@ -2275,7 +2461,7 @@ function flushDraftMeta() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const ui = {};
-  for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
+  for (const id of SETTINGS_INPUT_IDS) {
     ui[id] = $(id).value;
   }
   ui.removeKeys = $("removeKeys").checked;
@@ -2312,9 +2498,9 @@ async function flushDraftBlobs() {
   if (!state.swaps.length) return;
   const h = hash64(state.text);
   const iconPreviews = state.slotMeta.map(m => m.iconPreview || null);
-  const hasBlobs = state.panelImagePreview || iconPreviews.some(p => p) || state.text;
+  const hasBlobs = state.panelImagePreview || state.previewBgImage || iconPreviews.some(p => p) || state.text;
   if (hasBlobs) {
-    await dbPut(h, { text: state.text, img: state.panelImagePreview || null, iconPreviews });
+    await dbPut(h, { text: state.text, img: state.panelImagePreview || null, previewBgImage: state.previewBgImage || null, iconPreviews });
   }
 }
 
@@ -2347,7 +2533,7 @@ async function loadDraft() {
 
     // 签名通过或无需校验 → 开始恢复
     // 恢复 UI 配置
-    for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
+    for (const id of SETTINGS_INPUT_IDS) {
       if (d.ui[id] !== undefined) $(id).value = d.ui[id];
     }
     if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -2360,7 +2546,9 @@ async function loadDraft() {
     // 从 IndexedDB 恢复大图
     const blob = await dbGet(h);
     state.panelImagePreview = blob?.img || null;
+    state.previewBgImage = blob?.previewBgImage || null;
     state.panelImageRgba = await dataUrlToRgba(state.panelImagePreview, 256);
+    applyPreviewBg();
 
     // 恢复排序（先排后覆：重排 swaps/slotMeta 后再恢复 meta）
     if (orderOk) {
@@ -2414,6 +2602,12 @@ function parseKeyValue(raw) {
   const value = String(raw || "").split("=").slice(1).join("=").trim();
   if (value === ";") return value;
   return value.replace(/\s+;.*/, "").trim();
+}
+
+function alpha01(id, fallback = 255) {
+  const raw = Number($(id)?.value);
+  const value = Number.isFinite(raw) ? raw : fallback;
+  return Math.max(0, Math.min(255, value)) / 255;
 }
 
 function normalizeKeyForMatch(key) {
@@ -4471,11 +4665,14 @@ async function buildResources() {
   const swaps = state.swaps;
   const accent = $("accentColor").value;
   const bg = $("bgColor").value;
-  const alpha = Math.max(0, Math.min(255, Number($("bgAlpha").value) || 200));
 
   const [ar, ag, ab] = hexToRgb(accent);
   const [br, bg2, bb] = hexToRgb(bg);
-  const alpha01 = alpha / 255;
+  const bgAlpha = alpha01("bgAlpha", 210);
+  const slotAlpha = alpha01("slotAlpha", 200);
+  const hoverAlpha = alpha01("hoverAlpha", 230);
+  const panelBorderAlpha = alpha01("panelBorderAlpha", 255);
+  const slotBorderAlpha = alpha01("slotBorderAlpha", 255);
   const [sr, sgg, sbb] = hexToRgb($("slotColor").value);
   const [hr, hg, hb] = hexToRgb($("hoverColor").value);
   const [pbor, pbog, pbob] = hexToRgb($("panelBorderColor").value);
@@ -4498,7 +4695,7 @@ async function buildResources() {
   const panelH = padding + Math.round(32 * panelScale) + rows * slotSize + (rows - 1) * Math.round(gap * panelScale) + padding;
 
   // 面板背景（圆角矩形 + 顶部强调色边框，按实际尺寸）
-  const bgOpts = { fill: [br, bg2, bb, alpha01], border: [pbor, pbog, pbob, 1], topBorder: [ar, ag, ab, 1] };
+  const bgOpts = { fill: [br, bg2, bb, bgAlpha], border: [pbor, pbog, pbob, panelBorderAlpha], topBorder: [ar, ag, ab, panelBorderAlpha] };
   if (state.panelImageRgba) {
     // 有上传图片：先画背景底色，再叠加图像到内容区
     const bgRgba = renderBgRgba(panelW, panelH, bgOpts);
@@ -4535,8 +4732,8 @@ async function buildResources() {
 
   const slotTasks = active.map(async (sIdx, n) => {
     const m = meta[sIdx];
-    const slotFill = [sr, sgg, sbb, 200 / 255];
-    const hoverFill = [hr, hg, hb, 230 / 255];
+    const slotFill = [sr, sgg, sbb, slotAlpha];
+    const hoverFill = [hr, hg, hb, hoverAlpha];
     const label = (m.name && !(hideUploadLabel && m.iconPreview)) ? m.name : "";
 
     // 准备图标数据
@@ -4550,7 +4747,7 @@ async function buildResources() {
       }
     }
 
-    const baseOpts = { border: [sbor, sbog, sbob, 1], iconRgba, iconSvg, label };
+    const baseOpts = { border: [sbor, sbog, sbob, slotBorderAlpha], iconRgba, iconSvg, label };
     if (showKey && swaps[sIdx].key) {
       baseOpts.keyHint = swaps[sIdx].key;
     }
@@ -4731,22 +4928,26 @@ async function renderPreview() {
   const gap = Math.max(0, Number($("gap").value) || 14);
   const accent = $("accentColor").value;
   const bgC = $("bgColor").value;
-  const alpha = (Number($("bgAlpha").value) || 200) / 255;
+  const bgAlpha = alpha01("bgAlpha", 210);
   const [br, bgg, bb] = hexToRgb(bgC);
 
   const panel = $("guiPanel");
   panel.style.setProperty("--top-border", accent);
-  panel.style.setProperty("--bg-rgba", `rgba(${br}, ${bgg}, ${bb}, ${alpha})`);
+  panel.style.setProperty("--bg-rgba", `rgba(${br}, ${bgg}, ${bb}, ${bgAlpha})`);
   panel.style.setProperty("--title-shadow", $("disableTitleShadow").checked ? "transparent" : $("titleShadowColor").value);
 
   // 按钮底色 / 悬停底色 / 边框
   const slotC = $("slotColor").value;
   const [sr, sg2, sb2] = hexToRgb(slotC);
   const [hr, hg, hb] = hexToRgb($("hoverColor").value);
-  panel.style.setProperty("--slot-rgba", `rgba(${sr}, ${sg2}, ${sb2}, .78)`);
-  panel.style.setProperty("--slot-hover-rgba", `rgba(${hr}, ${hg}, ${hb}, .9)`);
+  const [pbor, pbog, pbob] = hexToRgb($("panelBorderColor").value);
+  const [sbor, sbog, sbob] = hexToRgb($("slotBorderColor").value);
+  panel.style.setProperty("--slot-rgba", `rgba(${sr}, ${sg2}, ${sb2}, ${alpha01("slotAlpha", 200)})`);
+  panel.style.setProperty("--slot-hover-rgba", `rgba(${hr}, ${hg}, ${hb}, ${alpha01("hoverAlpha", 230)})`);
   panel.style.setProperty("--panel-border-c", $("panelBorderColor").value);
   panel.style.setProperty("--slot-border-c", $("slotBorderColor").value);
+  panel.style.setProperty("--panel-border-rgba", `rgba(${pbor}, ${pbog}, ${pbob}, ${alpha01("panelBorderAlpha", 255)})`);
+  panel.style.setProperty("--slot-border-rgba", `rgba(${sbor}, ${sbog}, ${sbob}, ${alpha01("slotBorderAlpha", 255)})`);
   if (state.panelImagePreview) {
     panel.style.background = `url(${state.panelImagePreview}) center/cover`;
   } else {
@@ -4845,6 +5046,24 @@ function renderIniView() {
   $("viewIni").innerHTML = html;
 }
 
+function setIniPreviewHidden(hidden) {
+  const body = document.querySelector(".preview-body");
+  body.classList.toggle("ini-hidden", hidden);
+  $("btnToggleIniPreview").textContent = t(hidden ? "showIniPreview" : "hideIniPreview");
+  localStorage.setItem(INI_PREVIEW_HIDDEN_KEY, hidden ? "1" : "0");
+}
+
+function setIniPreviewWidth(value) {
+  const num = Math.max(24, Math.min(72, Number(value) || 50));
+  document.querySelector(".preview-body").style.setProperty("--ini-preview-width", `${num}%`);
+  localStorage.setItem(INI_PREVIEW_WIDTH_KEY, String(num));
+}
+
+function initIniPreviewLayout() {
+  setIniPreviewWidth(localStorage.getItem(INI_PREVIEW_WIDTH_KEY) || 50);
+  setIniPreviewHidden(localStorage.getItem(INI_PREVIEW_HIDDEN_KEY) === "1");
+}
+
 function activeSwapCount() {
   return state.swaps.filter((_, i) => !state.slotMeta[i]?.skip).length;
 }
@@ -4866,6 +5085,99 @@ function updateStatus() {
     $("status").className = "status ok";
     $("status").textContent = t("statusActive", { total, active });
   }
+}
+
+function openLogicCompare(initialIdx = null) {
+  if (!state.swaps.length) return;
+  const active = logicCompareSlotIndices();
+  const slots = active.length ? active : state.swaps.map((_, i) => i);
+  $("logicCompareSlots").innerHTML = slots.map((idx, n) => {
+    const meta = state.slotMeta[idx];
+    const sw = state.swaps[idx];
+    const skipped = meta?.skip ? " skipped" : "";
+    const key = sw?.key ? ` · ${sw.key}` : "";
+    return `<button class="logic-slot-btn${skipped}" data-logic-slot="${idx}">${n + 1}. ${escapeHtml(meta?.name || sw?.key || `Slot ${idx + 1}`)}${escapeHtml(key)}</button>`;
+  }).join("");
+  $("logicCompareModal").classList.add("show");
+  const targetIdx = slots.includes(initialIdx) ? initialIdx : slots[0];
+  if (targetIdx !== undefined) renderLogicCompareSlot(targetIdx);
+}
+
+function closeLogicCompare() {
+  $("logicCompareModal").classList.remove("show");
+}
+
+function sourceSectionText(handler) {
+  const sec = state.sections.find(s => s.index === handler.sourceIndex || s.name === handler.section);
+  if (sec?.lines?.length) return sec.lines.join("\n");
+  const lines = [`[${handler.section || "Key"}]`];
+  for (const key of handler.keys || [handler.key]) if (key) lines.push(`key = ${key}`);
+  if (handler.condition) lines.push(`condition = ${handler.condition}`);
+  if (handler.type) lines.push(`type = ${handler.type}`);
+  if (handler.back) lines.push(`back = ${handler.back}`);
+  for (const entry of handler.entries || []) lines.push(entry.raw || entry.line || "");
+  return lines.join("\n");
+}
+
+function generatedHandlerText(handler, fallbackBehavior = "cycle") {
+  const constants = parseConstantsInitialValues(state.sections);
+  const type = effectiveHandlerType(handler, fallbackBehavior);
+  const L = [];
+  if (isActivateType(type)) emitActivateCommandList(L, handler);
+  else emitKeyHandlerCommandList(L, handler, fallbackBehavior, constants);
+  return L.join("\n").trim();
+}
+
+function logicCompareSlotIndices() {
+  return state.swaps.map((_, i) => i).filter(i => !state.slotMeta[i]?.skip);
+}
+
+function renderLogicCompareSlot(idx) {
+  const sw = state.swaps[idx];
+  const meta = state.slotMeta[idx];
+  if (!sw || !meta) return;
+  document.querySelectorAll("#logicCompareSlots [data-logic-slot]").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.logicSlot) === idx);
+  });
+
+  const active = logicCompareSlotIndices();
+  const activePos = active.indexOf(idx);
+  const clickNo = activePos >= 0 ? activePos + 1 : null;
+  const behavior = $("behavior").value;
+  const handlers = sw.handlers || [];
+  const sourceParts = handlers.map((handler, n) => [
+    `; Handler ${n + 1}: ${handler.section || "Key"}`,
+    `; key: ${(handler.keys || [handler.key]).filter(Boolean).join(" / ") || "<none>"}`,
+    handler.condition ? `; condition: ${handler.condition}` : "; condition: <always>",
+    `; type: ${effectiveHandlerType(handler, behavior)}`,
+    sourceSectionText(handler),
+  ].join("\n"));
+
+  const generatedClick = [];
+  generatedClick.push("[CommandListGuiClick]");
+  if (clickNo === null) {
+    generatedClick.push(`; ${meta.name} is skipped, no GUI click branch is generated`);
+  } else {
+    generatedClick.push(`if $gui_clicked == ${clickNo}`);
+    generatedClick.push(`  ; ${meta.name}`);
+    for (const handler of handlers) emitGuiRunHandler(generatedClick, "  ", handler, behavior);
+    generatedClick.push("endif");
+  }
+  const generatedParts = [generatedClick.join("\n")];
+  for (const handler of handlers) {
+    const commandText = generatedHandlerText(handler, behavior);
+    if (commandText) generatedParts.push(commandText);
+    if (handler.back) {
+      const backLines = [];
+      emitGuiRunHandlerBack(backLines, "", handler, behavior);
+      if (backLines.length) generatedParts.push(`[CommandListGuiRightClick branch]\n${backLines.join("\n")}`);
+    }
+  }
+
+  $("logicOriginalTitle").textContent = `${t("logicOriginal")} · ${meta.name}`;
+  $("logicGeneratedTitle").textContent = `${t("logicGenerated")} · ${meta.name}`;
+  $("logicOriginalText").textContent = sourceParts.join("\n\n");
+  $("logicGeneratedText").textContent = generatedParts.join("\n\n");
 }
 
 let _draftTimer = 0;
@@ -5616,7 +5928,7 @@ drop.addEventListener("drop", e => {
 });
 
 // 配置项变化
-["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "behavior", "panelScale"].forEach(id => {
+[...SETTINGS_INPUT_IDS].filter(id => id !== "previewRes" && id !== "previewBg").forEach(id => {
   $(id).addEventListener("input", () => {
     if (id === "title") $("title").dataset.touched = "1";
     if (id === "cols") colsManual = true;
@@ -5627,6 +5939,34 @@ drop.addEventListener("drop", e => {
   $(id).addEventListener("change", () => { rerender(); });
 });
 $("previewRes").addEventListener("change", () => { saveSettings(); rerender(); });
+
+$("btnToggleIniPreview").addEventListener("click", () => {
+  const body = document.querySelector(".preview-body");
+  setIniPreviewHidden(!body.classList.contains("ini-hidden"));
+});
+
+let iniPreviewDragging = false;
+$("previewResizer").addEventListener("pointerdown", e => {
+  iniPreviewDragging = true;
+  $("previewResizer").classList.add("dragging");
+  $("previewResizer").setPointerCapture(e.pointerId);
+});
+$("previewResizer").addEventListener("pointermove", e => {
+  if (!iniPreviewDragging) return;
+  const body = document.querySelector(".preview-body");
+  const rect = body.getBoundingClientRect();
+  const iniWidth = Math.max(0, rect.right - e.clientX);
+  setIniPreviewWidth((iniWidth / rect.width) * 100);
+});
+$("previewResizer").addEventListener("pointerup", e => {
+  iniPreviewDragging = false;
+  $("previewResizer").classList.remove("dragging");
+  $("previewResizer").releasePointerCapture(e.pointerId);
+});
+$("previewResizer").addEventListener("pointercancel", () => {
+  iniPreviewDragging = false;
+  $("previewResizer").classList.remove("dragging");
+});
 let langRefreshSeq = 0;
 function scheduleLanguageRefresh() {
   const seq = ++langRefreshSeq;
@@ -5667,20 +6007,24 @@ const PALETTE_DEFAULT = {
   accentColor: "#ff4fb3",
   titleShadowColor: "#ff4fb3",
   hoverColor: "#ff4fb3",
+  hoverAlpha: "230",
   slotColor: "#3c3c46",
+  slotAlpha: "200",
   panelBorderColor: "#f2f2f2",
+  panelBorderAlpha: "255",
   slotBorderColor: "#f2f2f2",
+  slotBorderAlpha: "255",
   previewBg: "#0e0d12",
   disableTitleShadow: false,
 };
 const PALETTE_PRESETS = [
   { nameKey: "palettePresetDefault", values: PALETTE_DEFAULT },
-  { nameKey: "palettePresetMoon", values: { bgColor: "#171126", bgAlpha: "222", accentColor: "#9f7aea", titleShadowColor: "#c084fc", hoverColor: "#7c3aed", slotColor: "#27213b", panelBorderColor: "#ded7ff", slotBorderColor: "#b7a8ff", previewBg: "#0b0712" } },
-  { nameKey: "palettePresetCherry", values: { bgColor: "#260f19", bgAlpha: "224", accentColor: "#ff5f8f", titleShadowColor: "#ff9fbd", hoverColor: "#d81b60", slotColor: "#3b1d2b", panelBorderColor: "#ffd6e5", slotBorderColor: "#ff9fbd", previewBg: "#12070d" } },
-  { nameKey: "palettePresetCyan", values: { bgColor: "#0b1d26", bgAlpha: "220", accentColor: "#38bdf8", titleShadowColor: "#67e8f9", hoverColor: "#0891b2", slotColor: "#17313d", panelBorderColor: "#b6f3ff", slotBorderColor: "#7dd3fc", previewBg: "#061018" } },
-  { nameKey: "palettePresetAmber", values: { bgColor: "#21170a", bgAlpha: "218", accentColor: "#f59e0b", titleShadowColor: "#facc15", hoverColor: "#b45309", slotColor: "#382a12", panelBorderColor: "#ffe8a3", slotBorderColor: "#fbbf24", previewBg: "#100a03" } },
-  { nameKey: "palettePresetMint", values: { bgColor: "#0c1f1a", bgAlpha: "216", accentColor: "#34d399", titleShadowColor: "#86efac", hoverColor: "#059669", slotColor: "#17362e", panelBorderColor: "#c7ffe4", slotBorderColor: "#6ee7b7", previewBg: "#06110e" } },
-  { nameKey: "palettePresetSilver", values: { bgColor: "#1f2329", bgAlpha: "226", accentColor: "#cbd5e1", titleShadowColor: "#94a3b8", hoverColor: "#64748b", slotColor: "#2f3540", panelBorderColor: "#f8fafc", slotBorderColor: "#cbd5e1", previewBg: "#111317" } },
+  { nameKey: "palettePresetMoon", values: { bgColor: "#171126", bgAlpha: "222", accentColor: "#9f7aea", titleShadowColor: "#c084fc", hoverColor: "#7c3aed", hoverAlpha: "230", slotColor: "#27213b", slotAlpha: "200", panelBorderColor: "#ded7ff", panelBorderAlpha: "255", slotBorderColor: "#b7a8ff", slotBorderAlpha: "255", previewBg: "#0b0712" } },
+  { nameKey: "palettePresetCherry", values: { bgColor: "#260f19", bgAlpha: "224", accentColor: "#ff5f8f", titleShadowColor: "#ff9fbd", hoverColor: "#d81b60", hoverAlpha: "230", slotColor: "#3b1d2b", slotAlpha: "200", panelBorderColor: "#ffd6e5", panelBorderAlpha: "255", slotBorderColor: "#ff9fbd", slotBorderAlpha: "255", previewBg: "#12070d" } },
+  { nameKey: "palettePresetCyan", values: { bgColor: "#0b1d26", bgAlpha: "220", accentColor: "#38bdf8", titleShadowColor: "#67e8f9", hoverColor: "#0891b2", hoverAlpha: "230", slotColor: "#17313d", slotAlpha: "200", panelBorderColor: "#b6f3ff", panelBorderAlpha: "255", slotBorderColor: "#7dd3fc", slotBorderAlpha: "255", previewBg: "#061018" } },
+  { nameKey: "palettePresetAmber", values: { bgColor: "#21170a", bgAlpha: "218", accentColor: "#f59e0b", titleShadowColor: "#facc15", hoverColor: "#b45309", hoverAlpha: "230", slotColor: "#382a12", slotAlpha: "200", panelBorderColor: "#ffe8a3", panelBorderAlpha: "255", slotBorderColor: "#fbbf24", slotBorderAlpha: "255", previewBg: "#100a03" } },
+  { nameKey: "palettePresetMint", values: { bgColor: "#0c1f1a", bgAlpha: "216", accentColor: "#34d399", titleShadowColor: "#86efac", hoverColor: "#059669", hoverAlpha: "230", slotColor: "#17362e", slotAlpha: "200", panelBorderColor: "#c7ffe4", panelBorderAlpha: "255", slotBorderColor: "#6ee7b7", slotBorderAlpha: "255", previewBg: "#06110e" } },
+  { nameKey: "palettePresetSilver", values: { bgColor: "#1f2329", bgAlpha: "226", accentColor: "#cbd5e1", titleShadowColor: "#94a3b8", hoverColor: "#64748b", hoverAlpha: "230", slotColor: "#2f3540", slotAlpha: "200", panelBorderColor: "#f8fafc", panelBorderAlpha: "255", slotBorderColor: "#cbd5e1", slotBorderAlpha: "255", previewBg: "#111317" } },
 ];
 
 function applyPalette(values) {
@@ -5740,15 +6084,33 @@ function updatePaletteSwatches() {
   $("paletteBgSwatch").style.background = $("bgColor").value;
   $("paletteAccentSwatch").style.background = $("accentColor").value;
   $("paletteTitleShadowSwatch").style.background = $("titleShadowColor").value;
-  $("paletteHoverSwatch").style.background = $("hoverColor").value;
-  $("paletteSlotSwatch").style.background = $("slotColor").value;
-  $("palettePanelBorderSwatch").style.background = $("panelBorderColor").value;
-  $("paletteSlotBorderSwatch").style.background = $("slotBorderColor").value;
+  $("paletteHoverSwatch").style.background = colorWithAlpha("hoverColor", "hoverAlpha", 230);
+  $("paletteSlotSwatch").style.background = colorWithAlpha("slotColor", "slotAlpha", 200);
+  $("palettePanelBorderSwatch").style.background = colorWithAlpha("panelBorderColor", "panelBorderAlpha", 255);
+  $("paletteSlotBorderSwatch").style.background = colorWithAlpha("slotBorderColor", "slotBorderAlpha", 255);
   $("palettePreviewSwatch").style.background = $("previewBg").value;
 }
 
 function applyPreviewBg() {
-  $("viewPanel").style.setProperty("--preview-bg", $("previewBg").value);
+  const panel = $("viewPanel");
+  panel.style.setProperty("--preview-bg", $("previewBg").value);
+  const img = $("previewBgImageEl");
+  if (img) {
+    if (state.previewBgImage) {
+      img.src = state.previewBgImage;
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+      img.removeAttribute("src");
+    }
+  }
+  panel.classList.toggle("has-bg-image", Boolean(state.previewBgImage));
+  if ($("btnClearPreviewBgImage")) $("btnClearPreviewBgImage").style.display = state.previewBgImage ? "" : "none";
+}
+
+function colorWithAlpha(colorId, alphaId, fallbackAlpha = 255) {
+  const [r, g, b] = hexToRgb($(colorId).value);
+  return `rgba(${r}, ${g}, ${b}, ${alpha01(alphaId, fallbackAlpha)})`;
 }
 
 async function pickModFolder() {
@@ -6116,7 +6478,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       state.swaps = parseSwaps(state.sections);
       state.slotMeta = state.swaps.map(newSlotMeta);
       // 恢复 UI
-      for (const id of ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "hoverColor", "titleShadowColor", "panelBorderColor", "slotBorderColor", "previewBg", "behavior", "previewRes", "panelScale"]) {
+      for (const id of SETTINGS_INPUT_IDS) {
         if (d.ui[id] !== undefined) $(id).value = d.ui[id];
       }
       if (typeof d.ui.removeKeys === "boolean") $("removeKeys").checked = d.ui.removeKeys;
@@ -6127,6 +6489,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
       if (typeof d.ui.disableTitleShadow === "boolean") $("disableTitleShadow").checked = d.ui.disableTitleShadow;
       // 恢复大图
       state.panelImagePreview = blob.img || null;
+      state.previewBgImage = blob.previewBgImage || null;
       state.panelImageRgba = await dataUrlToRgba(state.panelImagePreview, 256);
       if ($("panelImageThumb")) {
         if (state.panelImagePreview) {
@@ -6138,6 +6501,7 @@ $("draftHistoryList").addEventListener("click", async (e) => {
           $("btnClearPanelImage").style.display = "none";
         }
       }
+      applyPreviewBg();
       // 恢复排序（先排后覆）
       if (d.order && d.order.length === state.swaps.length) {
         const sigSet = new Set(state.swaps.map(sw => JSON.stringify(swapSign(sw))));
@@ -6174,6 +6538,15 @@ $("draftHistoryList").addEventListener("click", async (e) => {
     } catch (e) { toast(t("toastDraftRestoreFail"), "err"); }
   }
 });
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
 
 // 面板背景图上传
 $("btnPanelImage").addEventListener("click", () => {
@@ -6214,6 +6587,31 @@ $("btnClearPanelImage").addEventListener("click", () => {
 });
 // 初始状态：清除按钮隐藏
 $("btnClearPanelImage").style.display = "none";
+
+$("btnPreviewBgImage").addEventListener("click", () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      state.previewBgImage = await readFileAsDataUrl(file);
+      applyPreviewBg();
+      flushDraftBlobs();
+      toast(t("toastPanelImageUpdated"), "ok");
+    } catch (e) {
+      toast(t("toastImageFail"), "err");
+    }
+  };
+  input.click();
+});
+
+$("btnClearPreviewBgImage").addEventListener("click", () => {
+  state.previewBgImage = null;
+  applyPreviewBg();
+  flushDraftBlobs();
+});
 
 $("swapList").addEventListener("click", async e => {
   if (autoIconBusy) return;
@@ -6718,6 +7116,9 @@ $("ctxMenu").addEventListener("click", async e => {
       }
       rerender();
       break;
+    case "logicCompare":
+      openLogicCompare(idx);
+      break;
     case "picker":
       openPicker(idx);
       break;
@@ -6829,6 +7230,15 @@ $("btnIni").addEventListener("click", () => {
   downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), getOutputIniName());
 });
 
+$("logicCompareClose").addEventListener("click", () => closeLogicCompare());
+$("logicCompareSlots").addEventListener("click", e => {
+  const btn = e.target.closest("[data-logic-slot]");
+  if (btn) renderLogicCompareSlot(Number(btn.dataset.logicSlot));
+});
+$("logicCompareModal").addEventListener("click", e => {
+  if (e.target === $("logicCompareModal")) closeLogicCompare();
+});
+
 $("btnWriteFolder").addEventListener("click", () => writeGeneratedToFolder());
 
 $("btnZip").addEventListener("click", async () => {
@@ -6856,6 +7266,7 @@ $("btnZip").addEventListener("click", async () => {
 // 启动
 loadSettings();
 applyI18n();
+initIniPreviewLayout();
 applyPreviewBg();
 renderPreview();
 renderIniView();

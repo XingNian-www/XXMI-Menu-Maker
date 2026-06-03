@@ -312,9 +312,39 @@ slot 图片是完整合成图，包含：
 排序
 ```
 
+按钮图标支持四类来源：
+
+```text
+内置自动图标
+Lucide 图标
+Iconify 图标
+上传图片
+```
+
+图标选择器会混合显示 Lucide 和 Iconify 搜索结果。默认平铺；切到分组视图时，会按图标集 prefix 分组，并优先显示已缓存的 Iconify prefix，其次按用户置顶 prefix 排序。
+
+Lucide 有内置兜底包：`BUILTIN_ICONS` 会在离线或 CDN 加载失败时继续可用；Lucide 不需要下载到 IndexedDB。
+
+Iconify 支持在线搜索，也支持预下载 collection/package 到本地缓存。搜索时优先读 IndexedDB 的 `icons` store：本地命中会立即返回，同时后台再拉在线结果并合并去重；本地没有命中才走在线搜索。
+
+图标库预下载会从 `https://api.iconify.design/collections?pretty=0` 读取 collection 列表，排除 `lucide`，再按常用图标集和数量排序。下载后的 Iconify 图标以 `prefix:name` 为 key 写入 IndexedDB，可按 prefix 删除，也可清空全部图标缓存。
+
+图标 SVG 必须经过 `sanitizeSvg()` 过滤，只保留允许的标签和属性，移除事件属性和 `javascript:` / `data:` URL。
+
+`normalizeKeyForMatch()` 只用于判断 key 是否相同：它会 trim、合并空白、忽略正确拼写的 `no_modifiers`，再转小写；不会纠正拼错的 modifier。
+
 右键“绑定按键”会同步更新 slot 和该 slot 下所有 handler 的 key，导出时原 `[Key*]` 也会使用新 key。
 
 严格模式下不允许拆分同 key 多 handler slot。拆分会破坏“点击一次等价于按原 key 一次”的语义。
+
+批量合并同 key slot 直接合并。不同 key slot 会弹出强制合并确认框：
+
+```text
+allKeys   所有原 key 都等效于按一次合并后的 GUI 按钮
+guiOnly   原 key 仍保持各自逻辑，只有 GUI 点击会执行全部 handler
+```
+
+强制合并时会显示参与合并的所有 key。合并图标继承发生在删除旧 slot 之前：优先继承非上传图标，并按 prefix 优先级排序，避免 splice 后取错 meta。
 
 ## 14. 暂存
 
@@ -329,9 +359,23 @@ localStorage: keyswap-gui-settings-v1
 ```js
 localStorage: keyswap-gui-drafts-v2
 IndexedDB: KeySwapDrafts / blobs
+IndexedDB: KeySwapDrafts / icons
 ```
 
 localStorage 保存元信息和 UI 配置；IndexedDB 保存原 INI 文本、面板图片和上传图标。
+
+`icons` store 保存 Iconify 缓存，key 是完整图标名：
+
+```js
+{
+  name: "mdi:home",
+  body: "<path ...>",
+  width: 24,
+  height: 24
+}
+```
+
+`icons` 和草稿共用 `KeySwapDrafts` 数据库，但用途不同：`blobs` 存文件草稿，`icons` 存图标库缓存。
 
 草稿恢复会校验 slot 数量和 `swapSign()`，避免错误套用到不匹配的文件。
 
@@ -351,8 +395,11 @@ localStorage 保存元信息和 UI 配置；IndexedDB 保存原 INI 文本、面
 2. 原 `.ini` 内容备份为 `.txt`
 3. 如果同名 `.txt` 已存在，改用 `原名.backup-YYYYMMDD-HHMMSS.txt`
 4. 写入或覆盖 `res_gui` 中的生成资源
+5. 如果选择不使用原 ini 名，会在生成文件全部写入成功后删除原 `.ini`，并把当前文件句柄切到备份出的 `.txt`
 
 如果输入是 `.txt`，默认生成同名 `.ini`，不改原 `.txt`。
+
+文件夹写入顺序不能改成先删后写：必须先备份原 INI，再成功写入新 INI 和 `res_gui` 资源，最后才允许删除被转换成 `.txt` 的原 `.ini`。
 
 ## 16. ZIP 打包
 
@@ -383,14 +430,27 @@ INI 中通过 `x87/y87/z87/w87` 设置绘制参数。
 6. 不要把工具生成的 `KeyGui*` 当成业务按钮
 7. 不要在二次导入时重复注入 `[Present]` GUI 调用
 8. 不要静默丢弃 Key body 中暂时不理解的 raw 行
+9. 不要把 `normalizeKeyForMatch()` 做成拼写纠错器，它只忽略正确的 `no_modifiers`
+10. 不要在文件夹写入时先删除原 INI，必须等备份和新文件写入成功
+11. 不要在合并 slot 时先 splice 再读取继承图标 meta
+12. 外链 `target="_blank"` 必须带 `rel="noopener noreferrer"`
+
+预览里的面板和按钮边框色使用 CSS 变量：
+
+```css
+--panel-border-c
+--slot-border-c
+```
+
+这两个变量由调色输入同步，不能只改导出图片逻辑而漏掉预览。
 
 ## 19. 建议测试
 
 当前项目还没有正式测试框架。修改核心逻辑后至少手动验证：
 
 ```text
-测试.ini 生成 10 个 key slot
-生成后再导入仍是 10 个 key slot
+test/test.ini 解析数量以 test/ini-test.js 输出为准
+生成后再导入 slot 数不应异常变化
 key = 5 同时包含 KeySwap0 和 KeySwap00
 slot 内 handler 使用独立 if，不使用 elif
 无 $gui_step
