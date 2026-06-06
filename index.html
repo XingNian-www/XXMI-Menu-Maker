@@ -41,6 +41,7 @@
   }
   button { font: inherit; color: inherit; }
   input, select, textarea { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
 
   .app {
     display: grid;
@@ -216,11 +217,11 @@
   .icon-btn svg { width: 16px; height: 16px; }
 
   /* ---------- buttons ---------- */
-  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 10px 14px;
     border-radius: 10px;
     border: 0;
@@ -235,7 +236,15 @@
   .btn.ghost {
     background: transparent;
     border: 1px solid var(--line-2);
-    color: var(--text);
+    color: var(--muted);
+  }
+  .btn.ghost:hover { color: var(--text); border-color: var(--hot); }
+  .actions .sep {
+    width: 1px;
+    height: 24px;
+    background: var(--line);
+    margin: 0 2px;
+    flex: 0 0 auto;
   }
   .link-btn {
     background: none;
@@ -1271,7 +1280,12 @@
           <span data-i18n="downloadZip">下载完整 ZIP</span>
         </button>
         <button class="btn" id="btnWriteFolder" disabled data-i18n="writeFolder">写入文件夹</button>
-        <button class="btn ghost" id="btnIni" disabled data-i18n="downloadIni">只下载 ini</button>
+        <span class="sep"></span>
+        <button class="btn ghost" id="btnIni" disabled>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+          <span data-i18n="downloadIni">只下载 ini</span>
+        </button>
+        <button class="btn ghost" id="btnSaveLocal" hidden data-i18n="saveLocal">保存本地版</button>
       </div>
       <div id="status" class="status" style="margin-top:10px" data-i18n="statusWaiting">等待 ini</div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center">
@@ -1599,6 +1613,7 @@ const I18N = {
     palettePresetSilver: "银白灰",
     downloadZip: "下载完整 ZIP",
     writeFolder: "写入文件夹",
+    saveLocal: "保存本地版",
     logicCompare: "逻辑对比",
     downloadIni: "只下载 ini",
     author: "作者",
@@ -1673,6 +1688,9 @@ const I18N = {
     toastReadFileFail: "读取文件失败",
     toastPaletteReset: "已恢复默认配色",
     toastPaletteApplied: "已应用 {name}",
+    toastSaveLocalOk: "已保存本地版，下次打开可一键覆盖更新",
+    toastSaveLocalFail: "写入失败，请允许文件权限",
+    toastSaveLocalNoApi: "当前浏览器不支持，请用 Chrome/Edge 双击打开本页",
     toastFolderUnsupported: "当前浏览器不支持直接写入文件夹，请继续用 ZIP",
     toastFolderReadIniTxt: "已读取文件夹，请选择 ini / txt",
     toastFolderReadIni: "已读取文件夹，请选择 ini",
@@ -1871,6 +1889,7 @@ const I18N = {
     palettePresetSilver: "Silver Gray",
     downloadZip: "Download full ZIP",
     writeFolder: "Write to folder",
+    saveLocal: "Save local copy",
     logicCompare: "Compare logic",
     downloadIni: "Download ini only",
     author: "Author",
@@ -1945,6 +1964,9 @@ const I18N = {
     toastReadFileFail: "Failed to read file",
     toastPaletteReset: "Default colors restored",
     toastPaletteApplied: "Applied {name}",
+    toastSaveLocalOk: "Saved locally, one-click overwrite next time",
+    toastSaveLocalFail: "Write failed, please allow file permission",
+    toastSaveLocalNoApi: "Browser not supported, open this page locally in Chrome/Edge",
     toastFolderUnsupported: "This browser cannot write directly to folders. Use ZIP instead",
     toastFolderReadIniTxt: "Folder loaded. Select an ini / txt file",
     toastFolderReadIni: "Folder loaded. Select an ini file",
@@ -2181,6 +2203,8 @@ function toast(msg, kind = "") {
 const SETTINGS_KEY = "keyswap-gui-settings-v1";
 const FOLDER_PICKER_ID = "keyswap-gui-mod-folder";
 const LAST_FOLDER_HANDLE_KEY = "__last_mod_folder_handle";
+const SAVED_LOCAL_HANDLE_KEY = "__saved_local_html_handle";
+const SAVED_LOCAL_NAME = "XXMI_Menu_Maker.html";
 const SETTINGS_INPUT_IDS = ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "slotAlpha", "hoverColor", "hoverAlpha", "titleShadowColor", "panelBorderColor", "panelBorderAlpha", "slotBorderColor", "slotBorderAlpha", "previewBg", "behavior", "previewRes", "panelScale"];
 const INI_PREVIEW_HIDDEN_KEY = "keyswap-gui-ini-preview-hidden";
 const INI_PREVIEW_WIDTH_KEY = "keyswap-gui-ini-preview-width";
@@ -3875,6 +3899,48 @@ function downloadBlob(blob, name) {
   const url = URL.createObjectURL(blob);
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+async function saveAsLocalPage() {
+  if (!window.showSaveFilePicker) {
+    // 降级：普通下载
+    const html = "<!doctype html>\n" + document.documentElement.outerHTML;
+    downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), SAVED_LOCAL_NAME);
+    toast(t("toastSaveLocalNoApi"), "err");
+    return;
+  }
+  const btn = $("btnSaveLocal");
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "…";
+  try {
+    let handle = await dbGet(SAVED_LOCAL_HANDLE_KEY);
+    let useSaved = false;
+    if (handle?.handle) {
+      try {
+        const perm = await handle.handle.queryPermission({ mode: "readwrite" });
+        if (perm === "granted") useSaved = true;
+      } catch (e) {}
+    }
+    if (!useSaved) {
+      handle = await window.showSaveFilePicker({
+        suggestedName: SAVED_LOCAL_NAME,
+        types: [{ description: "HTML", accept: { "text/html": [".html"] } }],
+      });
+      handle = { handle };
+      await dbPut(SAVED_LOCAL_HANDLE_KEY, handle);
+    }
+    const writable = await handle.handle.createWritable();
+    const html = "<!doctype html>\n" + document.documentElement.outerHTML;
+    await writable.write(new Blob([html], { type: "text/html;charset=utf-8" }));
+    await writable.close();
+    toast(t("toastSaveLocalOk"), "ok");
+  } catch (e) {
+    if (e.name !== "AbortError") toast(t("toastSaveLocalFail"), "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
 }
 
 /* ============================================================
@@ -7241,6 +7307,8 @@ $("logicCompareModal").addEventListener("click", e => {
 
 $("btnWriteFolder").addEventListener("click", () => writeGeneratedToFolder());
 
+$("btnSaveLocal").addEventListener("click", () => saveAsLocalPage());
+
 $("btnZip").addEventListener("click", async () => {
   const btn = $("btnZip");
   const orig = btn.innerHTML;
@@ -7267,6 +7335,7 @@ $("btnZip").addEventListener("click", async () => {
 loadSettings();
 applyI18n();
 initIniPreviewLayout();
+$("btnSaveLocal").hidden = location.protocol === "file:";
 applyPreviewBg();
 renderPreview();
 renderIniView();
