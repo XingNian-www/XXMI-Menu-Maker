@@ -10,3 +10,11 @@ Thumbs.db
 # 测试文件
 test/
 TEST.md
+
+# 本地开发工具与暂存产物（只在本机保留，不入库）
+/spec/
+/tools/
+/tests/
+/docs/
+/package.json
+/out/

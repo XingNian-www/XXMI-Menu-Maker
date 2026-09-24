@@ -1098,6 +1098,10 @@
         <strong data-i18n="dropChoose">点击选择，或拖入 ini / txt</strong>
         <small id="fileInfo" data-i18n="fileNone">还没选文件</small>
       </label>
+      <div id="multiIniTip" style="margin-top:10px;padding:9px 11px;border:1px solid var(--line-2);border-left:3px solid var(--warn);border-radius:8px;font-size:12px;line-height:1.7;color:var(--muted)">
+        <strong style="color:var(--warn)" data-i18n="multiIniTipTitle">提示：</strong>
+        <span data-i18n="multiIniTip">一个角色的 MOD 如果由多个 ini 共同决定，直接选单个 ini 只会处理其中一部分。请点下方「选择 MOD 文件夹」，选中 MOD 根目录后用「合并为一个 ini」一次处理全部。</span>
+      </div>
       <div class="actions folder-help-wrap" style="margin-top:10px">
         <button class="btn ghost" id="btnOpenFolder" style="flex:1">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
@@ -1108,8 +1112,8 @@
         <div class="status folder-help">
           <strong style="color:var(--warn)" data-i18n="folderHelpTitle">文件夹模式说明：</strong>
           <p data-i18n="folderHelp1">选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
-          <p><strong data-i18n="folderHelp2">部分 Chrome 版本禁止网页通过文件夹接口读写 .ini（会报 Name is not allowed）。检测到时会自动改用「文件夹扫描」只读模式。</strong><span data-i18n="folderHelp2b">只读模式下可以读取 ini 并下载 ZIP，但不能写回文件夹。</span></p>
-          <p data-i18n="folderHelp3">选中目标文件后，可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。</p>
+          <p><strong data-i18n="folderHelp2">Chrome 152 起，文件夹接口会按「下载危险文件类型」表校验文件名：.ini / .cfg / .dll / .manifest 属于 DANGEROUS，网页读写它们一律报 Name is not allowed。旧版对本地 file:// 页面有豁免，Chrome 152 已移除，所以现在本地打开也一样。</strong><span data-i18n="folderHelp2b">检测到这种情况会自动改用「文件夹扫描」只读模式，仍能读取 ini 并下载 ZIP，但不能写回文件夹。</span></p>
+          <p data-i18n="folderHelp3">选中目标文件后，浏览器允许时可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。只读模式下该按钮不可用。</p>
           <p data-i18n="folderHelp4">不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。</p>
         </div>
       </div>
@@ -1117,6 +1121,14 @@
         <label data-i18n="folderIniLabel">文件夹内 ini / txt（含子文件夹）</label>
         <select id="folderIniSelect"></select>
         <div id="folderScanStats" style="font-size:11px;color:var(--muted);line-height:1.6"></div>
+        <div id="mergeRow" style="margin-top:10px;display:none">
+          <button class="btn ghost" id="btnMergeInis" type="button" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M12 8v8M8 12h8"/></svg>
+            <span data-i18n="mergeBtn">合并为一个 ini</span>
+          </button>
+          <div id="mergeHint" style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:6px"></div>
+          <div id="mergeStatus" style="font-size:11px;color:var(--muted);line-height:1.6"></div>
+        </div>
       </div>
     </section>
 
@@ -1526,9 +1538,9 @@ const I18N = {
     folderHelpAria: "文件夹模式说明",
     folderHelpTitle: "文件夹模式说明：",
     folderHelp1: "选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。",
-    folderHelp2: "部分 Chrome 版本禁止网页通过文件夹接口读写 .ini（会报 Name is not allowed）。检测到这种情况时会自动改用「文件夹扫描」只读模式，仍能读取 ini。",
-    folderHelp2b: "只读模式下请用「下载完整 ZIP」；未被限制的浏览器仍使用原有的文件夹直写模式。",
-    folderHelp3: "本地打开页面时，选中目标文件后可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。",
+    folderHelp2: "Chrome 152 起，文件夹接口会按 Chrome 的「下载危险文件类型」表校验文件名：.ini / .cfg / .dll / .manifest 属于 DANGEROUS，网页通过它读取或创建这些文件一律报 Name is not allowed。旧版对本地 file:// 页面有豁免（这就是以前「本地打开能读写、在线不行」的原因），Chrome 152 移除了该豁免，所以现在本地打开也一样。",
+    folderHelp2b: "检测到这种限制时会自动改用「文件夹扫描」只读模式：能读取 ini 并下载 ZIP，但不能写回文件夹。Chrome 151 及更早版本、或未启用该检查的浏览器仍使用原有的文件夹直写模式。",
+    folderHelp3: "选中目标文件后，浏览器允许时可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。只读模式下该按钮不可用。",
     folderHelp4: "不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。",
     folderIniLabel: "文件夹内 ini / txt（含子文件夹）",
     sectionPanel: "2. 面板",
@@ -1695,8 +1707,22 @@ const I18N = {
     toastFolderReadIniTxt: "已读取文件夹，请选择 ini / txt",
     toastFolderReadIni: "已读取文件夹，请选择 ini",
     toastFolderChooseFail: "选择文件夹失败",
-    toastFsaIniBlocked: "此 Chrome 版本禁止网页通过文件夹接口读写 .ini，已改用「文件夹扫描」只读模式。若这次没弹出选择框，请再点一次「选择 MOD 文件夹」。",
-    toastFsaIniWriteBlocked: "当前浏览器的文件夹接口不允许写入 .ini（Name is not allowed）。请改用「下载完整 ZIP」。",
+    multiIniTipTitle: "提示：",
+    multiIniTip: "一个角色的 MOD 如果由多个 ini 共同决定，直接选单个 ini 只会处理其中一部分。请点下方「选择 MOD 文件夹」，选中 MOD 根目录后用「合并为一个 ini」一次处理全部。",
+    mergeBtn: "合并为一个 ini",
+    mergeHint: "该文件夹里有 {n} 个 ini，可自动合并成一个再处理。",
+    mergeBusy: "正在合并…",
+    mergeNeedTwo: "该文件夹里只有 {n} 个 ini，无需合并。",
+    mergeDone: "已合并 {n} 个 ini → {lines} 行（段改名 {sec}，变量改名 {vars}，路径重写 {paths}）。",
+    mergeFail: "合并未通过校验，已中止：{why}",
+    mergeErr: "合并失败：{why}",
+    mergePathFail: "路径重写校验未通过",
+    mergeNote: "注意：合并会改变命名空间，d3dx_user.ini 里的持久化键会失效一次（档位/窗口位置复位）。点「写入文件夹」时会自动把原 ini 备份成 txt 并删除。",
+    mergeMustDelete: "当前是只读模式，浏览器不能写文件夹，所以删不掉原 ini。请手动删除（或改名为 .txt）这 {n} 个文件：{list}。否则它们会和合并结果同时加载，同一个按键会被处理两次。",
+    mergeMustDeleteShort: "只读模式：请手动删除原有的 {n} 个 ini，否则按键会被处理两次（见上方提示）。",
+    mergeWritten: "已写入 {name}，并把 {n} 个原 ini 备份为 txt。",
+    toastFsaIniBlocked: "Chrome 152 起禁止网页通过文件夹接口读写 .ini（Name is not allowed），已改用「文件夹扫描」只读模式。若这次没弹出选择框，请再点一次「选择 MOD 文件夹」。",
+    toastFsaIniWriteBlocked: "Chrome 152 起文件夹接口不允许写入 .ini（Name is not allowed）。请改用「下载完整 ZIP」。",
     toastNoFolderFilesIniTxt: "这个文件夹及子文件夹里没有 ini / txt",
     toastNoFolderFilesIni: "这个文件夹及子文件夹里没有 ini",
     toastSelectFolderIni: "请先选择文件夹里的 ini",
@@ -1804,9 +1830,9 @@ const I18N = {
     folderHelpAria: "Folder mode help",
     folderHelpTitle: "Folder mode:",
     folderHelp1: "After choosing a MOD root folder, processable ini files are listed recursively. Enable “Include txt files” to list txt too.",
-    folderHelp2: "Some Chrome builds block web pages from reading or writing .ini through the folder API (Name is not allowed). When detected, the tool switches to a read-only folder scan and can still read ini files.",
-    folderHelp2b: "In read-only mode use \"Download full ZIP\"; unrestricted browsers keep the original direct folder-write mode.",
-    folderHelp3: "When opened locally, selecting a target file lets you write the generated ini and `res_gui` directly. By default the original ini name is reused and the original content is backed up as txt.",
+    folderHelp2: "Since Chrome 152 the folder API validates file names against Chrome's dangerous-download-type list: .ini / .cfg / .dll / .manifest are DANGEROUS, so web pages always get Name is not allowed when reading or creating them. Older versions exempted local file:// pages (which is why \"local worked, online did not\"); Chrome 152 removed that exemption, so opening the page from disk no longer helps.",
+    folderHelp2b: "When this restriction is detected, the tool switches to a read-only folder scan: ini can be read and ZIP can be downloaded, but nothing is written back. Chrome 151 and earlier, or builds without this check, keep the original direct folder-write mode.",
+    folderHelp3: "Selecting a target file lets you write the generated ini and `res_gui` directly when the browser allows it. By default the original ini name is reused and the original content is backed up as txt. Unavailable in read-only mode.",
     folderHelp4: "Avoid huge folders with many ini/txt files, or scanning and the list may lag. This feature writes files and backs up the original ini, so make sure you know which MOD you are editing.",
     folderIniLabel: "Folder ini / txt files (including subfolders)",
     sectionPanel: "2. Panel",
@@ -1973,8 +1999,22 @@ const I18N = {
     toastFolderReadIniTxt: "Folder loaded. Select an ini / txt file",
     toastFolderReadIni: "Folder loaded. Select an ini file",
     toastFolderChooseFail: "Failed to choose folder",
-    toastFsaIniBlocked: "This Chrome build blocks web pages from reading or writing .ini through the folder API. Switched to read-only folder scan. If no picker appeared, click \"Choose MOD folder\" once more.",
-    toastFsaIniWriteBlocked: "This browser's folder API does not allow writing .ini files (Name is not allowed). Use \"Download full ZIP\" instead.",
+    multiIniTipTitle: "Tip: ",
+    multiIniTip: "If a character's MOD is decided by several ini files, picking a single ini only processes part of it. Click \"Choose MOD folder\" below, select the MOD root, then use \"Merge into one ini\" to handle them all at once.",
+    mergeBtn: "Merge into one ini",
+    mergeHint: "This folder has {n} ini files; they can be merged into one first.",
+    mergeBusy: "Merging...",
+    mergeNeedTwo: "This folder only has {n} ini file(s); nothing to merge.",
+    mergeDone: "Merged {n} ini into {lines} lines ({sec} sections and {vars} variables renamed, {paths} paths rewritten).",
+    mergeFail: "Merge failed validation and was aborted: {why}",
+    mergeErr: "Merge error: {why}",
+    mergePathFail: "path rewrite check failed",
+    mergeNote: "Note: merging changes the namespace, so persisted keys in d3dx_user.ini reset once. Clicking Write to folder backs up the original ini files as txt and removes them.",
+    mergeMustDelete: "This session is read-only, so the browser cannot remove the original ini files. Delete them (or rename them to .txt) manually: {n} file(s) - {list}. Otherwise they load alongside the merged file and every key fires twice.",
+    mergeMustDeleteShort: "Read-only: delete the {n} original ini files manually, or every key will fire twice (see the note above).",
+    mergeWritten: "Wrote {name} and backed up {n} original ini files as txt.",
+    toastFsaIniBlocked: "Since Chrome 152, web pages cannot read or write .ini through the folder API (Name is not allowed). Switched to read-only folder scan. If no picker appeared, click \"Choose MOD folder\" once more.",
+    toastFsaIniWriteBlocked: "Since Chrome 152 the folder API does not allow writing .ini files (Name is not allowed). Use \"Download full ZIP\" instead.",
     toastNoFolderFilesIniTxt: "No ini / txt files found in this folder or its subfolders",
     toastNoFolderFilesIni: "No ini files found in this folder or its subfolders",
     toastSelectFolderIni: "Select an ini file from the folder first",
@@ -5179,7 +5219,8 @@ function updateStatus() {
   const hasActive = active > 0;
   $("btnZip").disabled = !hasActive;
   $("btnIni").disabled = !hasActive;
-  $("btnWriteFolder").disabled = !hasActive || !state.dirHandle || !state.targetDirHandle || !state.fileHandle;
+  const merged = Boolean(state.mergedSources && state.mergedSources.length);
+  $("btnWriteFolder").disabled = !hasActive || !state.dirHandle || !state.targetDirHandle || (!state.fileHandle && !merged);
   if (!total) {
     $("status").className = "status";
     $("status").textContent = t("statusWaiting");
@@ -5397,6 +5438,7 @@ async function loadFile(file, opts = {}) {
     state.folderScanStats = null;
     state.folderSource = null;
     state.sourceFiles = [];
+    state.mergedSources = null;
     $("folderIniRow").style.display = "none";
     $("folderIniSelect").innerHTML = "";
     $("folderScanStats").textContent = "";
@@ -6015,6 +6057,7 @@ $("iniFile").addEventListener("change", e => {
 });
 
 $("btnOpenFolder").addEventListener("click", () => pickModFolder());
+$("btnMergeInis").addEventListener("click", () => mergeModInis());
 $("folderIniSelect").addEventListener("change", e => {
   if (e.target.value === "") return;
   loadFolderFile(Number(e.target.value));
@@ -6220,6 +6263,1360 @@ function colorWithAlpha(colorId, alphaId, fallbackAlpha = 255) {
   return `rgba(${r}, ${g}, ${b}, ${alpha01(alphaId, fallbackAlpha)})`;
 }
 
+/* ==== XXMI-MERGE-CORE BEGIN（由 tools/build-web-merge.js 生成，请勿手改）==== */
+/*
+ * 通用合并核心（浏览器版）。
+ * 由 tools/build-web-merge.js 从 tools/merge/*.js 机械嵌入，逻辑与 Node CLI 同源。
+ * 浏览器没有 fs/path，这里提供最小垫片；deploy.js（文件系统操作）不参与嵌入。
+ */
+var MergeCore = (function () {
+  'use strict';
+  var BS = String.fromCharCode(92);
+  var SPEC_JSON_TEXT = "{\n  \"$comment\": \"3DMigoto / XXMI / ZZMI 语言规范。段类型表来源 bo3b/3Dmigoto DirectX11/IniHandler.cpp:47-82。此文件与代码解耦：遇到新指令改这里，不改代码。\",\n  \"version\": 1,\n  \"namespacedSectionPrefixes\": [\n    \"ShaderOverride\",\n    \"ShaderRegex\",\n    \"TextureOverride\",\n    \"CustomShader\",\n    \"CommandList\",\n    \"BuiltInCustomShader\",\n    \"BuiltInCommandList\",\n    \"Resource\",\n    \"Key\",\n    \"Preset\",\n    \"Include\",\n    \"Pool\"\n  ],\n  \"globalSections\": [\n    \"Present\",\n    \"Constants\",\n    \"ClearRenderTargetView\",\n    \"ClearDepthStencilView\",\n    \"ClearUnorderedAccessViewUint\",\n    \"ClearUnorderedAccessViewFloat\",\n    \"Loader\",\n    \"Logging\",\n    \"System\",\n    \"Device\",\n    \"Stereo\",\n    \"Rendering\",\n    \"Hunting\",\n    \"Profile\",\n    \"ConvergenceMap\"\n  ],\n  \"directives\": {\n    \"path\": [\n      \"filename\",\n      \"vs\",\n      \"ps\",\n      \"gs\",\n      \"hs\",\n      \"ds\",\n      \"cs\",\n      \"include\",\n      \"include_recursive\",\n      \"exclude_recursive\",\n      \"override_directory\",\n      \"cache_directory\",\n      \"storage_directory\"\n    ],\n    \"reference\": [\n      \"run\",\n      \"ref\",\n      \"this\",\n      \"checktextureoverride\"\n    ],\n    \"flow\": [\n      \"if\",\n      \"elif\",\n      \"else\",\n      \"endif\",\n      \"while\",\n      \"endwhile\"\n    ],\n    \"namespace\": \"namespace\"\n  },\n  \"scalarDirectives\": [\n    \"type\",\n    \"hash\",\n    \"stride\",\n    \"format\",\n    \"handling\",\n    \"blend\",\n    \"cull\",\n    \"clear\",\n    \"alpha\",\n    \"topology\",\n    \"array\",\n    \"data\",\n    \"depth_enable\",\n    \"stencil_enable\",\n    \"depth_clip_enable\",\n    \"depth_write_mask\",\n    \"depth_func\",\n    \"front\",\n    \"filter_index\",\n    \"match_first_index\",\n    \"match_priority\",\n    \"match_type\",\n    \"match_format\",\n    \"match_width\",\n    \"match_height\",\n    \"match_mips\",\n    \"override_vertex_count\",\n    \"override_byte_stride\",\n    \"uav_byte_stride\",\n    \"vb0\",\n    \"vb1\",\n    \"vb2\",\n    \"ib\",\n    \"draw\",\n    \"drawindexed\",\n    \"dispatch\",\n    \"drawindexedinstanced\",\n    \"shader_model\",\n    \"bind_flags\",\n    \"pool_size\",\n    \"pool_index_type\",\n    \"pool_variable_default_value\",\n    \"store\",\n    \"width\",\n    \"height\",\n    \"mips\",\n    \"msaa\",\n    \"msaa_quality\",\n    \"alpha_to_coverage\",\n    \"sample_mask\",\n    \"target\",\n    \"launch\",\n    \"module\",\n    \"require_admin\",\n    \"key\",\n    \"back\",\n    \"condition\",\n    \"allow_duplicate_hash\",\n    \"loader\",\n    \"hunting\",\n    \"marking_mode\",\n    \"next_marking_mode\",\n    \"marking_actions\",\n    \"previous_pixelshader\",\n    \"next_pixelshader\",\n    \"mark_pixelshader\",\n    \"previous_vertexshader\",\n    \"next_vertexshader\",\n    \"mark_vertexshader\",\n    \"previous_indexbuffer\",\n    \"next_indexbuffer\",\n    \"mark_indexbuffer\",\n    \"previous_vertexbuffer\",\n    \"next_vertexbuffer\",\n    \"mark_vertexbuffer\",\n    \"previous_vertexbuffer_slot\",\n    \"next_vertexbuffer_slot\",\n    \"previous_computeshader\",\n    \"next_computeshader\",\n    \"mark_computeshader\",\n    \"previous_geometryshader\",\n    \"next_geometryshader\",\n    \"mark_geometryshader\",\n    \"previous_domainshader\",\n    \"next_domainshader\",\n    \"mark_domainshader\",\n    \"previous_hullshader\",\n    \"next_hullshader\",\n    \"mark_hullshader\",\n    \"done_hunting\",\n    \"take_screenshot\",\n    \"reload_fixes\",\n    \"toggle_hunting\",\n    \"reload_config\",\n    \"wipe_user_config\",\n    \"show_original\",\n    \"monitor_performance\",\n    \"freeze_performance_monitor\",\n    \"monitor_performance_interval\",\n    \"repeat_rate\",\n    \"verbose_overlay\",\n    \"analyse_frame\",\n    \"analyse_options\",\n    \"clear_unknown_settings\",\n    \"load_library_redirect\",\n    \"check_foreground_window\",\n    \"allow_check_interface\",\n    \"allow_create_device\",\n    \"allow_platform_update\",\n    \"skip_early_includes_load\",\n    \"config_initialization_delay\",\n    \"settings_auto_save_interval\",\n    \"dll_initialization_delay\",\n    \"screen_width\",\n    \"screen_height\",\n    \"upscaling\",\n    \"full_screen\",\n    \"force_stereo\",\n    \"get_resolution_from\",\n    \"hide_cursor\",\n    \"automatic_mode\",\n    \"unlock_separation\",\n    \"unlock_convergence\",\n    \"create_profile\",\n    \"force_no_nvapi\",\n    \"shader_hash\",\n    \"texture_hash\",\n    \"rasterizer_disable_scissor\",\n    \"stereo_params\",\n    \"ini_params\",\n    \"assemble_signature_comments\",\n    \"disassemble_undecipherable_custom_data\",\n    \"patch_assembly_cb_offsets\",\n    \"recursive_include\",\n    \"export_fixed\",\n    \"export_shaders\",\n    \"export_hlsl\",\n    \"dump_usage\",\n    \"fix_sv_position\",\n    \"track_texture_updates\",\n    \"track_region_hashes\",\n    \"allow_buffer_resize\",\n    \"log_level\",\n    \"input\",\n    \"unbuffered\",\n    \"force_cpu_affinity\",\n    \"convergence\",\n    \"separation\",\n    \"debug_locks\",\n    \"crash\",\n    \"show_warnings\",\n    \"calls\",\n    \"debug\",\n    \"cache_shaders\",\n    \"user_config\",\n    \"pool_element_type_switch_reset\",\n    \"temps\",\n    \"flags\",\n    \"mode\",\n    \"blend_factor\"\n  ],\n  \"patterns\": {\n    \"variable\": \"^\\\\$[A-Za-z0-9_]+$\",\n    \"iniParam\": \"^[xyzw]\\\\d*$\",\n    \"shaderSlot\": \"^(?:(?:[a-z]{2,4}-)?(?:[tu]|cb)\\\\d+|o[0-9dD]|u\\\\d|g\\\\d|t\\\\d|s\\\\d)$\",\n    \"fqn\": \"\\\\\\\\\",\n    \"indexed\": \"^([A-Za-z_$][A-Za-z0-9_]*)\\\\s*(\\\\[[^\\\\]]*\\\\])$\"\n  },\n  \"caseInsensitive\": {\n    \"sections\": true,\n    \"variables\": true\n  },\n  \"notes\": [\n    \"namespacedSectionPrefixes 的顺序即 IniHandler.cpp 的匹配顺序，前缀匹配、大小写不敏感、取第一个命中\",\n    \"globalSections 精确匹配，永不参与命名空间，允许重复（重复时追加合并）\",\n    \"带前缀的段重名时第 2 个起被静默丢弃，所以合并必须改名\",\n    \"patterns.fqn 表示含反斜杠的左值一律视为全限定名引用\",\n    \"未登记的左值不会被改写，一律归入 unclassified 并触发失败即停\",\n    \"Pool 是 XXMI/ZZMI 对 3DMigoto 的段类型扩展（PoolCache / Poolt / PoolUIPlacementCallers）\",\n    \"name[...] 形式的左值先剥掉下标再按基名分类；local $x 是命令列表局部变量，绝不改名\"\n  ]\n}\n";
+  var _existsFn = function () { return true; };
+
+  /* ---- path 垫片：只实现合并核心用到的 POSIX 语义 ---- */
+  var _path = (function () {
+    function norm(p) {
+      var s = String(p);
+      var abs = s.charAt(0) === '/';
+      var parts = s.split('/');
+      var out = [];
+      for (var i = 0; i < parts.length; i++) {
+        var seg = parts[i];
+        if (seg === '' || seg === '.') continue;
+        if (seg === '..') {
+          if (out.length && out[out.length - 1] !== '..') out.pop();
+          else if (!abs) out.push('..');
+          continue;
+        }
+        out.push(seg);
+      }
+      var joined = out.join('/');
+      if (abs) return '/' + joined;
+      return joined || '.';
+    }
+    function join() {
+      var ps = [];
+      for (var i = 0; i < arguments.length; i++) if (arguments[i]) ps.push(String(arguments[i]));
+      return norm(ps.join('/'));
+    }
+    function dirname(p) {
+      var s = norm(p);
+      if (s === '/') return '/';
+      var i = s.lastIndexOf('/');
+      if (i < 0) return '.';
+      if (i === 0) return '/';
+      return s.slice(0, i);
+    }
+    function resolve() {
+      var p = '';
+      for (var i = 0; i < arguments.length; i++) {
+        var a = String(arguments[i]);
+        if (a.charAt(0) === '/') p = a;
+        else p = p ? p + '/' + a : a;
+      }
+      if (p.charAt(0) !== '/') p = '/' + p;
+      return norm(p);
+    }
+    function relative(from, to) {
+      var f = resolve(from).split('/');
+      var t = resolve(to).split('/');
+      while (f.length && f[0] === '') f.shift();
+      while (t.length && t[0] === '') t.shift();
+      var i = 0;
+      while (i < f.length && i < t.length && f[i] === t[i]) i++;
+      var out = [];
+      for (var j = i; j < f.length; j++) out.push('..');
+      for (var k = i; k < t.length; k++) out.push(t[k]);
+      return out.join('/');
+    }
+    return { sep: '/', join: join, dirname: dirname, resolve: resolve, relative: relative, normalize: norm };
+  })();
+
+  /* ---- fs 垫片：规范从内联文本读；不写磁盘 ---- */
+  var _fs = {
+    readFileSync: function (p) {
+      if (String(p).indexOf('3dmigoto.json') >= 0) return SPEC_JSON_TEXT;
+      throw new Error('合并核心（浏览器版）不支持读取文件：' + p);
+    },
+    existsSync: function (p) { return _existsFn(p); },
+    writeFileSync: function () { throw new Error('合并核心（浏览器版）不写磁盘，请使用返回的 text'); },
+  };
+
+  var _modules = Object.create(null);
+  var _cache = Object.create(null);
+  function _define(name, fn) { _modules[name] = fn; }
+  function _require(name) {
+    if (name === 'node:fs') return _fs;
+    if (name === 'node:path') return _path;
+    if (_cache[name]) return _cache[name].exports;
+    var fn = _modules[name];
+    if (!fn) throw new Error('合并核心：未知模块 ' + name);
+    var mod = { exports: {} };
+    _cache[name] = mod;
+    fn(mod, mod.exports, _require, '/merge');
+    return mod.exports;
+  }
+
+  _define("./spec", function (module, exports, require, __dirname) {
+    /* ---- spec.js 原文 ---- */
+    'use strict';
+    /**
+     * 语言规范加载与查询。规范放在 spec/3dmigoto.json，与代码解耦。
+     */
+
+    const fs = require('node:fs');
+    const path = require('node:path');
+
+    const SPEC_PATH = path.join(__dirname, '..', '..', 'spec', '3dmigoto.json');
+
+    function loadSpec(overridePath) {
+      const spec = JSON.parse(fs.readFileSync(SPEC_PATH, 'utf8'));
+      if (overridePath) {
+        const extra = JSON.parse(fs.readFileSync(overridePath, 'utf8'));
+        for (const k of Object.keys(extra)) {
+          if (Array.isArray(extra[k])) spec[k] = (spec[k] || []).concat(extra[k]);
+          else if (extra[k] && typeof extra[k] === 'object') Object.assign(spec[k] = spec[k] || {}, extra[k]);
+          else spec[k] = extra[k];
+        }
+      }
+      spec._lower = {
+        prefixes: spec.namespacedSectionPrefixes.map(function (p) { return p.toLowerCase(); }),
+        globals: new Set(spec.globalSections.map(function (p) { return p.toLowerCase(); })),
+        scalar: new Set((spec.scalarDirectives || []).map(function (p) { return p.toLowerCase(); })),
+        path: new Set(spec.directives.path.map(function (p) { return p.toLowerCase(); })),
+        reference: new Set(spec.directives.reference.map(function (p) { return p.toLowerCase(); })),
+        flow: new Set(spec.directives.flow.map(function (p) { return p.toLowerCase(); })),
+      };
+      spec._re = {
+        variable: new RegExp(spec.patterns.variable),
+        iniParam: new RegExp(spec.patterns.iniParam),
+        shaderSlot: new RegExp(spec.patterns.shaderSlot),
+      };
+      return spec;
+    }
+
+    /** 按 IniHandler.cpp:141-165 的规则取段前缀：顺序遍历，大小写不敏感前缀匹配，取第一个命中。 */
+    function sectionPrefixOf(name, spec) {
+      const lower = String(name || '').toLowerCase();
+      for (let i = 0; i < spec._lower.prefixes.length; i++) {
+        const p = spec._lower.prefixes[i];
+        if (lower.length >= p.length && lower.slice(0, p.length) === p) return spec.namespacedSectionPrefixes[i];
+      }
+      return null;
+    }
+
+    function isGlobalSection(name, spec) {
+      return spec._lower.globals.has(String(name || '').toLowerCase());
+    }
+
+    module.exports = { loadSpec, sectionPrefixOf, isGlobalSection, SPEC_PATH };
+  });
+
+  _define("./loader", function (module, exports, require, __dirname) {
+    /* ---- loader.js 原文 ---- */
+    'use strict';
+    /**
+     * 加载顺序解析。复刻 3DMigoto IniHandler.cpp:771-820 的真实行为，而不是猜。
+     *   1. 每个目录内先处理本层全部 .ini，再递归子目录
+     *   2. 两侧都按大小写不敏感的字典序排序
+     *   3. 只认小写 .ini 扩展名（IniHandler.cpp:801 用的是区分大小写的 wcscmp）
+     */
+
+    const fs = require('node:fs');
+    const path = require('node:path');
+
+    /** 反斜杠常量：避免源码里的转义歧义。 */
+    const BS = String.fromCharCode(92);
+    const INI_RE = /\.ini$/;
+    const SEP_RE = new RegExp('[' + BS + BS + '/]');
+
+    function ciCompare(a, b) {
+      const x = String(a).toLowerCase(), y = String(b).toLowerCase();
+      if (x < y) return -1;
+      if (x > y) return 1;
+      return 0;
+    }
+
+    function readLevel(dir) {
+      const out = { files: [], dirs: [] };
+      let entries;
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
+      for (const e of entries) {
+        if (e.isDirectory()) out.dirs.push(e.name);
+        else if (INI_RE.test(e.name)) out.files.push(e.name);
+      }
+      out.files.sort(ciCompare);
+      out.dirs.sort(ciCompare);
+      return out;
+    }
+
+    /** 通配符 → 正则。匹配的是文件名本身（IniHandler.cpp:793）。 */
+    function globToRegExp(glob) {
+      let re = '';
+      for (const ch of String(glob)) {
+        if (ch === '*') re += '[^' + BS + BS + '/]*';
+        else if (ch === '?') re += '[^' + BS + BS + '/]';
+        else if (/[A-Za-z0-9_ ]/.test(ch)) re += ch;
+        else re += BS + ch;
+      }
+      return new RegExp('^' + re + '$', 'i');
+    }
+
+    function isExcluded(name, excludeRes) {
+      for (const re of excludeRes) if (re.test(name)) return true;
+      return false;
+    }
+
+    /** 递归枚举，返回相对路径（反斜杠分隔）的有序列表 = 3DMigoto 的加载顺序。 */
+    function walkRecursive(root, rel, excludeRes, acc) {
+      const dir = rel ? path.join(root, rel.split(BS).join(path.sep)) : root;
+      const level = readLevel(dir);
+      for (const f of level.files) {
+        if (isExcluded(f, excludeRes)) continue;
+        acc.push(rel ? rel + BS + f : f);
+      }
+      for (const d of level.dirs) {
+        if (isExcluded(d, excludeRes)) continue;
+        walkRecursive(root, rel ? rel + BS + d : d, excludeRes, acc);
+      }
+      return acc;
+    }
+
+    function detectLoaderRoot(startDir) {
+      let cur = path.resolve(startDir);
+      for (let i = 0; i < 16; i++) {
+        if (fs.existsSync(path.join(cur, 'd3dx.ini'))) return cur;
+        const up = path.dirname(cur);
+        if (up === cur) break;
+        cur = up;
+      }
+      return null;
+    }
+
+    /** 文件相对加载器根的路径（反斜杠）就是它的命名空间（IniHandler.cpp:810-815）。 */
+    function namespaceOf(loaderRoot, absFile) {
+      return path.relative(loaderRoot, absFile).split(SEP_RE).join(BS);
+    }
+
+    /**
+     * 按 3DMigoto 的枚举顺序比较两个相对路径（文件先于子目录，同级大小写不敏感排序）。
+     * 与 walkRecursive 等价，用于在「还没落盘」时预判插入位置。
+     */
+    function compareRel(a, b) {
+      const A = String(a).split(BS), B = String(b).split(BS);
+      const n = Math.min(A.length, B.length);
+      for (let i = 0; i < n; i++) {
+        const aDir = i < A.length - 1, bDir = i < B.length - 1;
+        if (aDir !== bDir) return aDir ? 1 : -1;
+        if (aDir) { const c = ciCompare(A[i], B[i]); if (c) return c; }
+      }
+      if (A.length !== B.length) return A.length - B.length;
+      return ciCompare(A[A.length - 1], B[B.length - 1]);
+    }
+
+    module.exports = { readLevel, globToRegExp, isExcluded, walkRecursive, detectLoaderRoot, namespaceOf, ciCompare, compareRel, INI_RE, BS, SEP_RE };
+  });
+
+  _define("./model", function (module, exports, require, __dirname) {
+    /* ---- model.js 原文 ---- */
+    'use strict';
+    /**
+     * 通用 ini 模型：把任意 3DMigoto ini 解析成「段 / 符号 / 引用 / 路径 / 未分类行」。
+     *
+     * 设计原则：不做任何 MOD 专有假设。所有判断来自 spec（语言规范）与文本本身。
+     */
+
+    const fs = require('node:fs');
+    const { sectionPrefixOf, isGlobalSection } = require('./spec');
+
+    /** 反斜杠常量：避免源码里的转义歧义。 */
+    const BS = String.fromCharCode(92);
+
+    function detectEol(text) {
+      const crlf = (text.match(/\r\n/g) || []).length;
+      const lf = (text.match(/(?<!\r)\n/g) || []).length;
+      const cr = (text.match(/\r(?!\n)/g) || []).length;
+      if (crlf && !lf && !cr) return { eol: '\r\n', mixed: false };
+      if (lf && !crlf && !cr) return { eol: '\n', mixed: false };
+      if (cr && !crlf && !lf) return { eol: '\r', mixed: false };
+      if (!crlf && !lf && !cr) return { eol: '\n', mixed: false };
+      return { eol: '\n', mixed: true };
+    }
+
+    /** 3DMigoto 只把「整行以 ; 开头」当注释，行中间的分号不是注释（IniHandler.cpp:596-607）。 */
+    function isComment(text) { return text.charAt(0) === ';'; }
+
+    /** 拆 pre / post 前缀（IniHandler.cpp:1955）。 */
+    function splitPrePost(key) {
+      const m = /^(pre|post)\s+(.*)$/i.exec(key);
+      if (m) return { scope: m[1].toLowerCase(), key: m[2] };
+      return { scope: null, key: key };
+    }
+
+    /** 找第一个「赋值用」等号，跳过 == != <= >= 里的等号。 */
+    function firstEq(text) {
+      for (let i = 0; i < text.length; i++) {
+        if (text.charAt(i) !== '=') continue;
+        const prev = text.charAt(i - 1), next = text.charAt(i + 1);
+        if (next === '=' || prev === '=' || prev === '!' || prev === '<' || prev === '>') continue;
+        return i;
+      }
+      return -1;
+    }
+
+    /**
+     * 给一行（已 trim）分类。返回 { dirKind, key, value, scope, bare, ... }。
+     *   '$var' 变量   'iniparam' IniParams   'slot' shader 槽位   'fqn' 全限定名
+     *   'path' 路径类  'reference' 引用类     'flow' 流程控制       'scalar' 已知标量指令
+     *   'ambiguous' 以段前缀开头但无反斜杠（本地资源变量 or 段左值，无法断言）
+     *   'unclassified' 未登记（失败即停的依据）  'bare' 无等号且非流程控制
+     */
+    function classifyLine(text, spec) {
+      if (text.charAt(0) === '[') return { dirKind: 'section' };
+
+      // 流程控制优先判定，避免 if $x == 1 里的 == 被当成赋值号
+      const pp = splitPrePost(text);
+      const firstWord = pp.key.split(/\s+/)[0].toLowerCase();
+      if (spec._lower.flow.has(firstWord)) return { dirKind: 'flow' };
+
+      const eq = firstEq(text);
+      const keyText = (eq < 0 ? text : text.slice(0, eq)).trim();
+      const value = eq < 0 ? null : text.slice(eq + 1);
+      const pp2 = splitPrePost(keyText);
+      let scope = pp2.scope;
+      let bare = pp2.key.trim();
+
+      // [Constants] 的限定符：global / persist / locked，可叠加（例如 global locked $x）
+      const q = /^((?:(?:global|persist|locked)\s+)+)([\s\S]+)$/i.exec(bare);
+      if (q) {
+        scope = ((scope ? scope + ' ' : '') + q[1].trim()).toLowerCase();
+        bare = q[2].trim();
+      }
+      const lk = bare.toLowerCase();
+      const base = { key: keyText, value: value, scope: scope, bare: bare };
+
+      if (eq < 0) return Object.assign(base, { dirKind: 'bare', word: lk.split(/\s+/)[0] });
+
+      // 命令列表局部变量 local $x：作用域仅限该命令列表，不参与命名空间，绝不改名。
+      const lm = /^local\s+(\$[A-Za-z0-9_]+)$/i.exec(bare);
+      if (lm) return Object.assign(base, { dirKind: 'localvar', localName: lm[1] });
+
+      // 带下标的左值（blend_factor[0] / Poolt[*] / $Poolt[*]）：先剥下标，再按基名分类。
+      const im = /^([A-Za-z_$][A-Za-z0-9_]*)\s*\[([^\]]*)\]$/.exec(bare);
+      if (im) { base.indexed = '[' + im[2] + ']'; bare = im[1]; base.bare = bare; }
+      const lk2 = bare.toLowerCase();
+      if (spec._re.variable.test(bare)) return Object.assign(base, { dirKind: '$var' });
+      if (spec._re.iniParam.test(lk2)) return Object.assign(base, { dirKind: 'iniparam' });
+      if (spec._re.shaderSlot.test(lk2)) return Object.assign(base, { dirKind: 'slot' });
+      if (spec.patterns.fqn && new RegExp(spec.patterns.fqn).test(bare)) return Object.assign(base, { dirKind: 'fqn' });
+      if (spec._lower.path.has(lk2)) return Object.assign(base, { dirKind: 'path' });
+      if (spec._lower.reference.has(lk2)) return Object.assign(base, { dirKind: 'reference' });
+      if (lk2 === String(spec.directives.namespace).toLowerCase()) return Object.assign(base, { dirKind: 'namespace' });
+      if (spec._lower.scalar.has(lk2)) return Object.assign(base, { dirKind: 'scalar' });
+      if (sectionPrefixOf(bare, spec)) return Object.assign(base, { dirKind: 'ambiguous' });
+      return Object.assign(base, { dirKind: 'unclassified' });
+    }
+
+    /** 解析一个 ini 文件。 */
+    function parseFile(absPath, namespace, spec) {
+      return parseText(fs.readFileSync(absPath, 'utf8'), absPath, namespace, spec);
+    }
+
+    function parseText(raw, absPath, namespace, spec) {
+      // 编码保护：只接受 UTF-8 / ASCII。UTF-16 或二进制被当成 utf8 读会静默变形，
+      // 那是最危险的一类错误——看起来成功，实际内容已经烂掉。这里直接拒绝。
+      if (raw.indexOf(String.fromCharCode(0)) >= 0) {
+        throw new Error('编码不支持（疑似 UTF-16 或二进制，本工具只处理 UTF-8）：' + absPath);
+      }
+      const bom = raw.charCodeAt(0) === 0xFEFF;
+      const body = bom ? raw.slice(1) : raw;
+      const { eol, mixed } = detectEol(body);
+      const rawLines = body.split(/\r\n|\n|\r/);
+
+      // 显式 namespace 声明覆盖路径推导值，并决定本文件标识符的全限定名
+      // （IniHandler.cpp:493-496；只在第一个段之前生效，见 :571-623）。
+      let effectiveNamespace = namespace;
+      for (let i = 0; i < rawLines.length; i++) {
+        const t = rawLines[i].trim();
+        if (!t || t.charAt(0) === ';') continue;
+        if (t.charAt(0) === '[') break;
+        const nm = /^namespace\s*=\s*([\s\S]*)$/i.exec(t);
+        if (nm) { effectiveNamespace = nm[1].trim(); break; }
+      }
+
+      const file = {
+        absPath, namespace, effectiveNamespace, bom, eol, mixedEol: mixed,
+        declaredNamespace: effectiveNamespace !== namespace,
+        lines: [], sections: [], variables: new Map(), paths: [], unclassified: [], ambiguous: [],
+        localRefs: [],
+      };
+
+      let current = null;
+      for (let i = 0; i < rawLines.length; i++) {
+        const rawLine = rawLines[i];
+        const trimmed = rawLine.trim();
+        const rec = {
+          n: i + 1, raw: rawLine, text: trimmed,
+          indent: rawLine.slice(0, rawLine.length - rawLine.trimStart().length),
+          kind: 'blank', section: current,
+        };
+        if (trimmed === '') rec.kind = 'blank';
+        else if (isComment(trimmed)) rec.kind = 'comment';
+        else if (trimmed.charAt(0) === '[') {
+          rec.kind = 'section';
+          const close = trimmed.indexOf(']');
+          const name = (close >= 0 ? trimmed.slice(1, close) : trimmed.slice(1)).trim();
+          const prefix = sectionPrefixOf(name, spec);
+          const global = isGlobalSection(name, spec);
+          const sec = {
+            file, name, line: i + 1, rec,
+            type: prefix ? 'namespaced' : (global ? 'global' : 'unknown'),
+            prefix, shortName: prefix ? name.slice(prefix.length) : name,
+            fqn: prefix ? prefix + BS + effectiveNamespace + BS + name.slice(prefix.length) : name,
+            lines: [],
+          };
+          current = sec;
+          rec.section = sec;
+          file.sections.push(sec);
+          rec.kind = 'section';
+        } else {
+          const c = classifyLine(trimmed, spec);
+          Object.assign(rec, c);
+          rec.kind = 'kv';
+          if (c.dirKind === 'unclassified') file.unclassified.push({ n: i + 1, text: trimmed });
+          else if (c.dirKind === 'ambiguous') file.ambiguous.push({ n: i + 1, text: trimmed, key: c.bare });
+          if (c.dirKind === '$var') {
+            const vname = c.bare.slice(1);
+            const lv = vname.toLowerCase();
+            if (!file.variables.has(lv)) file.variables.set(lv, { name: vname, lines: [] });
+            file.variables.get(lv).lines.push(i + 1);
+          }
+          // 局部变量行上的 $ 记号全部记下来：它们绝不能指向被改名的全局变量。
+          if (c.dirKind === 'localvar') {
+            const re = /\$([A-Za-z0-9_]+)/g;
+            let mm;
+            while ((mm = re.exec(rec.raw)) !== null) file.localRefs.push({ n: i + 1, name: mm[1].toLowerCase() });
+          }
+          // 引用 token：键是引用类指令时取值；否则看值是否为 "ref X" 形式。
+          // 这两种都要统一收集，否则 Resource\ZZMI\Diffuse = ref Resource_H1 这类会被漏掉。
+          if (c.value != null) {
+            const m = /^\s*ref\s+([\s\S]+)$/i.exec(c.value);
+            const tok = c.dirKind === 'reference' ? (m ? m[1] : c.value).trim() : (m ? m[1].trim() : null);
+            if (tok) rec.refToken = tok;
+          }
+          if (c.dirKind === 'path') {
+            const v = c.value.trim();
+            if (v && v.toLowerCase() !== 'null') {
+              file.paths.push({ n: i + 1, directive: c.bare.toLowerCase(), raw: v, line: rawLine });
+            }
+          }
+          if (current) current.lines.push(i + 1);
+        }
+        file.lines.push(rec);
+      }
+      return file;
+    }
+
+    module.exports = { parseFile, parseText, classifyLine, firstEq, detectEol, isComment, splitPrePost };
+  });
+
+  _define("./plan", function (module, exports, require, __dirname) {
+    /* ---- plan.js 原文 ---- */
+    'use strict';
+    /**
+     * 冲突检测与改名计划。全部由文本与 spec 推导，没有任何 MOD 专有假设。
+     *
+     * 冲突判据（来自 IniHandler.cpp:398-419）：带前缀的段重名时第 2 个起被静默丢弃，
+     * 所以凡是原本靠命名空间区分开的同名符号，合并后都必须改名；而原本就在同一
+     * 个文件里重复的，必须原样保留（那正是今天的行为）。
+     */
+
+    const { BS, SEP_RE } = require('./loader');
+
+    function sanitize(s) {
+      let out = String(s).replace(/[^A-Za-z0-9_]/g, '_');
+      if (/^[0-9]/.test(out)) out = '_' + out;
+      return out || 'x';
+    }
+
+    /** 每个文件取「最短的唯一路径后缀」作为消歧前缀，避免同名文件互相冲突。 */
+    function disambiguators(entries) {
+      const segs = entries.map(function (e) {
+        return e.relPath.replace(/\.ini$/i, '').split(SEP_RE).map(sanitize).filter(Boolean);
+      });
+      return entries.map(function (e, i) {
+        for (let k = 1; k <= segs[i].length; k++) {
+          const cand = segs[i].slice(segs[i].length - k).join('_');
+          const clash = segs.some(function (g, j) {
+            return j !== i && g.slice(Math.max(0, g.length - k)).join('_') === cand;
+          });
+          if (!clash) return cand;
+        }
+        return segs[i].join('_') + '_' + i;
+      });
+    }
+
+    function buildPlan(entries, spec, opts) {
+      opts = opts || {};
+      const style = opts.style === 'prefix' ? 'prefix' : 'suffix';
+      const dis = disambiguators(entries);
+      entries.forEach(function (e, i) { e.disambiguator = dis[i]; });
+
+      const secIndex = new Map();
+      const varIndex = new Map();
+      entries.forEach(function (e, i) {
+        e.model.sections.forEach(function (sec) {
+          if (sec.type !== 'namespaced') return;
+          const key = (sec.prefix + BS + sec.shortName).toLowerCase();
+          if (!secIndex.has(key)) secIndex.set(key, []);
+          secIndex.get(key).push({ i: i, sec: sec });
+        });
+        e.model.variables.forEach(function (v, lv) {
+          if (!varIndex.has(lv)) varIndex.set(lv, []);
+          varIndex.get(lv).push({ i: i, name: v.name });
+        });
+      });
+
+      const usedSec = new Set(secIndex.keys());
+      const usedVar = new Set(varIndex.keys());
+      const secRenames = entries.map(function () { return new Map(); });
+      const varRenames = entries.map(function () { return new Map(); });
+      const collisions = [];
+
+      function bucket(list) {
+        const byI = new Map();
+        list.forEach(function (x) {
+          if (!byI.has(x.i)) byI.set(x.i, []);
+          byI.get(x.i).push(x);
+        });
+        return byI;
+      }
+
+      secIndex.forEach(function (list, key) {
+        if (new Set(list.map(function (x) { return x.i; })).size < 2) return;
+        const order = list.slice().sort(function (a, b) { return a.i - b.i; });
+        const keepI = order[0].i;
+        collisions.push({
+          kind: 'section', key: key,
+          files: [...new Set(order.map(function (x) { return x.i; }))].sort(function (a, b) { return a - b; }),
+          keep: keepI,
+          rename: [...new Set(order.map(function (x) { return x.i; }))].filter(function (i) { return i !== keepI; }),
+        });
+        bucket(order).forEach(function (items, i) {
+          if (i === keepI) return;
+          const src = items[0].sec;
+          const map = secRenames[i];
+          const mapKey = (src.prefix + BS + src.shortName).toLowerCase();
+          if (map.has(mapKey)) return;
+          const base = style === 'prefix'
+            ? entries[i].disambiguator + '_' + src.shortName
+            : src.shortName + '_' + entries[i].disambiguator;
+          let cand = base, n = 1;
+          while (usedSec.has((src.prefix + BS + cand).toLowerCase())) cand = base + '_' + (++n);
+          usedSec.add((src.prefix + BS + cand).toLowerCase());
+          map.set(mapKey, cand);
+        });
+      });
+
+      varIndex.forEach(function (list, lv) {
+        if (new Set(list.map(function (x) { return x.i; })).size < 2) return;
+        const order = list.slice().sort(function (a, b) { return a.i - b.i; });
+        const keepI = order[0].i;
+        collisions.push({
+          kind: 'variable', key: lv,
+          files: [...new Set(order.map(function (x) { return x.i; }))].sort(function (a, b) { return a - b; }),
+          keep: keepI,
+          rename: [...new Set(order.map(function (x) { return x.i; }))].filter(function (i) { return i !== keepI; }),
+        });
+        bucket(order).forEach(function (items, i) {
+          if (i === keepI) return;
+          const map = varRenames[i];
+          if (map.has(lv)) return;
+          const oldName = items[0].name;
+          const base = style === 'prefix'
+            ? entries[i].disambiguator + '_' + oldName
+            : oldName + '_' + entries[i].disambiguator;
+          let cand = base, n = 1;
+          while (usedVar.has(cand.toLowerCase())) cand = base + '_' + (++n);
+          usedVar.add(cand.toLowerCase());
+          map.set(lv, cand);
+        });
+      });
+
+      // 合并后所有文件共享同一个命名空间，由输出文件的位置决定。
+      const outNamespace = opts.outputNamespace || null;
+
+      return {
+        style: style,
+        outputNamespace: outNamespace,
+        order: entries.map(function (e, i) {
+          return { i: i, relPath: e.relPath, namespace: e.namespace, disambiguator: e.disambiguator };
+        }),
+        collisions: collisions,
+        sectionRenames: secRenames,
+        variableRenames: varRenames,
+        stats: {
+          files: entries.length,
+          sections: entries.reduce(function (a, e) { return a + e.model.sections.length; }, 0),
+          variables: entries.reduce(function (a, e) { return a + e.model.variables.size; }, 0),
+          paths: entries.reduce(function (a, e) { return a + e.model.paths.length; }, 0),
+          unclassified: entries.reduce(function (a, e) { return a + e.model.unclassified.length; }, 0),
+          ambiguous: entries.reduce(function (a, e) { return a + e.model.ambiguous.length; }, 0),
+          sectionCollisions: collisions.filter(function (c) { return c.kind === 'section'; }).length,
+          variableCollisions: collisions.filter(function (c) { return c.kind === 'variable'; }).length,
+        },
+      };
+    }
+
+    module.exports = { buildPlan, disambiguators, sanitize };
+  });
+
+  _define("./apply", function (module, exports, require, __dirname) {
+    /* ---- apply.js 原文 ---- */
+    'use strict';
+    /**
+     * 生成合并文件。三件事：按权威顺序串接、改名、重写路径。
+     * 不写磁盘（由调用方决定），并输出逐行来源对照表供校验与审阅。
+     */
+
+    const path = require('node:path');
+    const { BS } = require('./loader');
+    const { sectionPrefixOf } = require('./spec');
+
+    function toNative(p) { return String(p).split(BS).join(path.sep).split('/').join(path.sep); }
+
+    /** 重写一个路径类指令的值，保持原有的分隔符风格。 */
+    function rewritePathValue(value, fromFile, toFile) {
+      const style = (value.indexOf('/') >= 0 && value.indexOf(BS) < 0) ? '/' : BS;
+      const abs = path.resolve(path.dirname(fromFile), toNative(value));
+      let rel = path.relative(path.dirname(toFile), abs);
+      if (style === '/') rel = rel.split(path.sep).join('/');
+      else rel = rel.split(path.sep).join(BS);
+      return { abs: abs, rel: rel, changed: rel.toLowerCase() !== value.toLowerCase() };
+    }
+
+    /** 变量改名：$name -> $new。不触碰 $\ns\name 这种全限定形式。 */
+    function renameVars(text, varMap) {
+      if (!varMap || !varMap.size) return text;
+      return text.replace(/\$([A-Za-z0-9_]+)/g, function (m, name) {
+        const nv = varMap.get(name.toLowerCase());
+        return nv ? '$' + nv : m;
+      });
+    }
+
+    function applyPlan(entries, plan, spec, opts) {
+      const outFile = opts.outputFile;
+      const outNs = plan.outputNamespace;
+      const out = [];
+      const prov = [];
+      const notes = [];
+
+      // 全限定名映射：覆盖全部段（不只是改名的），因为命名空间本身也变了。
+      const fqnMap = new Map();
+      // 裸引用写的是「完整段名」（ref Resource_H1 指向 [Resource_H1]），
+      // 所以映射必须按完整段名建立，不能按去掉前缀的短名。
+      const nameMapPerFile = entries.map(function () { return new Map(); });
+      entries.forEach(function (e, i) {
+        e.model.sections.forEach(function (sec) {
+          if (sec.type !== 'namespaced') return;
+          const k = (sec.prefix + BS + sec.shortName).toLowerCase();
+          const newShort = plan.sectionRenames[i].get(k) || sec.shortName;
+          if (newShort !== sec.shortName) nameMapPerFile[i].set(sec.name.toLowerCase(), sec.prefix + newShort);
+          // 必须用「生效命名空间」：文件可能显式声明 namespace = X，覆盖路径推导值。
+          const oldFqn = sec.prefix + BS + (e.model.effectiveNamespace || e.namespace) + BS + sec.shortName;
+          const newFqn = sec.prefix + BS + outNs + BS + newShort;
+          if (oldFqn.toLowerCase() !== newFqn.toLowerCase()) fqnMap.set(oldFqn.toLowerCase(), newFqn);
+        });
+      });
+
+      function lookupName(token, i) {
+        const lower = token.toLowerCase();
+        const fq = fqnMap.get(lower);
+        if (fq) return fq;
+        const nm = nameMapPerFile[i].get(lower);
+        if (nm) return nm;
+        return null;
+      }
+
+      /** 重写一个引用值，保留 ref 前缀与两端空白。 */
+      function rewriteRef(value, i) {
+        const m = /^(\s*(?:ref\s+)?)([\s\S]*?)(\s*)$/i.exec(value);
+        if (!m) return value;
+        const nt = lookupName(m[2], i);
+        return nt ? m[1] + nt + m[3] : value;
+      }
+
+      function push(outLine, i, inLine, transform) {
+        out.push(outLine);
+        prov.push({ outLine: out.length, file: i, inLine: inLine, transform: transform });
+      }
+
+      push('; ============================================================', -1, 0, 'header');
+      push('; 本文件由 XXMI-Menu-Maker 通用合并工具生成，请勿手工在两处同时编辑。', -1, 0, 'header');
+      push('; 源文件（按 3DMigoto 的权威加载顺序）:', -1, 0, 'header');
+      entries.forEach(function (e, i) {
+        push(';   ' + (i + 1) + '. ' + e.relPath, -1, 0, 'header');
+        push(';      原命名空间 ' + e.namespace, -1, 0, 'header');
+      });
+      push('; 产物命名空间 ' + outNs, -1, 0, 'header');
+      push('; ============================================================', -1, 0, 'header');
+      push('', -1, 0, 'header');
+
+      entries.forEach(function (e, i) {
+        const model = e.model;
+        const firstSectionLine = model.sections.length ? model.sections[0].line : Infinity;
+        push('; ---- 合并自 ' + e.relPath + ' ----', -1, 0, 'separator');
+
+        model.lines.forEach(function (rec) {
+          // 源文件的 namespace 前置声明在合并后必须去掉：合并文件只有一个命名空间。
+          if (rec.kind === 'kv' && rec.n < firstSectionLine && rec.bare && rec.bare.toLowerCase() === spec.directives.namespace) {
+            push('; [已移除] 原文件前置声明: ' + rec.raw.trim(), i, rec.n, 'dropped-namespace');
+            notes.push({ file: e.relPath, line: rec.n, note: '移除 namespace 前置声明', old: rec.raw.trim() });
+            return;
+          }
+          if (rec.kind === 'blank' || rec.kind === 'comment') {
+            push(rec.raw, i, rec.n, 'verbatim');
+            return;
+          }
+          if (rec.kind === 'section') {
+            const newShort = rec.section ? plan.sectionRenames[i].get((rec.section.prefix + BS + rec.section.shortName).toLowerCase()) : null;
+            if (newShort) {
+              const m = /^(\s*\[\s*)([\s\S]*?)(\s*\]\s*)$/.exec(rec.raw);
+              const rebuilt = m ? m[1] + rec.section.prefix + newShort + m[3] : rec.raw;
+              push(rebuilt, i, rec.n, 'rename-section');
+              notes.push({ file: e.relPath, line: rec.n, note: '段改名', old: rec.section.name, neu: rec.section.prefix + newShort });
+            } else {
+              push(rec.raw, i, rec.n, 'verbatim');
+            }
+            return;
+          }
+          // kv 行：先做变量改名，再只在「值」的范围内做引用 / 路径重写。
+          // 变量改名会移动 '=' 的位置（global persist $x = 0），所以偏移量必须重算。
+          // local $x 是命令列表局部变量，绝不参与改名（由 V10 兜底检查）。
+          let line = rec.dirKind === 'localvar' ? rec.raw : renameVars(rec.raw, plan.variableRenames[i]);
+          if (line !== rec.raw) {
+            notes.push({ file: e.relPath, line: rec.n, note: '变量改名', old: rec.raw.trim(), neu: line.trim() });
+          }
+          if (rec.value != null && (rec.refToken || rec.dirKind === 'path')) {
+            const indent = line.length - line.trimStart().length;
+            const t = line.trim();
+            const eqPos = t.indexOf('=');
+            if (eqPos >= 0) {
+              const valStart = indent + eqPos + 1;
+              const val = line.slice(valStart);
+              if (rec.refToken) {
+                const nv = rewriteRef(val, i);
+                if (nv !== val) {
+                  line = line.slice(0, valStart) + nv;
+                  notes.push({ file: e.relPath, line: rec.n, note: '引用重写', old: val.trim(), neu: nv.trim() });
+                }
+              } else {
+                const v = val.trim();
+                if (v && v.toLowerCase() !== 'null') {
+                  const rw = rewritePathValue(v, e.absPath, outFile);
+                  if (rw.rel !== v) {
+                    line = line.slice(0, valStart) + val.replace(v, rw.rel);
+                    notes.push({ file: e.relPath, line: rec.n, note: '路径重写', old: v, neu: rw.rel });
+                  }
+                }
+              }
+            }
+          }
+          push(line, i, rec.n, 'kv');
+        });
+        push('', i, 0, 'separator');
+      });
+
+      return { text: out.join('\n') + '\n', provenance: prov, notes: notes, fqnMap: fqnMap };
+    }
+
+    module.exports = { applyPlan, rewritePathValue, renameVars };
+  });
+
+  _define("./verify", function (module, exports, require, __dirname) {
+    /* ---- verify.js 原文 ---- */
+    'use strict';
+    /**
+     * 不变量校验：合并前后必须「可证明等价」。
+     * 做法是独立地重新解析产物，再与源侧语义模型逐项比对，而不是相信 apply 的自述。
+     */
+
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const { BS } = require('./loader');
+    const { parseText } = require('./model');
+
+    function toNative(p) { return String(p).split(BS).join(path.sep).split('/').join(path.sep); }
+
+    function finalNameOf(sec, i, plan) {
+      if (sec.type !== 'namespaced') return sec.name;
+      const k = (sec.prefix + BS + sec.shortName).toLowerCase();
+      const n = plan.sectionRenames[i].get(k);
+      return n ? sec.prefix + n : sec.name;
+    }
+
+    function keyOf(name, spec, sectionPrefixOf) {
+      const p = sectionPrefixOf(name, spec);
+      return p ? (p + BS + name.slice(p.length)).toLowerCase() : name.toLowerCase();
+    }
+
+    /**
+     * 解析一个引用 token：返回命中的段对象，未命中返回 null。
+     * 裸引用写的是「完整段名」（ref Resource_H1 指向 [Resource_H1]），不是去掉前缀的短名。
+     */
+    function resolveRef(model, token) {
+      const t = String(token).trim();
+      if (!t) return null;
+      const lower = t.toLowerCase();
+      if (t.indexOf(BS) >= 0) {
+        for (const s of model.sections) if (s.fqn && s.fqn.toLowerCase() === lower) return s;
+        return null;
+      }
+      for (const s of model.sections) if (s.name.toLowerCase() === lower) return s;
+      return null;
+    }
+
+    function refTokensOf(model) {
+      const out = [];
+      for (const rec of model.lines) {
+        if (rec.kind === 'kv' && rec.refToken) out.push({ n: rec.n, token: rec.refToken });
+      }
+      return out;
+    }
+
+    /** 与 apply 独立实现的变量名归一，避免校验器依赖被校验的代码。 */
+    function renameVarsLocal(text, map) {
+      if (!map || !map.size) return text;
+      return String(text).replace(/\$([A-Za-z0-9_]+)/g, function (m, n) {
+        const nv = map.get(n.toLowerCase());
+        return nv ? '$' + nv : m;
+      });
+    }
+
+    function pathsOf(model) {
+      const out = [];
+      for (const p of model.paths) {
+        const abs = path.resolve(path.dirname(model.absPath), toNative(p.raw));
+        out.push({ n: p.n, directive: p.directive, raw: p.raw, abs: abs });
+      }
+      return out;
+    }
+
+    function varTokensOf(model) {
+      const out = [];
+      for (const rec of model.lines) {
+        if (rec.kind !== 'kv') continue;
+        const re = /\$([A-Za-z0-9_]+)/g;
+        let m;
+        while ((m = re.exec(rec.raw)) !== null) out.push(m[1].toLowerCase());
+      }
+      return out;
+    }
+
+    function countBy(arr, f) {
+      const m = new Map();
+      for (const x of arr) { const k = f(x); m.set(k, (m.get(k) || 0) + 1); }
+      return m;
+    }
+
+    function diffMultiset(a, b) {
+      const ka = countBy(a, function (x) { return x; });
+      const kb = countBy(b, function (x) { return x; });
+      const onlyA = [], onlyB = [];
+      ka.forEach(function (v, k) { const w = kb.get(k) || 0; if (v > w) onlyA.push(k + ' x' + (v - w)); });
+      kb.forEach(function (v, k) { const w = ka.get(k) || 0; if (v > w) onlyB.push(k + ' x' + (v - w)); });
+      return { onlyA: onlyA.sort(), onlyB: onlyB.sort() };
+    }
+
+    function verify(entries, plan, spec, opts) {
+      const helpers = require('./spec');
+      const outModel = parseText(opts.outputText, opts.targetFile, opts.outputNamespace, spec);
+      const results = [];
+      const add = function (id, name, ok, detail) { results.push({ id: id, name: name, ok: ok, detail: detail }); };
+
+      // ---- 期望的段序列（按权威顺序串接，并套用改名） ----
+      const expectedSecs = [];
+      entries.forEach(function (e, i) {
+        e.model.sections.forEach(function (sec) {
+          const finalName = finalNameOf(sec, i, plan);
+          expectedSecs.push({ fileI: i, sec: sec, type: sec.type, finalName: finalName, key: keyOf(finalName, spec, helpers.sectionPrefixOf) });
+        });
+      });
+      const actualSecs = outModel.sections.map(function (s) {
+        return { name: s.name, key: keyOf(s.name, spec, helpers.sectionPrefixOf) };
+      });
+
+      // ---- V1 键守恒：所有 'key =' 行的键的多重集合必须一致 ----
+      const srcKeys = [];
+      entries.forEach(function (e, i) {
+        // 合并会有意丢弃源文件的 namespace 前置声明（合并后只存在一个命名空间），
+        // 这几行属于「有意为之」，不能算成丢失内容。
+        const firstSec = e.model.sections.length ? e.model.sections[0].line : Infinity;
+        e.model.lines.forEach(function (rec) {
+          if (rec.kind !== 'kv' || !rec.key) return;
+          if (rec.n < firstSec && rec.bare && String(rec.bare).toLowerCase() === spec.directives.namespace) return;
+          srcKeys.push(renameVarsLocal(rec.key, plan.variableRenames[i]).trim().toLowerCase());
+        });
+      });
+      const outKeys = outModel.lines.filter(function (r) { return r.kind === 'kv' && r.key; }).map(function (r) { return r.key.trim().toLowerCase(); });
+      const kd = diffMultiset(srcKeys, outKeys);
+      add('V1', '键守恒（每个 key = 行的键都不多不少）', kd.onlyA.length === 0 && kd.onlyB.length === 0,
+        kd.onlyA.length || kd.onlyB.length ? '源独有 ' + JSON.stringify(kd.onlyA.slice(0, 5)) + '  产物独有 ' + JSON.stringify(kd.onlyB.slice(0, 5)) : srcKeys.length + ' 个键完全一致');
+
+      // ---- V2 命名空间双射：任何人都不能塌缩 ----
+      const byKey = new Map();
+      expectedSecs.forEach(function (s) {
+        // 全局段（Constants / Present / Loader…）本来就不参与命名空间，允许重复并累加。
+        if (s.type !== 'namespaced') return;
+        if (!byKey.has(s.key)) byKey.set(s.key, new Set());
+        byKey.get(s.key).add(s.fileI);
+      });
+      const collapsed = [];
+      byKey.forEach(function (files, k) { if (files.size > 1) collapsed.push(k + ' <- ' + [...files].map(function (i) { return entries[i].relPath; }).join(', ')); });
+      // 变量同样必须单射：只比对出现次数抓不到「两个文件的同名变量合并成一个」这种语义塌缩。
+      const varByKey = new Map();
+      entries.forEach(function (e, i) {
+        e.model.variables.forEach(function (v, lv) {
+          const k = (plan.variableRenames[i].get(lv) || v.name).toLowerCase();
+          if (!varByKey.has(k)) varByKey.set(k, new Set());
+          varByKey.get(k).add(i);
+        });
+      });
+      varByKey.forEach(function (files, k) {
+        if (files.size > 1) collapsed.push('$' + k + ' <- ' + [...files].map(function (i) { return entries[i].relPath; }).join(', '));
+      });
+      add('V2', '命名空间双射（段与变量都无塌缩）', collapsed.length === 0,
+        collapsed.length ? JSON.stringify(collapsed.slice(0, 6))
+          : expectedSecs.length + ' 个段 / ' + byKey.size + ' 个段标识，' + varByKey.size + ' 个变量，均来自单一源文件');
+
+      // ---- V3 顺序保持 ----
+      const expKeys = expectedSecs.map(function (s) { return s.key; });
+      const actKeys = actualSecs.map(function (s) { return s.key; });
+      let firstDiff = -1;
+      for (let i = 0; i < Math.max(expKeys.length, actKeys.length); i++) {
+        if (expKeys[i] !== actKeys[i]) { firstDiff = i; break; }
+      }
+      add('V3', '顺序保持（段序列 = 各源文件按权威顺序串接）', firstDiff < 0,
+        firstDiff < 0 ? expKeys.length + ' 个段次序完全一致'
+          : '首个差异在第 ' + (firstDiff + 1) + ' 个段：期望 ' + JSON.stringify(expKeys[firstDiff]) + ' 实得 ' + JSON.stringify(actKeys[firstDiff]));
+
+      // ---- V8 重复段相容：产物里的重名集合必须恰好等于原本同文件内的重名集合 ----
+      const expDup = new Map(), actDup = new Map();
+      countBy(expKeys, function (x) { return x; }).forEach(function (v, k) { if (v > 1) expDup.set(k, v); });
+      countBy(actKeys, function (x) { return x; }).forEach(function (v, k) { if (v > 1) actDup.set(k, v); });
+      const dupSame = expDup.size === actDup.size && [...expDup].every(function (kv) { return actDup.get(kv[0]) === kv[1]; });
+      add('V8', '重复段相容（无新增重名段）', dupSame,
+        '期望重名 ' + JSON.stringify([...expDup]) + '  实得 ' + JSON.stringify([...actDup]));
+
+      // ---- 变量多重集合 ----
+      const srcVars = [];
+      entries.forEach(function (e, i) {
+        e.model.lines.forEach(function (rec) {
+          if (rec.kind !== 'kv') return;
+          const re = /\$([A-Za-z0-9_]+)/g; let m;
+          while ((m = re.exec(rec.raw)) !== null) {
+            const nv = plan.variableRenames[i].get(m[1].toLowerCase());
+            srcVars.push((nv || m[1]).toLowerCase());
+          }
+        });
+      });
+      const outVars = varTokensOf(outModel);
+      const vd = diffMultiset(srcVars, outVars);
+      add('V2b', '变量集合双射（含引用全部重写）', vd.onlyA.length === 0 && vd.onlyB.length === 0,
+        vd.onlyA.length || vd.onlyB.length ? '源独有 ' + JSON.stringify(vd.onlyA.slice(0, 6)) + '  产物独有 ' + JSON.stringify(vd.onlyB.slice(0, 6)) : srcVars.length + ' 处变量出现完全一致');
+
+      // ---- V4 引用闭合：未解析引用集合必须逐一对应 ----
+      // 源侧 FQN 允许指向其它被合并文件的命名空间；产物侧则应全部落在产物命名空间内。
+      const srcFqn = new Set();
+      entries.forEach(function (e) { e.model.sections.forEach(function (s) { if (s.fqn) srcFqn.add(s.fqn.toLowerCase()); }); });
+      const srcUnres = [];
+      entries.forEach(function (e) {
+        refTokensOf(e.model).forEach(function (r) {
+          const t = r.token, lower = t.toLowerCase();
+          if (t.indexOf(BS) >= 0) { if (!srcFqn.has(lower)) srcUnres.push(lower); }
+          else if (!resolveRef(e.model, t)) srcUnres.push(lower);
+        });
+      });
+      const outUnres = [];
+      refTokensOf(outModel).forEach(function (r) {
+        if (!resolveRef(outModel, r.token)) outUnres.push(r.token.toLowerCase());
+      });
+      const rd = diffMultiset(srcUnres, outUnres);
+
+      // 引用必须指向「原来那一段」，而不只是「能解析到某一段」。
+      // 只查可解析性会漏掉「被改指向了另一个同名段」这种最危险的错误。
+      const expRefs = [];
+      entries.forEach(function (e, i) {
+        for (const rec of e.model.lines) {
+          if (rec.kind !== 'kv' || !rec.refToken) continue;
+          const t = rec.refToken;
+          let sec = null, owner = i;
+          if (t.indexOf(BS) >= 0) {
+            for (let j = 0; j < entries.length && !sec; j++) {
+              const s = entries[j].model.sections.find(function (x) { return x.fqn && x.fqn.toLowerCase() === t.toLowerCase(); });
+              if (s) { sec = s; owner = j; }
+            }
+          } else {
+            sec = e.model.sections.find(function (x) { return x.name.toLowerCase() === t.toLowerCase(); });
+          }
+          expRefs.push({ token: t, target: sec ? finalNameOf(sec, owner, plan).toLowerCase() : null });
+        }
+      });
+      const actRefs = [];
+      for (const rec of outModel.lines) {
+        if (rec.kind !== 'kv' || !rec.refToken) continue;
+        const s = resolveRef(outModel, rec.refToken);
+        actRefs.push({ token: rec.refToken, target: s ? s.name.toLowerCase() : null });
+      }
+      let refDiff = null;
+      if (expRefs.length !== actRefs.length) {
+        refDiff = '引用条数不同：源 ' + expRefs.length + '，产物 ' + actRefs.length;
+      } else {
+        for (let k = 0; k < expRefs.length; k++) {
+          if (expRefs[k].target !== actRefs[k].target) {
+            refDiff = '第 ' + (k + 1) + ' 个引用原本指向 ' + expRefs[k].target + '，产物指向 ' + actRefs[k].target;
+            break;
+          }
+          // 目标段被改名时，引用 token 本来就该跟着变，所以只比对目标身份；
+          // 只有「解析不到目标」的外部引用才要求 token 原样不动。
+          if (expRefs[k].target === null && expRefs[k].token !== actRefs[k].token) {
+            refDiff = '第 ' + (k + 1) + ' 个外部引用被改动：' + expRefs[k].token + ' -> ' + actRefs[k].token;
+            break;
+          }
+        }
+      }
+      add('V4', '引用闭合（每个引用仍指向原来那一段）', !refDiff && rd.onlyA.length === 0 && rd.onlyB.length === 0,
+        refDiff || (expRefs.length + ' 个引用逐一指向同一目标段（其中外部/未解析 ' + outUnres.length + ' 处，与源侧一一对应）'));
+
+      // ---- V5/V6 路径可达与悬空集合不变 ----
+      const srcPaths = [];
+      entries.forEach(function (e) { pathsOf(e.model).forEach(function (p) { srcPaths.push(p.abs.toLowerCase()); }); });
+      const outPaths = pathsOf(outModel).map(function (p) { return p.abs.toLowerCase(); });
+      const pd = diffMultiset(srcPaths, outPaths);
+      add('V5', '路径可达（每条路径仍指向原文件）', pd.onlyA.length === 0 && pd.onlyB.length === 0,
+        pd.onlyA.length || pd.onlyB.length ? '源独有 ' + JSON.stringify(pd.onlyA.slice(0, 4)) + '  产物独有 ' + JSON.stringify(pd.onlyB.slice(0, 4)) : srcPaths.length + ' 条路径全部指向同一绝对文件');
+
+      const srcDang = [...new Set(srcPaths.filter(function (p) { return !fs.existsSync(p); }))].sort();
+      const outDang = [...new Set(outPaths.filter(function (p) { return !fs.existsSync(p); }))].sort();
+      add('V6', '悬空集合不变（不新增断链，也不顺手修好）', JSON.stringify(srcDang) === JSON.stringify(outDang),
+        '源悬空 ' + srcDang.length + ' 条（去重），产物悬空 ' + outDang.length + ' 条'
+        + (JSON.stringify(srcDang) === JSON.stringify(outDang) ? '' : '  差异 ' + JSON.stringify(outDang.filter(function (p) { return srcDang.indexOf(p) < 0; }).slice(0, 4))));
+
+      // ---- V7 无未分类行 ----
+      const srcUnc = entries.reduce(function (a, e) { return a + e.model.unclassified.length; }, 0);
+      add('V7', '无未分类行（规范覆盖完整）', srcUnc === 0 && outModel.unclassified.length === 0,
+        '源 ' + srcUnc + ' 行，产物 ' + outModel.unclassified.length + ' 行未分类');
+
+      // ---- V9 歧义左值不与改名冲突 ----
+      // ResourceCB = null 这类左值无法断言是本地变量还是段引用，工具不改写它；
+      // 但若它恰好与被改名的段同名，那就是隐患，必须拒绝而不是放过。
+      const ambClash = [];
+      entries.forEach(function (e, i) {
+        const renamedNames = new Set();
+        e.model.sections.forEach(function (s) {
+          if (plan.sectionRenames[i].has((s.prefix + BS + s.shortName).toLowerCase())) renamedNames.add(s.name.toLowerCase());
+        });
+        e.model.ambiguous.forEach(function (a) {
+          if (renamedNames.has(String(a.key).toLowerCase())) ambClash.push(e.relPath + ':' + a.n + ' ' + a.key);
+        });
+      });
+      add('V9', '歧义左值不与改名冲突', ambClash.length === 0,
+        ambClash.length ? JSON.stringify(ambClash.slice(0, 5)) : '无冲突（歧义左值共 ' + entries.reduce(function (a, e) { return a + e.model.ambiguous.length; }, 0) + ' 处，均未参与改名）');
+
+      // ---- V10 命令列表局部变量不与改名冲突 ----
+      // local $x 的作用域只在它所在的命令列表内；若它恰好与某个被改名的全局变量同名，
+      // 改名就会误伤它，这里必须拒绝而不是放过。
+      const localClash = [];
+      entries.forEach(function (e, i) {
+        e.model.localRefs.forEach(function (r) {
+          if (plan.variableRenames[i].has(r.name)) localClash.push(e.relPath + ':' + r.n + ' $' + r.name);
+        });
+      });
+      add('V10', '命令列表局部变量不与改名冲突', localClash.length === 0,
+        localClash.length ? JSON.stringify(localClash.slice(0, 5))
+          : '局部变量记号共 ' + entries.reduce(function (a, e) { return a + e.model.localRefs.length; }, 0) + ' 处，均未被改动');
+
+      // ---- V11 合并集内部不得互相 include ----
+      // 否则内容会被加载两次：一次作为合并后的内联副本，一次仍按原文件的命名空间加载，
+      // 结果是每个段成对出现，按键绑定翻倍——静默且致命。
+      const inSet = new Set(entries.map(function (e) { return path.resolve(e.absPath).toLowerCase(); }));
+      const incClash = [];
+      entries.forEach(function (e) {
+        e.model.paths.forEach(function (p) {
+          const abs = path.resolve(path.dirname(e.model.absPath), toNative(p.raw)).toLowerCase();
+          if (/^include$/i.test(p.directive) && inSet.has(abs)) {
+            incClash.push(e.relPath + ':' + p.n + ' include -> ' + p.raw);
+          } else if (/^include_recursive$/i.test(p.directive)) {
+            const pref = abs.endsWith(path.sep) ? abs : abs + path.sep;
+            entries.forEach(function (g) {
+              if (path.resolve(g.absPath).toLowerCase().indexOf(pref) === 0) {
+                incClash.push(e.relPath + ':' + p.n + ' include_recursive -> ' + p.raw + ' 覆盖了 ' + g.relPath);
+              }
+            });
+          }
+        });
+      });
+      add('V11', '合并集内部无互相 include（避免重复加载）', incClash.length === 0,
+        incClash.length ? JSON.stringify(incClash.slice(0, 4)) : '合并集内部无 include 互相指向');
+
+      const failed = results.filter(function (r) { return !r.ok; });
+      return { results: results, ok: failed.length === 0, outModel: outModel };
+    }
+
+    module.exports = { verify, resolveRef, refTokensOf, pathsOf, varTokensOf };
+  });
+
+  var _specMod = _require("./spec");
+  var _loaderMod = _require("./loader");
+  var _modelMod = _require("./model");
+  var _planMod = _require("./plan");
+  var _applyMod = _require("./apply");
+  var _verifyMod = _require("./verify");
+
+  return {
+    BS: BS,
+    spec: _specMod.loadSpec(),
+    parseText: _modelMod.parseText,
+    buildPlan: _planMod.buildPlan,
+    applyPlan: _applyMod.applyPlan,
+    verify: _verifyMod.verify,
+    compareRel: _loaderMod.compareRel,
+    namespaceOf: _loaderMod.namespaceOf,
+    sectionPrefixOf: _specMod.sectionPrefixOf,
+    isGlobalSection: _specMod.isGlobalSection,
+    setFsExists: function (fn) { _existsFn = fn; },
+    path: _path,
+  };
+})();
+/* ==== XXMI-MERGE-CORE END ==== */
+
+/* ============================================================
+ * 多个 ini -> 合并为一个（通用，无 MOD 专有假设）
+ *
+ * 单个 MOD 里有多个 ini 时，按 3DMigoto 的权威加载顺序自动合并成一个。
+ * 算法与 Node CLI（tools/merge）同源——就是上面嵌入的 MergeCore。
+ * 这里只负责：取文件 -> 学习命名空间 -> 规划 -> 生成 -> 校验 -> 交给正常流程。
+ * ============================================================ */
+
+/**
+ * 学习 MOD 根在加载器里的命名空间前缀。
+ *
+ * 浏览器里拿不到 d3dx.ini，无法直接算「路径派生命名空间」。但只有当一个文件
+ * 全限定引用另一个文件（形如 类型\前缀\a.ini\段名）时前缀才影响结果，而这种引用
+ * 本身含有真实前缀，从引用反推即可。推不出、且确实没有全限定引用时返回 ''，
+ * 此时前缀不影响任何重写，产物自洽。
+ */
+function learnModNamespacePrefix(entries) {
+  const BS = MergeCore.BS;
+  const found = new Map();
+  entries.forEach(function (src) {
+    src.model.lines.forEach(function (rec) {
+      const tok = rec.refToken || '';
+      if (tok.indexOf(BS) < 0) return;
+      const lower = tok.toLowerCase();
+      const firstBS = lower.indexOf(BS);
+      if (firstBS < 0) return;
+      for (let i = 0; i < entries.length; i++) {
+        const needle = BS + entries[i].relBs.toLowerCase() + BS;
+        const idx = lower.indexOf(needle);
+        if (idx < firstBS + 1) continue;
+        const last = tok.slice(idx + needle.length);
+        // 必须确实指向该文件里真实存在的段，否则可能撞上别的 MOD 的同名文件
+        const ok = entries[i].model.sections.some(function (s) {
+          return s.shortName.toLowerCase() === last.toLowerCase() || s.name.toLowerCase() === last.toLowerCase();
+        });
+        if (!ok) continue;
+        const prefix = tok.slice(firstBS + 1, idx);
+        found.set(prefix.toLowerCase(), prefix);
+      }
+    });
+  });
+  if (found.size > 1) {
+    return { error: '无法唯一确定 MOD 根命名空间，候选：' + Array.from(found.values()).join(' / ') + '。请确认所选文件夹就是 MOD 根目录。' };
+  }
+  const vals = Array.from(found.values());
+  return { prefix: vals.length ? vals[0] : '' };
+}
+
+/**
+ * 合并计算。纯函数，不碰 DOM，便于回归测试。
+ * files: [{ path, text }]，path 为 MOD 相对路径、用 / 分隔。
+ */
+function mergeModBuild(files, outName) {
+  const BS = MergeCore.BS;
+  const spec = MergeCore.spec;
+  const toBs = function (p) { return String(p).split('/').join(BS); };
+
+  const usable = files
+    .filter(function (f) { return /\.ini$/i.test(f.path); })
+    .filter(function (f) { return !String(f.path).split('/').some(function (seg) { return /^disabled/i.test(seg); }); });
+  if (usable.length < 2) return { ok: false, error: 'need2', count: usable.length };
+
+  const ordered = usable.slice().sort(function (a, b) {
+    return MergeCore.compareRel(toBs(a.path), toBs(b.path));
+  });
+
+  let entries = ordered.map(function (f) {
+    const relBs = toBs(f.path);
+    return {
+      relPath: relBs, relBs: relBs, absPath: '/' + f.path, namespace: relBs, text: f.text,
+      model: MergeCore.parseText(f.text, '/' + f.path, relBs, spec),
+    };
+  });
+
+  const learned = learnModNamespacePrefix(entries);
+  if (learned.error) return { ok: false, error: 'ns', why: learned.error };
+  const prefix = learned.prefix;
+
+  if (prefix) {
+    entries = entries.map(function (e) {
+      const ns = prefix + BS + e.relBs;
+      return {
+        relPath: e.relPath, relBs: e.relBs, absPath: e.absPath, namespace: ns,
+        model: MergeCore.parseText(e.text, e.absPath, ns, spec),
+      };
+    });
+  }
+
+  const outNs = prefix ? prefix + BS + outName : outName;
+  const outAbs = '/' + outName;
+  const plan = MergeCore.buildPlan(entries, spec, { outputNamespace: outNs });
+  const merged = MergeCore.applyPlan(entries, plan, spec, { outputFile: outAbs });
+
+  // 浏览器核验不了 MOD 之外的文件是否存在（V5/V6 的存在性判定在这里失效），
+  // 因此补一条纯路径等价校验：重写后的路径必须解析到与原来相同的绝对位置。
+  const P = MergeCore.path;
+  const toNative = function (v) { return String(v).split(BS).join(P.sep).split('/').join(P.sep); };
+  const pathNotes = merged.notes.filter(function (n) { return n.note === '路径重写'; });
+  const pathBad = pathNotes.filter(function (n) {
+    const e = entries.find(function (x) { return x.relPath === n.file; });
+    if (!e) return true;
+    return P.resolve(P.dirname(e.absPath), toNative(n.old)) !== P.resolve(P.dirname(outAbs), toNative(n.neu));
+  });
+
+  MergeCore.setFsExists(function () { return true; });
+  const v = MergeCore.verify(entries, plan, spec, {
+    outputText: merged.text, targetFile: outAbs, outputNamespace: outNs,
+  });
+  const failed = v.results.filter(function (r) { return !r.ok; });
+
+  return {
+    ok: failed.length === 0 && pathBad.length === 0,
+    error: failed.length ? 'verify' : (pathBad.length ? 'path' : null),
+    text: merged.text,
+    outName: outName,
+    outNs: outNs,
+    entries: entries,
+    plan: plan,
+    verify: v,
+    failed: failed,
+    pathBad: pathBad,
+    stats: {
+      files: entries.length,
+      lines: merged.text.split('\n').length,
+      sec: plan.stats.sectionCollisions,
+      vars: plan.stats.variableCollisions,
+      paths: pathNotes.length,
+      refs: merged.notes.filter(function (n) { return n.note === '引用重写'; }).length,
+      unclassified: plan.stats.unclassified,
+    },
+  };
+}
+
+/** 合并结果载入正常流程（不写盘，只把合并文本变成当前文档）。 */
+async function loadMergedText(text, name) {
+  state.fileName = name;
+  // 合并产物写到 MOD 根，不对应某一个已选文件
+  state.fileHandle = null;
+  state.targetDirHandle = state.folderSource === "fsa" ? state.dirHandle : null;
+  state.text = text;
+  state.sections = parseSections(text);
+  state.swaps = parseSwaps(state.sections);
+  state.slotMeta = state.swaps.map(newSlotMeta);
+  const active = state.swaps.filter(function (_, i) { return !state.slotMeta[i].skip; }).length;
+  $("cols").value = autoCols(active || state.swaps.length);
+  colsManual = false;
+  setFileInfo("fileLoaded", { name: name, count: state.swaps.length });
+  updateStatus();
+  if (!$("title").dataset.touched) $("title").value = name.replace(/\.[^.]+$/, "");
+  renderSwapList();
+  rerender();
+  await saveDraft();
+}
+
+/**
+ * 浏览器能否直接改写这个文件夹。
+ * 能改写 -> 原 ini 由写回流程自动备份成 txt 并删除，不必提示用户手工处理。
+ * 不能改写（只读文件夹扫描模式）-> 必须明确提示用户自己删，否则会重复加载。
+ */
+function folderCanWrite() {
+  return state.folderSource === "fsa" && Boolean(state.dirHandle) && !fsaIniKnownBlocked();
+}
+
+/** 文件夹里 ini 数 >= 2 时才显示合并入口。 */
+function updateMergeButton() {
+  const row = $("mergeRow");
+  if (!row) return;
+  const n = (state.folderFiles || []).filter(function (f) { return /\.ini$/i.test(f.name); }).length;
+  const show = state.folderSource !== null && state.folderSource !== undefined && n >= 2;
+  row.style.display = show ? "block" : "none";
+  if (show) $("mergeHint").textContent = t("mergeHint", { n: n });
+}
+
+async function mergeModInis() {
+  const inis = (state.folderFiles || []).filter(function (f) { return /\.ini$/i.test(f.name); });
+  if (inis.length < 2) { toast(t("mergeNeedTwo", { n: inis.length }), "err"); return; }
+  const btn = $("btnMergeInis");
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> ' + t("mergeBusy");
+  $("mergeStatus").textContent = "";
+  try {
+    const files = [];
+    for (const f of inis) {
+      const text = f.file ? await f.file.text() : await (await f.handle.getFile()).text();
+      files.push({ path: f.path, text: text, src: f });
+    }
+    const modName = $("btnOpenFolder").dataset.folderName || "merged";
+    const outName = modName.replace(/[\\/:*?"<>|]/g, "_") + ".ini";
+    const r = mergeModBuild(files, outName);
+    if (!r.ok) {
+      const why = r.error === "need2" ? t("mergeNeedTwo", { n: r.count })
+        : r.error === "ns" ? r.why
+        : r.error === "path" ? t("mergePathFail") + "：" + r.pathBad.slice(0, 3).map(function (x) { return x.old + " -> " + x.neu; }).join("；")
+        : (r.failed || []).map(function (x) { return "[" + x.id + "] " + x.name + "：" + x.detail; }).join("；");
+      $("mergeStatus").textContent = t("mergeFail", { why: why });
+      toast(t("mergeFail", { why: why }), "err");
+      return;
+    }
+    state.mergedSources = files.map(function (f) {
+      return { name: f.src.name, path: f.src.path, text: f.text, dirHandle: f.src.dirHandle };
+    });
+    const canWrite = folderCanWrite();
+    await loadMergedText(r.text, r.outName);
+    const done = t("mergeDone", { n: r.stats.files, lines: r.stats.lines, sec: r.stats.sec, vars: r.stats.vars, paths: r.stats.paths });
+    if (canWrite) {
+      $("mergeStatus").textContent = done + " " + t("mergeNote");
+      toast(done, "ok");
+    } else {
+      // 只读模式下浏览器删不掉原 ini，必须让用户自己处理，并说清后果
+      const list = files.map(function (f) { return f.path; }).join("、");
+      $("mergeStatus").innerHTML = escapeHtml(done)
+        + ' <strong style="color:var(--warn)">'
+        + escapeHtml(t("mergeMustDelete", { n: files.length, list: list }))
+        + '</strong>';
+      toast(t("mergeMustDeleteShort", { n: files.length }), "err");
+    }
+  } catch (e) {
+    toast(t("mergeErr", { why: String((e && e.message) || e) }), "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
 async function pickModFolder() {
   // 已知被拦截时直接走只读扫描，不再弹出无法列出 ini 的文件夹直写选择器
   const fsaUsable = Boolean(window.showDirectoryPicker) && !fsaIniKnownBlocked();
@@ -6236,6 +7633,7 @@ async function pickModFolder() {
       state.dirHandle = dir;
       state.folderSource = "fsa";
       state.sourceFiles = [];
+      state.mergedSources = null;
       $("btnOpenFolder").dataset.folderName = dir.name || "MOD 文件夹";
       $("btnOpenFolder").title = t("lastFolder", { name: $("btnOpenFolder").dataset.folderName });
       await dbPut(LAST_FOLDER_HANDLE_KEY, { handle: dir, name: dir.name || "MOD 文件夹" });
@@ -6286,6 +7684,7 @@ async function onWebkitFolderPicked() {
   state.fileHandle = null;
   state.folderSource = "webkit";
   state.sourceFiles = files;
+  state.mergedSources = null;
   $("btnOpenFolder").dataset.folderName = rootName;
   $("btnOpenFolder").title = t("lastFolder", { name: rootName });
   saveSettings();
@@ -6352,6 +7751,7 @@ async function refreshFolderFileList() {
     state.targetDirHandle = null;
     $("folderIniRow").style.display = "grid";
     sel.innerHTML = "";
+    updateMergeButton();
     setFileInfo($("scanTxtFiles").checked ? "folderInfoEmptyIniTxt" : "folderInfoEmptyIni");
     renderFolderScanStats();
     updateStatus();
@@ -6374,6 +7774,7 @@ async function refreshFolderFileList() {
     updateStatus();
     setFileInfo("folderInfoChoose", { count: state.folderFiles.length, type: fileType });
   }
+  updateMergeButton();
 }
 
 async function scanFolderFiles(dirHandle, prefix, targetDirHandle) {
@@ -6471,7 +7872,52 @@ function getOutputIniName() {
   return base + "_gui.ini";
 }
 
+/**
+ * 合并产物的写回：先把 N 个源 ini 逐个备份为 .txt 并移除，再把生成结果写到 MOD 根。
+ * 与单文件流程同一约定——备份即停用，撤销就是把 .txt 改回 .ini。
+ */
+async function writeMergedToFolder() {
+  const targetDir = state.targetDirHandle || state.dirHandle;
+  if (!state.dirHandle || !targetDir) { toast(t("toastSelectFolderIni"), "err"); return; }
+  if (await isIniNameBlocked(targetDir)) { toast(t("toastFsaIniWriteBlocked"), "err"); return; }
+  const btn = $("btnWriteFolder");
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> ' + t("writing");
+  try {
+    const perm = await state.dirHandle.requestPermission({ mode: "readwrite" });
+    if (perm !== "granted") throw new Error("没有文件夹写入权限");
+    const resources = await buildResources();
+    const iniText = buildIni();
+    const srcs = state.mergedSources.slice();
+    for (const src of srcs) {
+      const dir = src.dirHandle || targetDir;
+      const txtName = src.name.replace(/\.ini$/i, ".txt");
+      const txtHandle = await getBackupFileHandle(dir, txtName);
+      await writeFileHandle(txtHandle, new Blob([src.text], { type: "text/plain;charset=utf-8" }));
+      await dir.removeEntry(src.name);
+    }
+    const outputName = getOutputIniName();
+    const iniHandle = await targetDir.getFileHandle(outputName, { create: true });
+    await writeFileHandle(iniHandle, new Blob([iniText], { type: "text/plain;charset=utf-8" }));
+    const resDir = await targetDir.getDirectoryHandle("res_gui", { create: true });
+    await Promise.all(resources.map(async function (file) {
+      const h = await resDir.getFileHandle(file.name.replace(/^res_gui\//, ""), { create: true });
+      await writeFileHandle(h, file.data);
+    }));
+    state.mergedSources = null;
+    toast(t("mergeWritten", { n: srcs.length, name: outputName }), "ok");
+    await refreshFolderFileList();
+  } catch (e) {
+    toast(t("toastWriteFail", { message: e.message || e.name || t("unknown") }), "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
 async function writeGeneratedToFolder() {
+  if (state.mergedSources && state.mergedSources.length) { await writeMergedToFolder(); return; }
   const targetDir = state.targetDirHandle || state.dirHandle;
   if (!state.dirHandle || !targetDir || !state.fileHandle) {
     toast(t("toastSelectFolderIni"), "err");

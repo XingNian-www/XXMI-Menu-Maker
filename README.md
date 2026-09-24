@@ -20,6 +20,8 @@ https://xingnian-www.github.io/XXMI-Menu-Maker/
 
 如果使用 Chrome / Edge，也可以点"选择 MOD 文件夹"，工具会递归列出该目录和子目录里的 `.ini`；勾选旁边的"包含 txt 文件"后也会列出 `.txt`，切换后会立即刷新列表。选中要处理的文件后可直接写回它所在的文件夹；工具会先把原 `.ini` 备份成 `.txt`，再写入新的 ini 和 `res_gui`，默认使用原 `.ini` 文件名。处理 `.txt` 时原文件不动，默认生成同名 `.ini`；关闭"使用原 ini 名"后，生成文件使用 `_gui.ini` 后缀。扫描时会忽略任何名称以 `DISABLED` 开头的文件和文件夹（不区分大小写）。
 
+**⚠️ Chrome 152 起，文件夹直写不再可用。** 文件夹接口（File System Access）会按 Chrome 的「下载危险文件类型」表校验文件名，`.ini` / `.cfg` / `.dll` / `.manifest` 属于 `DANGEROUS`，网页通过它**读取或创建**这些文件一律失败并报 `Name is not allowed`。旧版对本地 `file://` 页面有豁免（这正是以前「本地打开能读写、在线不行」的原因），Chrome 152 移除了这个豁免，**所以现在本地打开也一样**。检测到该限制时，工具会自动降级为「文件夹扫描」只读模式：能读取 ini、能下载 ZIP，但不能写回文件夹。相关改动：Chromium [`f7317c7f`](https://github.com/chromium/chromium/commit/f7317c7f70b7ed9650f993e4169e6d3f30c9a578)（[crbug.com/514454739](https://crbug.com/514454739)）。
+
 文件夹模式会直接写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表可能会很卡。
 再次选择文件夹时，Chrome / Edge 会尽量从上次选择的位置打开；如果浏览器权限失效或本地站点数据被清理，可能仍会回到用户目录。
 扫描后会显示统计，包括目录数、文件数、ini/txt 数量、显示数量、忽略 `DISABLED` 数量和读取失败数量，方便判断为什么没看到目标文件。
@@ -36,7 +38,7 @@ https://xingnian-www.github.io/XXMI-Menu-Maker/
 - 可选修复原 MOD 激活条件错误导致的跨角色呼出面板
 - 严格按原始 `key` 生成 GUI slot，同 key 下多个 `[Key*]` 会保留各自条件并一起参与点击判断
 - 合并按钮支持同 Key 大小写不同的项目直接合并；不同 Key 会二次确认，可选择“所有 Key 等效于按一次 GUI 按钮”或“只让 GUI 点一下执行全部”
-- Chrome / Edge 支持直接写入 MOD 文件夹，ZIP 下载仍作为通用兜底
+- Chrome / Edge 151 及更早版本支持直接写入 MOD 文件夹；Chrome 152 起该接口被限制（见上文），工具会自动降级为只读扫描，ZIP 下载仍作为通用兜底
 - 生成完整 ZIP：INI + PNG 纹理 + HLSL 着色器
 
 ## 严格映射
