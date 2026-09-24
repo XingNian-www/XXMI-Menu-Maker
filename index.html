@@ -1108,7 +1108,7 @@
         <div class="status folder-help">
           <strong style="color:var(--warn)" data-i18n="folderHelpTitle">文件夹模式说明：</strong>
           <p data-i18n="folderHelp1">选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。</p>
-          <p><strong data-i18n="folderHelp2">在线网页只能扫描 txt 文件，无法扫描 ini 文件；如果需要处理 ini，请先把网页保存到本地再打开。</strong><span data-i18n="folderHelp2b">只处理 txt 时可以直接在线使用。</span></p>
+          <p><strong data-i18n="folderHelp2">部分 Chrome 版本禁止网页通过文件夹接口读写 .ini（会报 Name is not allowed）。检测到时会自动改用「文件夹扫描」只读模式。</strong><span data-i18n="folderHelp2b">只读模式下可以读取 ini 并下载 ZIP，但不能写回文件夹。</span></p>
           <p data-i18n="folderHelp3">选中目标文件后，可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。</p>
           <p data-i18n="folderHelp4">不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。</p>
         </div>
@@ -1526,8 +1526,8 @@ const I18N = {
     folderHelpAria: "文件夹模式说明",
     folderHelpTitle: "文件夹模式说明：",
     folderHelp1: "选择 MOD 根目录后，会递归列出其中可处理的 ini；勾选“包含 txt 文件”后也会列出 txt。",
-    folderHelp2: "在线网页无法在文件夹中保存/写入 ini 文件，也可能无法扫描 ini。需要文件夹写入时，请先把网页保存到本地再打开。",
-    folderHelp2b: "在线版更适合只下载 ZIP 或只处理 txt。",
+    folderHelp2: "部分 Chrome 版本禁止网页通过文件夹接口读写 .ini（会报 Name is not allowed）。检测到这种情况时会自动改用「文件夹扫描」只读模式，仍能读取 ini。",
+    folderHelp2b: "只读模式下请用「下载完整 ZIP」；未被限制的浏览器仍使用原有的文件夹直写模式。",
     folderHelp3: "本地打开页面时，选中目标文件后可直接写入生成的 ini 和 `res_gui`；默认会使用原 ini 文件名，并把原 ini 内容备份成 txt。",
     folderHelp4: "不要选择包含大量 ini/txt 的大目录，否则扫描和下拉列表会很卡。这个功能会写入文件夹并备份原 ini，请确认自己知道在处理哪个 MOD。",
     folderIniLabel: "文件夹内 ini / txt（含子文件夹）",
@@ -1695,6 +1695,8 @@ const I18N = {
     toastFolderReadIniTxt: "已读取文件夹，请选择 ini / txt",
     toastFolderReadIni: "已读取文件夹，请选择 ini",
     toastFolderChooseFail: "选择文件夹失败",
+    toastFsaIniBlocked: "此 Chrome 版本禁止网页通过文件夹接口读写 .ini，已改用「文件夹扫描」只读模式。若这次没弹出选择框，请再点一次「选择 MOD 文件夹」。",
+    toastFsaIniWriteBlocked: "当前浏览器的文件夹接口不允许写入 .ini（Name is not allowed）。请改用「下载完整 ZIP」。",
     toastNoFolderFilesIniTxt: "这个文件夹及子文件夹里没有 ini / txt",
     toastNoFolderFilesIni: "这个文件夹及子文件夹里没有 ini",
     toastSelectFolderIni: "请先选择文件夹里的 ini",
@@ -1802,8 +1804,8 @@ const I18N = {
     folderHelpAria: "Folder mode help",
     folderHelpTitle: "Folder mode:",
     folderHelp1: "After choosing a MOD root folder, processable ini files are listed recursively. Enable “Include txt files” to list txt too.",
-    folderHelp2: "The online page cannot save/write ini files inside a folder, and may also be unable to scan ini files. Save this page locally first if you need folder writing.",
-    folderHelp2b: "The online version is better for downloading ZIPs or processing txt only.",
+    folderHelp2: "Some Chrome builds block web pages from reading or writing .ini through the folder API (Name is not allowed). When detected, the tool switches to a read-only folder scan and can still read ini files.",
+    folderHelp2b: "In read-only mode use \"Download full ZIP\"; unrestricted browsers keep the original direct folder-write mode.",
     folderHelp3: "When opened locally, selecting a target file lets you write the generated ini and `res_gui` directly. By default the original ini name is reused and the original content is backed up as txt.",
     folderHelp4: "Avoid huge folders with many ini/txt files, or scanning and the list may lag. This feature writes files and backs up the original ini, so make sure you know which MOD you are editing.",
     folderIniLabel: "Folder ini / txt files (including subfolders)",
@@ -1971,6 +1973,8 @@ const I18N = {
     toastFolderReadIniTxt: "Folder loaded. Select an ini / txt file",
     toastFolderReadIni: "Folder loaded. Select an ini file",
     toastFolderChooseFail: "Failed to choose folder",
+    toastFsaIniBlocked: "This Chrome build blocks web pages from reading or writing .ini through the folder API. Switched to read-only folder scan. If no picker appeared, click \"Choose MOD folder\" once more.",
+    toastFsaIniWriteBlocked: "This browser's folder API does not allow writing .ini files (Name is not allowed). Use \"Download full ZIP\" instead.",
     toastNoFolderFilesIniTxt: "No ini / txt files found in this folder or its subfolders",
     toastNoFolderFilesIni: "No ini files found in this folder or its subfolders",
     toastSelectFolderIni: "Select an ini file from the folder first",
@@ -2203,6 +2207,39 @@ function toast(msg, kind = "") {
 const SETTINGS_KEY = "keyswap-gui-settings-v1";
 const FOLDER_PICKER_ID = "keyswap-gui-mod-folder";
 const LAST_FOLDER_HANDLE_KEY = "__last_mod_folder_handle";
+const FSA_INI_PROBE_KEY = "keyswap-fsa-ini-blocked-v1";
+const FSA_INI_PROBE_NAME = "__keyswap_ini_probe__.ini";
+
+/* 部分 Chrome 版本禁止 File System Access 读写 .ini：
+   getFileHandle 会抛 TypeError("Name is not allowed")，而不是名字不存在时的 NotFoundError。
+   用不存在的中性文件名探测，不产生副作用。 */
+function chromeMajorVersion() {
+  const m = navigator.userAgent.match(/Chrom(?:e|ium)\/(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+function fsaIniKnownBlocked() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FSA_INI_PROBE_KEY) || "null");
+    return Boolean(raw && raw.blocked && raw.ver === chromeMajorVersion());
+  } catch (e) {
+    return false;
+  }
+}
+function rememberFsaIniBlocked(blocked) {
+  try {
+    localStorage.setItem(FSA_INI_PROBE_KEY, JSON.stringify({ blocked, ver: chromeMajorVersion() }));
+  } catch (e) {}
+}
+async function isIniNameBlocked(dirHandle) {
+  if (!dirHandle || typeof dirHandle.getFileHandle !== "function") return false;
+  try {
+    await dirHandle.getFileHandle(FSA_INI_PROBE_NAME);
+    return false;
+  } catch (e) {
+    // TypeError = 名字被浏览器拒绝；NotFoundError = 名字合法但文件不存在
+    return e && e.name === "TypeError";
+  }
+}
 const SAVED_LOCAL_HANDLE_KEY = "__saved_local_html_handle";
 const SAVED_LOCAL_NAME = "XXMI_Menu_Maker.html";
 const SETTINGS_INPUT_IDS = ["title", "menuKey", "clickMod", "cols", "gap", "bgColor", "accentColor", "bgAlpha", "slotColor", "slotAlpha", "hoverColor", "hoverAlpha", "titleShadowColor", "panelBorderColor", "panelBorderAlpha", "slotBorderColor", "slotBorderAlpha", "previewBg", "behavior", "previewRes", "panelScale"];
@@ -3954,6 +3991,8 @@ const state = {
   targetDirHandle: null,
   folderFiles: [],
   folderScanStats: null,
+  folderSource: null,   // "fsa"（文件夹直写） | "webkit"（只读扫描兜底）
+  sourceFiles: [],      // webkit 模式下的原始 File 快照
   text: "",
   sections: [],
   swaps: [],
@@ -5356,6 +5395,8 @@ async function loadFile(file, opts = {}) {
     state.targetDirHandle = null;
     state.folderFiles = [];
     state.folderScanStats = null;
+    state.folderSource = null;
+    state.sourceFiles = [];
     $("folderIniRow").style.display = "none";
     $("folderIniSelect").innerHTML = "";
     $("folderScanStats").textContent = "";
@@ -6062,7 +6103,7 @@ window.addEventListener("resize", () => {
 
 $("scanTxtFiles").addEventListener("change", async () => {
   saveSettings();
-  if (!state.dirHandle) return;
+  if (!state.dirHandle && state.folderSource !== "webkit") return;
   await refreshFolderFileList();
 });
 
@@ -6180,24 +6221,76 @@ function colorWithAlpha(colorId, alphaId, fallbackAlpha = 255) {
 }
 
 async function pickModFolder() {
-  if (!window.showDirectoryPicker) {
-    toast(t("toastFolderUnsupported"), "err");
-    return;
+  // 已知被拦截时直接走只读扫描，不再弹出无法列出 ini 的文件夹直写选择器
+  const fsaUsable = Boolean(window.showDirectoryPicker) && !fsaIniKnownBlocked();
+
+  if (fsaUsable) {
+    let dir = null;
+    try {
+      dir = await openRememberedDirectoryPicker();
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      dir = null;
+    }
+    if (dir) {
+      state.dirHandle = dir;
+      state.folderSource = "fsa";
+      state.sourceFiles = [];
+      $("btnOpenFolder").dataset.folderName = dir.name || "MOD 文件夹";
+      $("btnOpenFolder").title = t("lastFolder", { name: $("btnOpenFolder").dataset.folderName });
+      await dbPut(LAST_FOLDER_HANDLE_KEY, { handle: dir, name: dir.name || "MOD 文件夹" });
+      saveSettings();
+      state.targetDirHandle = null;
+      state.fileHandle = null;
+
+      const blocked = await isIniNameBlocked(dir);
+      rememberFsaIniBlocked(blocked);
+      if (!blocked) {
+        await refreshFolderFileList();
+        if (state.folderFiles.length) toast($("scanTxtFiles").checked ? t("toastFolderReadIniTxt") : t("toastFolderReadIni"), "ok");
+        return;
+      }
+      // 这个浏览器列不出 ini：保留已取得句柄，但改用只读扫描
+      state.dirHandle = null;
+      state.folderSource = "webkit";
+      toast(t("toastFsaIniBlocked"), "err");
+      openWebkitFolderPicker();
+      return;
+    }
   }
-  try {
-    const dir = await openRememberedDirectoryPicker();
-    state.dirHandle = dir;
-    $("btnOpenFolder").dataset.folderName = dir.name || "MOD 文件夹";
-    $("btnOpenFolder").title = t("lastFolder", { name: $("btnOpenFolder").dataset.folderName });
-    await dbPut(LAST_FOLDER_HANDLE_KEY, { handle: dir, name: dir.name || "MOD 文件夹" });
-    saveSettings();
-    state.targetDirHandle = null;
-    state.fileHandle = null;
-    await refreshFolderFileList();
-    if (state.folderFiles.length) toast($("scanTxtFiles").checked ? t("toastFolderReadIniTxt") : t("toastFolderReadIni"), "ok");
-  } catch (e) {
-    if (e.name !== "AbortError") toast(t("toastFolderChooseFail"), "err");
+  openWebkitFolderPicker();
+}
+
+let webkitFolderInput = null;
+
+function openWebkitFolderPicker() {
+  if (!webkitFolderInput) {
+    webkitFolderInput = document.createElement("input");
+    webkitFolderInput.type = "file";
+    webkitFolderInput.webkitdirectory = true;
+    webkitFolderInput.multiple = true;
+    webkitFolderInput.style.display = "none";
+    document.body.appendChild(webkitFolderInput);
+    webkitFolderInput.addEventListener("change", onWebkitFolderPicked);
   }
+  webkitFolderInput.value = "";
+  webkitFolderInput.click();
+}
+
+async function onWebkitFolderPicked() {
+  const files = webkitFolderInput ? [...webkitFolderInput.files] : [];
+  if (!files.length) return;
+  const rootName = (files[0].webkitRelativePath || "").split("/")[0] || "MOD 文件夹";
+  state.dirHandle = null;
+  state.targetDirHandle = null;
+  state.fileHandle = null;
+  state.folderSource = "webkit";
+  state.sourceFiles = files;
+  $("btnOpenFolder").dataset.folderName = rootName;
+  $("btnOpenFolder").title = t("lastFolder", { name: rootName });
+  saveSettings();
+  await refreshFolderFileList();
+  if (state.folderFiles.length) toast($("scanTxtFiles").checked ? t("toastFolderReadIniTxt") : t("toastFolderReadIni"), "ok");
 }
 
 async function openRememberedDirectoryPicker() {
@@ -6213,13 +6306,44 @@ async function openRememberedDirectoryPicker() {
   return window.showDirectoryPicker(opts);
 }
 
+/* webkit 只读模式：从 File 快照构建列表。
+   注意与 FSA 的差异：
+   - 空目录不会出现在结果里，目录数由文件路径反推
+   - disabled 目录内的文件仍会被枚举，必须自己过滤
+   - 命中名单与 FSA 相同（ini / txt），只是数据来源不同 */
+function collectWebkitFiles() {
+  const stats = state.folderScanStats;
+  const includeTxt = $("scanTxtFiles").checked;
+  const fileRe = includeTxt ? /\.(ini|txt)$/i : /\.ini$/i;
+  const dirs = new Set();
+  for (const file of state.sourceFiles) {
+    const rel = file.webkitRelativePath || file.name;
+    const parts = rel.split("/");
+    parts.shift(); // 去掉用户选中的根目录名
+    if (!parts.length) continue;
+    // 先判 DISABLED，保证被忽略目录下的子目录也不计入目录数（与 FSA 分支一致）
+    if (parts.some(seg => /^disabled/i.test(seg))) { stats.disabled++; continue; }
+    for (let i = 0; i < parts.length - 1; i++) dirs.add(parts.slice(0, i + 1).join("/"));
+    stats.files++;
+    const name = parts[parts.length - 1];
+    if (/\.ini$/i.test(name)) stats.ini++;
+    if (/\.txt$/i.test(name)) stats.txt++;
+    if (fileRe.test(name)) {
+      state.folderFiles.push({ name, path: parts.join("/"), file, handle: null, dirHandle: null });
+      stats.listed++;
+    }
+  }
+  stats.dirs = dirs.size + 1;
+}
+
 async function refreshFolderFileList() {
-  if (!state.dirHandle) return;
+  if (state.folderSource !== "webkit" && !state.dirHandle) return;
   const selectedValue = $("folderIniSelect").value;
   const prevPath = selectedValue === "" ? "" : (state.folderFiles[Number(selectedValue)]?.path || "");
   state.folderFiles = [];
   state.folderScanStats = { dirs: 0, files: 0, ini: 0, txt: 0, listed: 0, disabled: 0, errors: 0 };
-  await scanFolderFiles(state.dirHandle, "", state.dirHandle);
+  if (state.folderSource === "webkit") collectWebkitFiles();
+  else await scanFolderFiles(state.dirHandle, "", state.dirHandle);
   state.folderFiles.sort((a, b) => a.path.localeCompare(b.path, "zh-CN"));
 
   const sel = $("folderIniSelect");
@@ -6289,9 +6413,14 @@ function renderFolderScanStats() {
 async function loadFolderFile(index) {
   const item = state.folderFiles[index];
   if (!item) return;
-  const file = await item.handle.getFile();
-  state.targetDirHandle = item.dirHandle;
-  await loadFile(file, { keepFolder: true, fileHandle: item.handle });
+  let file;
+  if (item.file) {
+    file = item.file;                       // webkit 只读模式的 File 快照
+  } else {
+    file = await item.handle.getFile();     // FSA 模式每次取最新版本
+  }
+  state.targetDirHandle = item.handle ? item.dirHandle : null;
+  await loadFile(file, { keepFolder: true, fileHandle: item.handle || null });
   setFileInfo("fileLoadedFolder", { path: item.path, count: state.swaps.length });
   updateStatus();
 }
@@ -6346,6 +6475,12 @@ async function writeGeneratedToFolder() {
   const targetDir = state.targetDirHandle || state.dirHandle;
   if (!state.dirHandle || !targetDir || !state.fileHandle) {
     toast(t("toastSelectFolderIni"), "err");
+    return;
+  }
+  // 预检：部分 Chrome 禁止通过 File System Access 写 .ini。
+  // 放在任何写操作之前，避免先备份 txt 再中途失败留下半成品。
+  if (await isIniNameBlocked(targetDir)) {
+    toast(t("toastFsaIniWriteBlocked"), "err");
     return;
   }
   const btn = $("btnWriteFolder");
